@@ -66,7 +66,7 @@ export default function TopNav() {
   const breadcrumbs = generateBreadcrumbs();
 
   return (
-    <nav className='flex h-full items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-6 dark:border-[#1F1F23] dark:bg-[#0F0F12]'>
+    <nav className='flex h-full items-center justify-between border-gray-200 bg-white px-3 sm:px-6 dark:border-[#1F1F23] dark:bg-[#0F0F12]'>
       {/* Breadcrumbs section */}
       <div className='hidden max-w-[300px] items-center space-x-1 truncate text-sm font-medium sm:flex'>
         {breadcrumbs.map((item, index) => (

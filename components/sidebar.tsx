@@ -78,7 +78,7 @@ export default function Sidebar() {
         className={`fixed inset-y-0 left-0 z-[70] w-64 transform border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:static lg:w-64 lg:translate-x-0 dark:border-[#1F1F23] dark:bg-[#0F0F12] ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} `}
       >
         <div className='flex h-full flex-col'>
-          <Link href='/' className='flex h-16 items-center border-b border-gray-200 px-6 dark:border-[#1F1F23]'>
+          <Link href='/' className='flex h-16 items-center border-gray-200 px-6 dark:border-[#1F1F23]'>
             <div className='flex items-center gap-3'>
               <div className='flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100'>
                 <PenTool className='h-5 w-5 text-white dark:text-zinc-900' />

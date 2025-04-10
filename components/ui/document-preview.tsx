@@ -4,7 +4,7 @@ export function DocumentPreview() {
   return (
     <div className='relative h-full w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl'>
       {/* Document Header */}
-      <div className='absolute left-0 right-0 top-0 flex h-14 items-center justify-between border-b border-gray-200 bg-blue-50 px-6'>
+      <div className='absolute left-0 right-0 top-0 flex h-14 items-center justify-between border-gray-200 bg-blue-50 px-6'>
         <div className='flex items-center'>
           <div className='mr-2 h-3 w-3 rounded-full bg-red-500'></div>
           <div className='mr-2 h-3 w-3 rounded-full bg-yellow-500'></div>
