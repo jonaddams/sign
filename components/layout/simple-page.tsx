@@ -1,5 +1,5 @@
-import AppShell from '@/components/app-shell';
-import PageContent from '@/components/page-content';
+import PageLayout from '@/components/layout/page-layout';
+import PageContent from '@/components/layout/page-content';
 
 interface SimplePageProps {
   title: string;
@@ -8,10 +8,10 @@ interface SimplePageProps {
 
 export default function SimplePage({ title, description }: SimplePageProps) {
   return (
-    <AppShell>
+    <PageLayout>
       <PageContent title={title} description={description}>
         {/* Page content goes here */}
       </PageContent>
-    </AppShell>
+    </PageLayout>
   );
 }

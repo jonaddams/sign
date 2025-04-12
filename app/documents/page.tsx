@@ -1,8 +1,8 @@
 'use client';
 
-import { FileUpload } from '@/components/file-upload';
-import Layout from '@/components/layout';
-import PageContent from '@/components/page-content';
+import { FileUpload } from '@/components/ui/file-upload';
+import PageLayout from '@/components/layout/page-layout';
+import PageContent from '@/components/layout/page-content';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DocumentViewer from '@/components/ui/document-viewer';
@@ -262,7 +262,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <Layout>
+    <PageLayout>
       <PageContent title='Documents' description='Manage your documents and files'>
         {previewDoc && <DocumentViewer documentUrl={previewDoc.url} documentId={previewDoc.id} isOpen={previewDoc.isOpen} onClose={handleClosePreview} />}
 
@@ -352,6 +352,6 @@ export default function DocumentsPage() {
           </CardContent>
         </Card>
       </PageContent>
-    </Layout>
+    </PageLayout>
   );
 }

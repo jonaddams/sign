@@ -1,9 +1,9 @@
 'use client';
 
 import { toast } from 'sonner';
-import { FileUpload } from '@/components/file-upload';
-import AppShell from '@/components/app-shell';
-import PageContent from '@/components/page-content';
+import { FileUpload } from '@/components/ui/file-upload';
+import PageLayout from '@/components/layout/page-layout';
+import PageContent from '@/components/layout/page-content';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DocumentViewer from '@/components/ui/document-viewer';
@@ -257,7 +257,7 @@ export default function TemplatesPage() {
   };
 
   return (
-    <AppShell>
+    <PageLayout>
       <PageContent title='Templates' description='Manage your document templates'>
         {previewDoc && (
           <DocumentViewer documentUrl={previewDoc.url} documentId={previewDoc.id} isOpen={previewDoc.isOpen} onClose={handleClosePreview} preview={true} />
@@ -362,6 +362,6 @@ export default function TemplatesPage() {
           </CardContent>
         </Card>
       </PageContent>
-    </AppShell>
+    </PageLayout>
   );
 }

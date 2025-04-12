@@ -1,13 +1,13 @@
-import AppShell from '@/components/app-shell';
-import PageContent from '@/components/page-content';
+import PageLayout from '@/components/layout/page-layout';
+import PageContent from '@/components/layout/page-content';
 
 export default function SignPage() {
   return (
-    <AppShell>
+    <PageLayout>
       <PageContent>
         <h1>Sign Page</h1>
         <p>Welcome to the sign page.</p>
       </PageContent>
-    </AppShell>
+    </PageLayout>
   );
 }

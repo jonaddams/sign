@@ -8,7 +8,8 @@ import SendGrid from 'next-auth/providers/sendgrid';
 // import Postmark from "next-auth/providers/postmark";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  allowDangerousEmailLinking: true,
+  accountLinking: true,
+  allowDangerousEmailAccountLinking: true,
   adapter: DrizzleAdapter(db),
   pages: {
     signIn: '/login',

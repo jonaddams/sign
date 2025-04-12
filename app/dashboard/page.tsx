@@ -1,5 +1,5 @@
-import AppShell from '@/components/app-shell';
-import PageContent from '@/components/page-content';
+import PageLayout from '@/components/layout/page-layout';
+import PageContent from '@/components/layout/page-content';
 import { BarChart } from '@/components/ui/bar-chart';
 import { LineChart } from '@/components/ui/line-chart';
 import { MetricCard } from '@/components/ui/metric-card';
@@ -11,7 +11,7 @@ import { Activity, ArrowUpRight, CreditCard, DollarSign, Download, Users } from 
 
 export default function DashboardPage() {
   return (
-    <AppShell>
+    <PageLayout>
       <div className='flex-1 space-y-4 p-4 pt-6 md:p-8'>
         <div className='flex flex-col items-start justify-between space-y-2 md:flex-row md:items-center md:space-y-0'>
           <h2 className='text-2xl font-bold tracking-tight md:text-3xl'>Dashboard</h2>
@@ -213,6 +213,6 @@ export default function DashboardPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppShell>
+    </PageLayout>
   );
 }

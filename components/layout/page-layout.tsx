@@ -3,14 +3,14 @@
 import { useTheme } from 'next-themes';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import Sidebar from './sidebar';
-import TopNav from './ui/top-nav';
+import Sidebar from '@/components/layout/sidebar';
+import TopNav from '@/components/ui/top-nav';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function PageLayout({ children }: LayoutProps) {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -26,7 +26,7 @@ export default function Layout({ children }: LayoutProps) {
     <div className={`flex h-screen ${theme === 'dark' ? 'dark' : ''}`}>
       <Sidebar />
       <div className='flex w-full flex-1 flex-col'>
-        <header className='h-16 border-b border-gray-200 dark:border-[#1F1F23]'>
+        <header className='h-16 border-gray-200 dark:border-[#1F1F23]'>
           <TopNav />
         </header>
         <main className='flex-1 overflow-auto bg-white p-4 sm:p-6 dark:bg-[#0F0F12]'>{children}</main>

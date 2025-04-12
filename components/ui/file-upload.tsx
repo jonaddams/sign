@@ -124,6 +124,13 @@ export function FileUpload({ onUploadComplete, onError }: FileUploadProps) {
     }
   };
 
+  const resetFileState = () => {
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleButtonClick = () => {
     if (file) {
       handleUpload();
@@ -136,14 +143,33 @@ export function FileUpload({ onUploadComplete, onError }: FileUploadProps) {
     <div className='flex flex-col'>
       <input type='file' ref={fileInputRef} onChange={handleFileChange} className='hidden' accept={VALID_FILE_TYPES.join(',')} />
 
-      <Button
-        onClick={handleButtonClick}
-        disabled={uploading}
-        className={`flex items-center gap-2 cursor-pointer pl-0 ${file ? 'text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300' : ''}`}
-      >
-        {file ? <Upload className={`h-4 w-4 ${file ? 'text-blue-600 dark:text-blue-400' : ''}`} /> : <FileText className='h-4 w-4' />}
-        <span>{file ? `Upload ${file.name}` : 'Upload Document'}</span>
-      </Button>
+      <div className='flex items-center gap-2'>
+        <Button
+          type='button'
+          onClick={handleButtonClick}
+          disabled={uploading}
+          variant={file ? 'default' : 'outline'}
+          className='cursor-pointer flex items-center gap-2'
+        >
+          {file ? (
+            <>
+              <Upload className='h-4 w-4' />
+              Upload Now
+            </>
+          ) : (
+            <>
+              <FileText className='h-4 w-4' />
+              Upload Document
+            </>
+          )}
+        </Button>
+
+        {file && !uploading && (
+          <Button type='button' onClick={resetFileState} variant='destructive' className='cursor-pointer'>
+            Cancel
+          </Button>
+        )}
+      </div>
 
       {file && !uploading && (
         <div className='mt-2 text-sm text-zinc-500'>
