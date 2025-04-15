@@ -44,18 +44,26 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
         setIsLoading(true);
         setError(null);
 
-        // Extract key from URL
+        // Extract key from URL - improved handling
         let docKey: string;
         try {
-          const urlObj = new URL(documentUrl);
-          docKey = urlObj.pathname.substring(1);
+          // Check if documentUrl is a full URL or just a key
+          if (documentUrl.startsWith('http')) {
+            const urlObj = new URL(documentUrl);
+            docKey = urlObj.pathname.substring(1);
+          } else {
+            // Assume it's just the key
+            docKey = documentUrl;
+          }
+          console.log('Extracted document key:', docKey);
         } catch (error) {
           console.error('Error parsing document URL:', error);
           throw new Error('Invalid document URL');
         }
 
-        // Create proxy URL
+        // Create proxy URL - no need for double encoding
         const proxyEndpoint = `/api/documents/proxy?key=${encodeURIComponent(docKey)}&proxy=true`;
+        console.log('Proxy endpoint created:', proxyEndpoint);
         setProxyUrl(proxyEndpoint);
 
         // Update body to prevent scrolling while viewer is open
@@ -114,7 +122,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
           window.NutrientViewer.load({
             container,
             document: proxyUrl,
-            // toolbarItems: window.NutrientViewer.defaultToolbarItems,
+            // document: 'https://www.nutrient.io/downloads/pspdfkit-web-demo.pdf', // Example document for testing
             toolbarItems: toolBarItems,
           });
           setIsViewerLoaded(true);
@@ -148,7 +156,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
       >
         {/* More visible close button with contrasting background */}
         <div className='absolute right-4 top-4 z-[10000]'>
-          <Button variant='default' size='icon' className='rounded-full h-10 w-10 bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg' onClick={onClose}>
+          <Button variant='default' size='sm' className='rounded-full h-10 w-10 bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg' onClick={onClose}>
             <X className='h-5 w-5' />
           </Button>
         </div>
