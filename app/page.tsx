@@ -2,15 +2,18 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { isAuthenticated } from '@/server/auth/is-authenticated';
 import { LandingPage } from '@/components/layout/landing-page';
+import { headers } from 'next/headers';
 
 export default async function HomePage() {
+  // Get headers to ensure we're on the server side
+  headers();
+
   try {
     const authenticated = await isAuthenticated();
+    console.log('Server authentication check:', authenticated);
 
-    // Handle authentication check
     if (authenticated) {
-      // Use return before redirect to prevent React state updates
-      return redirect('/dashboard');
+      redirect('/dashboard');
     }
 
     return (
@@ -19,10 +22,13 @@ export default async function HomePage() {
       </Suspense>
     );
   } catch (error) {
-    // Only log non-redirect errors
-    if (!(error instanceof Error && error.message.includes('NEXT_REDIRECT'))) {
-      console.error('Authentication check failed:', error);
+    // Check if it's a redirect error
+    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+      // Let Next.js handle the redirect
+      throw error;
     }
+
+    console.error('Authentication check failed:', error);
     return <ErrorComponent />;
   }
 }
