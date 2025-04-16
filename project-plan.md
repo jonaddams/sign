@@ -3,8 +3,8 @@
 ## Project Plan
 
 **Project Name:** Sign  
-**Date:** April 11, 2025  
-**Version:** 1.0.0
+**Date:** April 15, 2025  
+**Version:** 1.1.1
 
 ## Table of Contents
 1. [Executive Summary](#executive-summary)
@@ -14,10 +14,13 @@
 5. [Database Schema](#database-schema)
 6. [Feature Development Timeline](#feature-development-timeline)
 7. [User Flows](#user-flows)
-8. [Security & Compliance](#security--compliance)
-9. [Testing Strategy](#testing-strategy)
-10. [Deployment Strategy](#deployment-strategy)
-11. [Post-Launch Plan](#post-launch-plan)
+8. [Current Focus: Documents Route Implementation](#current-focus-documents-route-implementation)
+9. [Security & Compliance](#security--compliance)
+10. [Testing Strategy](#testing-strategy)
+11. [Deployment Strategy](#deployment-strategy)
+12. [Post-Launch Plan](#post-launch-plan)
+13. [Future Enhancements](#future-enhancements)
+14. [Implementation Progress Tracking](#implementation-progress-tracking)
 
 ## Executive Summary
 
@@ -147,14 +150,14 @@ The database schema is well-structured around the following key entities:
 
 ## Feature Development Timeline
 
-### Phase 1: Foundation & Core Functionality (2 Weeks)
+### Phase 1: Foundation & Core Functionality (2 Weeks) - COMPLETED
 - [x] User authentication system
 - [x] Document upload and storage
 - [x] Basic document preview with Nutrient.io Web SDK
 - [x] Template management
 - [ ] Document dashboard
 
-### Phase 2: Signature Workflow (4 Weeks)
+### Phase 2: Signature Workflow (4 Weeks) - CURRENT FOCUS
 - [ ] Electronic signature implementation with Nutrient.io Web SDK
 - [ ] Signature request workflow
 - [ ] Email notifications
@@ -219,6 +222,65 @@ The database schema is well-structured around the following key entities:
 4. User can create new documents from the template
 5. User can manage template permissions and sharing
 6. User can request assistance from @nutrient-copilot for template setup
+
+## Current Focus: Documents Route Implementation
+
+The `/documents` route is a critical part of our application, providing the core document signing workflow functionality. We will implement a multi-step interface that guides users through the entire process.
+
+### Multi-Step Flow Structure
+- Progress indicator at the top showing current step and total steps
+- Forward navigation only enabled when current step requirements are met
+- Back navigation always available to revise previous steps
+
+### Step 1: Document Selection/Upload
+- Interface to browse and select from existing templates
+- File upload component for new documents
+- Option to save new uploads as templates with name and description
+- Document preview capability
+
+### Step 2: Recipient Configuration
+- Form for adding recipient names and email addresses
+- Dropdown selection for recipient type:
+  - Signer: Can sign the document
+  - Viewer: Can only view the document
+  - Copy: Receives a copy of the document
+- Checkbox for sender to also sign the document
+- Radio button option to be the only signer
+- Configuration for signing order (sequential or parallel)
+- Date picker for signing deadlines
+
+### Step 3: Field Placement
+- Nutrient Viewer integration for document display
+- Sidebar with draggable field components:
+  - Signature fields
+  - Initial fields
+  - Date fields
+  - Text fields
+  - Checkboxes
+  - Dropdown menus
+- Field validation rule configuration
+- Field labels for signer context
+
+### Step 4: Email Customization
+- Input field for email subject line
+- Rich text editor for email message body
+- Email preview functionality showing how the email will appear to recipients
+- Default subject and message templates
+
+### Step 5: Review & Send
+- Final document preview showing all placed fields
+- Summary of recipients and their roles
+- Summary of email subject and message
+- Send button with confirmation dialog
+- Option to save as draft for later completion
+
+### Technical Implementation
+- State management for multi-step form using React Context
+- Form validation for each step
+- API endpoints for saving document configuration
+- Email sending integration with SendGrid
+- Nutrient Viewer SDK integration for field placement
+- Document status tracking in database
 
 ## Security & Compliance
 
@@ -326,6 +388,47 @@ The database schema is well-structured around the following key entities:
 - Additional compliance certifications
 - Enhanced AI assistance capabilities
 
+## Future Enhancements
+
+The following features have been identified for post-initial release consideration:
+
+### Template Management Enhancements
+- Document tags/categories for easier template organization
+- Advanced search and filter functionality for templates
+- Template recommendations based on usage history
+- Grid view for template browsing with thumbnails
+- Template version control and history
+
+### Email and Notification Enhancements
+- Email templates for common scenarios (NDA, contracts, onboarding)
+- Dynamic placeholders in email templates (e.g., {{recipient_name}}, {{document_name}})
+- Custom branding options for emails
+- Multiple language support for notifications
+- Scheduled email sending
+- Real-time notifications for document status changes
+
+### Document Field Enhancements
+- Distinction between required and optional fields
+- Field grouping for complex forms
+- Conditional fields (show/hide based on other selections)
+- Advanced field validation rules
+- Field templates for common document types
+
+### Workflow Enhancements
+- Automated reminders for unsigned documents
+- Recurring signature requests
+- Document workflow templates
+- Multi-document packages
+- Integration with document storage systems (Google Drive, Dropbox)
+- Approval workflows with multiple levels
+
+### Analytics and Reporting
+- Signature completion rate analytics
+- Time-to-completion metrics
+- User engagement reporting
+- Custom report generation
+- Export capabilities for compliance documentation
+
 ---
 
 ## Appendix
@@ -346,3 +449,113 @@ The database schema is well-structured around the following key entities:
 - API documentation: [Swagger/API Docs Link]
 - Nutrient.io SDK documentation: [SDK Docs Link]
 - Team collaboration: [Project Management Tool Link]
+
+## Implementation Progress Tracking
+
+### Component Structure
+The implementation will follow this component structure:
+```
+/app/documents/
+├── page.tsx                     // Main page container
+├── components/                  // Local components for this route
+│   ├── DocumentFlow.tsx         // Main container for the multi-step flow
+│   ├── StepIndicator.tsx        // Progress indicator component
+│   ├── NavigationControls.tsx   // Next/back buttons
+│   ├── steps/                   // Individual step components
+│   │   ├── DocumentSelection.tsx // Step 1: Select/upload document
+│   │   ├── RecipientConfig.tsx  // Step 2: Add recipients
+│   │   ├── FieldPlacement.tsx   // Step 3: Add signature fields
+│   │   ├── EmailCustomization.tsx // Step 4: Email settings
+│   │   └── ReviewAndSend.tsx    // Step 5: Final review
+│   ├── ui/                      // UI components specific to document flow
+│   │   ├── RecipientRow.tsx     // Recipient form row
+│   │   ├── FieldTypeSelector.tsx // Signature field type selector
+│   │   └── EmailPreview.tsx     // Email preview component
+```
+
+### Current Status (as of April 15, 2025)
+- Technical implementation plan created for the `/documents` route
+- Component structure designed
+- State management approach defined using React Context API
+- Required API endpoints identified and documented
+
+### Implementation Schedule
+1. **Week 1 (April 16-22)**: Set up state management and basic multi-step framework
+   - Create `DocumentFlowContext.tsx`
+   - Implement `StepIndicator.tsx` and `NavigationControls.tsx`
+   - Set up the basic multi-step flow in `DocumentFlow.tsx`
+   
+2. **Week 2 (April 23-29)**: Implement document selection and recipient configuration
+   - Build `DocumentSelection.tsx` component
+   - Integrate with existing file upload functionality
+   - Implement `RecipientConfig.tsx` component
+   
+3. **Week 3 (April 30-May 6)**: Integrate Nutrient Viewer and implement field placement
+   - Implement `FieldPlacement.tsx` component
+   - Integrate with Nutrient.io SDK for document viewing
+   - Set up drag-and-drop field placement
+   
+4. **Week 4 (May 7-13)**: Complete email customization and review/send functionality
+   - Implement `EmailCustomization.tsx` component
+   - Build `ReviewAndSend.tsx` component
+   - Connect to API endpoints for document sending
+   - Add final testing and polish
+
+### Resume Points
+For improved development workflow and the ability to pause and resume work:
+
+1. **After State Management Setup**:
+   - `DocumentFlowContext.tsx` is completed
+   - Base multi-step navigation is functional
+   
+2. **After Document Selection Implementation**:
+   - Document upload/selection functionality works
+   - Template selection is integrated
+   - Save as template option is implemented
+   
+3. **After Recipient Configuration Implementation**:
+   - Adding/editing/removing recipients works
+   - Role selection and signing order is implemented
+   - Deadlines can be set
+
+4. **After Field Placement Integration**:
+   - Nutrient Viewer integration is complete
+   - Field drag and drop works
+   - Field properties can be configured
+   
+5. **After Email Customization Implementation**:
+   - Email subject and message body can be entered
+   - Email preview functionality works
+
+### Required API Endpoints
+The following API endpoints need to be implemented to support the workflow:
+
+```
+/api/documents
+  - POST: Create a new document record
+  - GET: List documents for the current user
+
+/api/documents/[id]
+  - GET: Get a specific document
+  - PATCH: Update document details
+  - DELETE: Delete a document
+
+/api/documents/upload
+  - POST: Upload document file to S3 storage
+
+/api/documents/[id]/fields
+  - POST: Add fields to a document
+  - GET: Get fields for a document
+  
+/api/documents/[id]/recipients
+  - POST: Add recipients to a document
+  - GET: Get recipients for a document
+  
+/api/documents/[id]/send
+  - POST: Send the document to recipients
+```
+
+### Dependencies
+- Need to integrate properly with Nutrient.io Web SDK for document viewing
+- Need to ensure proper authentication is maintained throughout the flow
+- Email sending functionality requires SendGrid integration
