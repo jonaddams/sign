@@ -14,13 +14,14 @@ export const signatureType = pgEnum('signature_type', ['ELECTRONIC', 'DIGITAL'])
 export const documentTemplates = pgTable('document_templates', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  description: text('description'),
+
   creatorId: text('creator_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow(),
   templateFilePath: text('template_file_path').notNull(),
   templateFileHash: text('template_file_hash'),
+  size: integer('size'),
 });
 
 // Documents Table
@@ -28,8 +29,7 @@ export const documents = pgTable('documents', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  title: text('title').notNull(),
-  description: text('description'),
+  name: text('name').notNull(),
 
   templateId: text('template_id').references(() => documentTemplates.id),
 
@@ -43,8 +43,6 @@ export const documents = pgTable('documents', {
   documentFilePath: text('document_file_path').notNull(),
   documentFileHash: text('document_file_hash'),
 
-  // Removed status field
-  // Added size field to store the document size in bytes
   size: integer('size'),
 
   esignCompliant: boolean('esign_compliant').default(true),

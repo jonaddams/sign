@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         templateFilePath: data.file_url,
         creatorId: session.user.id,
         createdAt: new Date(),
-        description: data.description || null,
+        size: data.file_size ? Number(data.file_size) : null,
       })
       .returning();
 

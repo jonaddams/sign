@@ -10,6 +10,9 @@ const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     s3BucketName: process.env.AWS_S3_BUCKET_NAME,
   },
+  database: {
+    url: process.env.DATABASE_URL,
+  },
 };
 
 export default config;

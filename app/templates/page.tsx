@@ -78,11 +78,23 @@ export default function TemplatesPage() {
           const fileExt = extractFileExtension(template.templateFilePath);
           const displayType = getFileTypeDisplay(fileExt);
 
+          // Format file size
+          let formattedSize = 'N/A';
+          if (template.size) {
+            if (template.size < 1024) {
+              formattedSize = `${template.size} B`;
+            } else if (template.size < 1024 * 1024) {
+              formattedSize = `${(template.size / 1024).toFixed(1)} KB`;
+            } else {
+              formattedSize = `${(template.size / (1024 * 1024)).toFixed(1)} MB`;
+            }
+          }
+
           return {
             id: template.id,
             name: template.name,
             type: displayType,
-            size: 'N/A',
+            size: formattedSize,
             modified: new Date(template.createdAt).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
@@ -125,6 +137,7 @@ export default function TemplatesPage() {
           name: fileData.name,
           file_url: fileData.url,
           file_type: mimeType || fileExt,
+          file_size: fileData.size || 0,
         }),
       });
 

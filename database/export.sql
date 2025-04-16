@@ -1,7 +1,3 @@
-
-> my-v0-project@0.1.0 db:export /Users/jonaddamsnutrient/SE/code/sign
-> drizzle-kit export --config=drizzle/drizzle.config.ts
-
 CREATE TYPE "public"."document_access_level" AS ENUM('VIEWER', 'EDITOR', 'SIGNER');
 CREATE TYPE "public"."document_status" AS ENUM('DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'DECLINED');
 CREATE TYPE "public"."signature_status" AS ENUM('PENDING', 'SIGNED', 'DECLINED');
@@ -30,30 +26,6 @@ CREATE TABLE "authenticator" (
 	"credentialBackedUp" boolean NOT NULL,
 	"transports" text,
 	CONSTRAINT "authenticator_credentialID_unique" UNIQUE("credentialID")
-);
-
-CREATE TABLE "document_templates" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"creator_id" text NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"template_file_path" text NOT NULL,
-	"template_file_hash" text
-);
-
-CREATE TABLE "documents" (
-	"id" text PRIMARY KEY NOT NULL,
-	"title" text NOT NULL,
-	"description" text,
-	"template_id" text,
-	"owner_id" text NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	"document_file_path" text NOT NULL,
-	"document_file_hash" text,
-	"size" integer,
-	"esign_compliant" boolean DEFAULT true
 );
 
 CREATE TABLE "session" (
@@ -117,6 +89,29 @@ CREATE TABLE "document_participants" (
 	CONSTRAINT "document_participants_document_id_user_id_unique" UNIQUE("document_id","user_id")
 );
 
+CREATE TABLE "document_templates" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"creator_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now(),
+	"template_file_path" text NOT NULL,
+	"template_file_hash" text,
+	"size" integer
+);
+
+CREATE TABLE "documents" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"template_id" text,
+	"owner_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now(),
+	"document_file_path" text NOT NULL,
+	"document_file_hash" text,
+	"size" integer,
+	"esign_compliant" boolean DEFAULT true
+);
+
 CREATE TABLE "signature_requests" (
 	"id" text PRIMARY KEY NOT NULL,
 	"document_id" text NOT NULL,
@@ -131,9 +126,6 @@ CREATE TABLE "signature_requests" (
 
 ALTER TABLE "account" ADD CONSTRAINT "account_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "authenticator" ADD CONSTRAINT "authenticator_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "document_templates" ADD CONSTRAINT "document_templates_creator_id_user_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "documents" ADD CONSTRAINT "documents_template_id_document_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."document_templates"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "documents" ADD CONSTRAINT "documents_owner_id_user_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "session" ADD CONSTRAINT "session_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "document_annotations" ADD CONSTRAINT "document_annotations_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "document_annotations" ADD CONSTRAINT "document_annotations_creator_id_user_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
@@ -142,5 +134,8 @@ ALTER TABLE "document_audit_log" ADD CONSTRAINT "document_audit_log_user_id_user
 ALTER TABLE "document_notifications" ADD CONSTRAINT "document_notifications_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "document_participants" ADD CONSTRAINT "document_participants_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "document_participants" ADD CONSTRAINT "document_participants_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "document_templates" ADD CONSTRAINT "document_templates_creator_id_user_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "documents" ADD CONSTRAINT "documents_template_id_document_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."document_templates"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "documents" ADD CONSTRAINT "documents_owner_id_user_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "signature_requests" ADD CONSTRAINT "signature_requests_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "signature_requests" ADD CONSTRAINT "signature_requests_participant_id_document_participants_id_fk" FOREIGN KEY ("participant_id") REFERENCES "public"."document_participants"("id") ON DELETE cascade ON UPDATE no action;

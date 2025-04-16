@@ -91,6 +91,7 @@ export function FileUpload({ onUploadComplete, onError }: FileUploadProps) {
               url: response.url,
               name: file.name,
               file_type: fileType,
+              size: file.size,
             });
             setFile(null);
             if (fileInputRef.current) {

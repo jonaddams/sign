@@ -3,8 +3,8 @@ import config from '@/lib/config';
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: 'drizzle/database.schema.ts',
-  out: 'drizzle/migrations/',
+  schema: 'database/drizzle/database.schema.ts',
+  out: 'database/drizzle/migrations/',
   dbCredentials: {
     url: config.database.url as string,
   },

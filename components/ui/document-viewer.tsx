@@ -16,7 +16,7 @@ interface DocumentViewerProps {
 declare global {
   interface Window {
     NutrientViewer?: {
-      load: (options: { container: HTMLElement; document: string; toolbarItems?: any[] }) => void;
+      load: (options: { container: HTMLElement; document: string; toolbarItems?: any[]; licenseKey?: string }) => void;
       unload: (container: HTMLElement | null) => void;
       defaultToolbarItems?: any[];
     };
@@ -122,11 +122,12 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
           window.NutrientViewer.load({
             container,
             document: proxyUrl,
-            // document: 'https://www.nutrient.io/downloads/pspdfkit-web-demo.pdf', // Example document for testing
             toolbarItems: toolBarItems,
+            licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
           });
           setIsViewerLoaded(true);
           console.log('NutrientViewer loaded successfully');
+          console.log('licenseKey', process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY);
         } catch (error) {
           console.error('Error loading document viewer:', error);
           setError('Failed to load document viewer');
