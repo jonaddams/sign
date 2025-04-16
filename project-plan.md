@@ -7,6 +7,7 @@
 **Version:** 1.1.1
 
 ## Table of Contents
+
 1. [Executive Summary](#executive-summary)
 2. [Project Overview](#project-overview)
 3. [Technology Stack](#technology-stack)
@@ -29,9 +30,11 @@ Sign is a comprehensive electronic and digital signature application designed to
 ## Project Overview
 
 ### Vision
+
 To create a secure, intuitive, and legally compliant electronic signature platform that simplifies document workflows and accelerates business processes.
 
 ### Goals
+
 - Build a fully functional electronic signature platform
 - Support both electronic and digital signatures using Nutrient.io Web SDK
 - Provide an intuitive user experience
@@ -42,6 +45,7 @@ To create a secure, intuitive, and legally compliant electronic signature platfo
 - Leverage Nutrient.io's integrated Co-Pilot for user assistance
 
 ### Target Audience
+
 - Small to medium-sized businesses
 - Enterprise organizations
 - Legal professionals
@@ -53,6 +57,7 @@ To create a secure, intuitive, and legally compliant electronic signature platfo
 ## Technology Stack
 
 ### Current Implementation
+
 - **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
 - **Authentication**: AuthJS/NextAuth with OAuth providers and email login
 - **Database**: PostgreSQL with Drizzle ORM
@@ -63,6 +68,7 @@ To create a secure, intuitive, and legally compliant electronic signature platfo
 - **AI Assistance**: Nutrient-Copilot integration
 
 ### Additional Technologies to Implement
+
 - **Document Signing**: Nutrient.io Web SDK for electronic and digital signatures
 - **Digital Signatures API**: Nutrient's API for cryptographic signatures
 - **Real-time Collaboration**: Socket.IO or Ably
@@ -75,35 +81,42 @@ To create a secure, intuitive, and legally compliant electronic signature platfo
 The application follows a modern Next.js architecture with server and client components:
 
 ### Key Components
+
 1. **Authentication Layer**
+
    - OAuth integration (Google, GitHub, Microsoft)
    - Email authentication with magic links
    - Session management
 
 2. **Document Management**
+
    - Upload and storage
    - Version control
    - Preview and rendering via Nutrient.io Web SDK
    - Document annotations
 
 3. **Signature Process**
+
    - Signature workflows using Nutrient.io SDK
    - Participant management
    - Status tracking
    - Notifications
 
 4. **AI Assistance**
+
    - Nutrient-Copilot integration
    - Contextual help via @nutrient-copilot mentions
    - Document and workflow guidance
    - Legal requirements assistance
 
 5. **Audit & Compliance**
+
    - Audit trail for all document activities
    - Legal compliance metadata
    - Tamper evidence through Nutrient's API
 
 6. **User & Team Management**
+
    - User profiles and preferences
    - Team roles and permissions
    - Organization management
@@ -120,22 +133,26 @@ The application follows a modern Next.js architecture with server and client com
 The database schema is well-structured around the following key entities:
 
 1. **Users & Authentication**
+
    - User accounts and profiles
    - Authentication providers
    - Sessions
 
 2. **Documents**
+
    - Document metadata
    - File storage references
    - Document status tracking
    - Document versions
 
 3. **Templates**
+
    - Reusable document templates
    - Template settings
    - Template categories
 
 4. **Signatures & Participants**
+
    - Signature requests
    - Document participants
    - Access levels (Viewer, Editor, Signer)
@@ -151,22 +168,25 @@ The database schema is well-structured around the following key entities:
 ## Feature Development Timeline
 
 ### Phase 1: Foundation & Core Functionality (2 Weeks) - COMPLETED
+
 - [x] User authentication system
 - [x] Document upload and storage
 - [x] Basic document preview with Nutrient.io Web SDK
 - [x] Template management
-- [ ] Document dashboard
+- [ ] Document dashboard (IN PROGRESS - Targeted completion: April 20, 2025)
 
 ### Phase 2: Signature Workflow (4 Weeks) - CURRENT FOCUS
-- [ ] Electronic signature implementation with Nutrient.io Web SDK
-- [ ] Signature request workflow
-- [ ] Email notifications
-- [ ] Document status tracking
-- [ ] Basic field placement (date, signature, text)
-- [ ] Document completion certificate
-- [ ] Nutrient-Copilot integration for signature guidance
+
+- [ ] Electronic signature implementation with Nutrient.io Web SDK (Starting April 21, 2025)
+- [ ] Signature request workflow (Planned start: April 25, 2025)
+- [ ] Email notifications (Planned start: May 2, 2025)
+- [ ] Document status tracking (Planned start: May 5, 2025)
+- [ ] Basic field placement (date, signature, text) (Planned start: April 27, 2025)
+- [ ] Document completion certificate (Planned start: May 10, 2025)
+- [ ] Nutrient-Copilot integration for signature guidance (Ongoing throughout Phase 2)
 
 ### Phase 3: Advanced Features (3 Weeks)
+
 - [ ] Digital signatures with Nutrient.io cryptographic verification API
 - [ ] Custom branding options
 - [ ] Document templates with field positioning
@@ -176,6 +196,7 @@ The database schema is well-structured around the following key entities:
 - [ ] Enhanced AI assistance for complex workflows
 
 ### Phase 4: Team & Enterprise Features (3 Weeks)
+
 - [ ] Team management
 - [ ] Role-based permissions
 - [ ] Signature delegation
@@ -185,6 +206,7 @@ The database schema is well-structured around the following key entities:
 - [ ] Team-specific Co-Pilot assistance
 
 ### Phase 5: Optimization & Additional Features (2 Weeks)
+
 - [ ] Analytics dashboard
 - [ ] Performance optimizations
 - [ ] Advanced security features
@@ -196,6 +218,7 @@ The database schema is well-structured around the following key entities:
 ## User Flows
 
 ### Document Sender Flow
+
 1. User logs into the platform
 2. User uploads a document or selects a template
 3. User adds signature fields and form fields to the document using Nutrient.io Web SDK
@@ -207,6 +230,7 @@ The database schema is well-structured around the following key entities:
 9. At any point, user can ask @nutrient-copilot for assistance with the process
 
 ### Document Signer Flow
+
 1. Recipient receives email invitation to sign
 2. Recipient clicks link and is directed to document
 3. Recipient reviews document and fills required fields in Nutrient.io Web SDK viewer
@@ -216,6 +240,7 @@ The database schema is well-structured around the following key entities:
 7. Recipient can ask @nutrient-copilot questions about the document or signing process
 
 ### Template Management Flow
+
 1. User creates a new template from existing document
 2. User configures reusable fields and signers with Nutrient.io SDK
 3. User saves template with name and description
@@ -228,17 +253,20 @@ The database schema is well-structured around the following key entities:
 The `/documents` route is a critical part of our application, providing the core document signing workflow functionality. We will implement a multi-step interface that guides users through the entire process.
 
 ### Multi-Step Flow Structure
+
 - Progress indicator at the top showing current step and total steps
 - Forward navigation only enabled when current step requirements are met
 - Back navigation always available to revise previous steps
 
 ### Step 1: Document Selection/Upload
+
 - Interface to browse and select from existing templates
 - File upload component for new documents
 - Option to save new uploads as templates with name and description
 - Document preview capability
 
 ### Step 2: Recipient Configuration
+
 - Form for adding recipient names and email addresses
 - Dropdown selection for recipient type:
   - Signer: Can sign the document
@@ -250,6 +278,7 @@ The `/documents` route is a critical part of our application, providing the core
 - Date picker for signing deadlines
 
 ### Step 3: Field Placement
+
 - Nutrient Viewer integration for document display
 - Sidebar with draggable field components:
   - Signature fields
@@ -262,12 +291,14 @@ The `/documents` route is a critical part of our application, providing the core
 - Field labels for signer context
 
 ### Step 4: Email Customization
+
 - Input field for email subject line
 - Rich text editor for email message body
 - Email preview functionality showing how the email will appear to recipients
 - Default subject and message templates
 
 ### Step 5: Review & Send
+
 - Final document preview showing all placed fields
 - Summary of recipients and their roles
 - Summary of email subject and message
@@ -275,6 +306,7 @@ The `/documents` route is a critical part of our application, providing the core
 - Option to save as draft for later completion
 
 ### Technical Implementation
+
 - State management for multi-step form using React Context
 - Form validation for each step
 - API endpoints for saving document configuration
@@ -285,6 +317,7 @@ The `/documents` route is a critical part of our application, providing the core
 ## Security & Compliance
 
 ### Security Measures
+
 - End-to-end encryption for documents
 - Secure storage with AWS S3
 - Authentication with multi-factor options
@@ -294,6 +327,7 @@ The `/documents` route is a critical part of our application, providing the core
 - Cryptographic signature validation via Nutrient.io API
 
 ### Compliance Standards
+
 - ESIGN Act (US)
 - eIDAS Regulation (EU)
 - UETA (Uniform Electronic Transactions Act)
@@ -302,6 +336,7 @@ The `/documents` route is a critical part of our application, providing the core
 - CCPA compliance
 
 ### Document Verification & Integrity
+
 - Tamper-evident seals through Nutrient.io cryptographic signatures
 - Digital signature verification
 - Time-stamping
@@ -311,12 +346,15 @@ The `/documents` route is a critical part of our application, providing the core
 ## Testing Strategy
 
 ### Testing Levels
+
 1. **Unit Testing**
+
    - Component testing
    - Function testing
    - API endpoint testing
 
 2. **Integration Testing**
+
    - Authentication flows
    - Document upload and processing
    - Signature workflows
@@ -324,11 +362,13 @@ The `/documents` route is a critical part of our application, providing the core
    - Co-Pilot functionality testing
 
 3. **End-to-End Testing**
+
    - Complete user flows
    - Cross-browser compatibility
    - Mobile responsiveness
 
 4. **Security Testing**
+
    - Penetration testing
    - Authentication security
    - Data protection
@@ -342,11 +382,14 @@ The `/documents` route is a critical part of our application, providing the core
 ## Deployment Strategy
 
 ### Environments
+
 1. **Development**
+
    - For active development
    - Feature branch deployments
 
 2. **Staging**
+
    - For QA and testing
    - Mimics production environment
 
@@ -355,12 +398,14 @@ The `/documents` route is a critical part of our application, providing the core
    - High availability configuration
 
 ### CI/CD Pipeline
+
 - GitHub Actions for automated builds and tests
 - Automatic deployment to development environment
 - Manual approval for staging and production deployments
 - Rollback capabilities
 
 ### Monitoring & Logging
+
 - Application performance monitoring
 - Error tracking and reporting
 - User activity monitoring
@@ -369,18 +414,21 @@ The `/documents` route is a critical part of our application, providing the core
 ## Post-Launch Plan
 
 ### Immediate Post-Launch (1 Month)
+
 - Bug tracking and rapid fixes
 - Performance monitoring
 - User feedback collection
 - Critical feature additions
 
 ### Short Term (3 Months)
+
 - Feature enhancements based on user feedback
 - Performance optimizations
 - Additional integrations
 - Marketing and user acquisition
 
 ### Long Term (6-12 Months)
+
 - Advanced enterprise features
 - Mobile applications
 - API ecosystem expansion
@@ -393,6 +441,7 @@ The `/documents` route is a critical part of our application, providing the core
 The following features have been identified for post-initial release consideration:
 
 ### Template Management Enhancements
+
 - Document tags/categories for easier template organization
 - Advanced search and filter functionality for templates
 - Template recommendations based on usage history
@@ -400,6 +449,7 @@ The following features have been identified for post-initial release considerati
 - Template version control and history
 
 ### Email and Notification Enhancements
+
 - Email templates for common scenarios (NDA, contracts, onboarding)
 - Dynamic placeholders in email templates (e.g., {{recipient_name}}, {{document_name}})
 - Custom branding options for emails
@@ -408,6 +458,7 @@ The following features have been identified for post-initial release considerati
 - Real-time notifications for document status changes
 
 ### Document Field Enhancements
+
 - Distinction between required and optional fields
 - Field grouping for complex forms
 - Conditional fields (show/hide based on other selections)
@@ -415,6 +466,7 @@ The following features have been identified for post-initial release considerati
 - Field templates for common document types
 
 ### Workflow Enhancements
+
 - Automated reminders for unsigned documents
 - Recurring signature requests
 - Document workflow templates
@@ -423,6 +475,7 @@ The following features have been identified for post-initial release considerati
 - Approval workflows with multiple levels
 
 ### Analytics and Reporting
+
 - Signature completion rate analytics
 - Time-to-completion metrics
 - User engagement reporting
@@ -434,6 +487,7 @@ The following features have been identified for post-initial release considerati
 ## Appendix
 
 ### Key Technologies & Libraries
+
 - Next.js 15
 - React
 - TypeScript
@@ -444,6 +498,7 @@ The following features have been identified for post-initial release considerati
 - Nutrient.io Web SDK with Co-Pilot integration
 
 ### Resources
+
 - Project repository: [GitHub Link]
 - Design system: [Figma Link]
 - API documentation: [Swagger/API Docs Link]
@@ -453,7 +508,9 @@ The following features have been identified for post-initial release considerati
 ## Implementation Progress Tracking
 
 ### Component Structure
+
 The implementation will follow this component structure:
+
 ```
 /app/documents/
 ├── page.tsx                     // Main page container
@@ -474,27 +531,26 @@ The implementation will follow this component structure:
 ```
 
 ### Current Status (as of April 15, 2025)
+
 - Technical implementation plan created for the `/documents` route
 - Component structure designed
 - State management approach defined using React Context API
 - Required API endpoints identified and documented
 
 ### Implementation Schedule
+
 1. **Week 1 (April 16-22)**: Set up state management and basic multi-step framework
    - Create `DocumentFlowContext.tsx`
    - Implement `StepIndicator.tsx` and `NavigationControls.tsx`
    - Set up the basic multi-step flow in `DocumentFlow.tsx`
-   
 2. **Week 2 (April 23-29)**: Implement document selection and recipient configuration
    - Build `DocumentSelection.tsx` component
    - Integrate with existing file upload functionality
    - Implement `RecipientConfig.tsx` component
-   
 3. **Week 3 (April 30-May 6)**: Integrate Nutrient Viewer and implement field placement
    - Implement `FieldPlacement.tsx` component
    - Integrate with Nutrient.io SDK for document viewing
    - Set up drag-and-drop field placement
-   
 4. **Week 4 (May 7-13)**: Complete email customization and review/send functionality
    - Implement `EmailCustomization.tsx` component
    - Build `ReviewAndSend.tsx` component
@@ -502,18 +558,18 @@ The implementation will follow this component structure:
    - Add final testing and polish
 
 ### Resume Points
+
 For improved development workflow and the ability to pause and resume work:
 
 1. **After State Management Setup**:
    - `DocumentFlowContext.tsx` is completed
    - Base multi-step navigation is functional
-   
 2. **After Document Selection Implementation**:
    - Document upload/selection functionality works
    - Template selection is integrated
    - Save as template option is implemented
-   
 3. **After Recipient Configuration Implementation**:
+
    - Adding/editing/removing recipients works
    - Role selection and signing order is implemented
    - Deadlines can be set
@@ -522,12 +578,12 @@ For improved development workflow and the ability to pause and resume work:
    - Nutrient Viewer integration is complete
    - Field drag and drop works
    - Field properties can be configured
-   
 5. **After Email Customization Implementation**:
    - Email subject and message body can be entered
    - Email preview functionality works
 
 ### Required API Endpoints
+
 The following API endpoints need to be implemented to support the workflow:
 
 ```
@@ -546,16 +602,17 @@ The following API endpoints need to be implemented to support the workflow:
 /api/documents/[id]/fields
   - POST: Add fields to a document
   - GET: Get fields for a document
-  
+
 /api/documents/[id]/recipients
   - POST: Add recipients to a document
   - GET: Get recipients for a document
-  
+
 /api/documents/[id]/send
   - POST: Send the document to recipients
 ```
 
 ### Dependencies
+
 - Need to integrate properly with Nutrient.io Web SDK for document viewing
 - Need to ensure proper authentication is maintained throughout the flow
 - Email sending functionality requires SendGrid integration
