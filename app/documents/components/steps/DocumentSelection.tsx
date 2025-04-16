@@ -5,11 +5,23 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { extractFileExtension } from '@/lib/file-utils';
 import { useEffect, useState } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
+import { Search, CheckCircle2 } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -22,8 +34,14 @@ interface Template {
 export default function DocumentSelection() {
   const { state, dispatch } = useDocumentFlow();
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const templatesPerPage = 6;
 
   // Fetch available templates
   useEffect(() => {
@@ -32,9 +50,10 @@ export default function DocumentSelection() {
         setIsLoading(true);
         const response = await fetch('/api/templates');
         if (!response.ok) throw new Error('Failed to fetch templates');
-        
+
         const data = await response.json();
         setTemplates(data.templates || []);
+        setFilteredTemplates(data.templates || []);
       } catch (error) {
         console.error('Error fetching templates:', error);
         toast({
@@ -50,26 +69,68 @@ export default function DocumentSelection() {
     fetchTemplates();
   }, []);
 
+  // Filter templates when search query changes
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredTemplates(templates);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = templates.filter(
+        (template) => template.name.toLowerCase().includes(query) || (template.description && template.description.toLowerCase().includes(query)),
+      );
+      setFilteredTemplates(filtered);
+    }
+
+    // Reset pagination to first page when search changes
+    setCurrentPage(1);
+  }, [searchQuery, templates]);
+
   // Validate step when document is selected or uploaded
   useEffect(() => {
     const isValid = Boolean(state.document.url || state.document.templateId);
     dispatch({
       type: 'VALIDATE_STEP',
-      payload: { step: 'step1Valid', isValid }
+      payload: { step: 'step1Valid', isValid },
     });
   }, [state.document.url, state.document.templateId, dispatch]);
+
+  // Get current templates for the current page
+  const indexOfLastTemplate = currentPage * templatesPerPage;
+  const indexOfFirstTemplate = indexOfLastTemplate - templatesPerPage;
+  const currentTemplates = filteredTemplates.slice(indexOfFirstTemplate, indexOfLastTemplate);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredTemplates.length / templatesPerPage);
+
+  // Generate page numbers for pagination
+  const pageNumbers: (number | 'ellipsis')[] = [];
+  if (totalPages <= 5) {
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+  } else {
+    pageNumbers.push(1);
+
+    if (currentPage <= 3) {
+      pageNumbers.push(2, 3, 'ellipsis', totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pageNumbers.push('ellipsis', totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pageNumbers.push('ellipsis', currentPage, 'ellipsis', totalPages);
+    }
+  }
 
   // Handle template selection
   const handleSelectTemplate = (templateId: string, templateUrl: string) => {
     setSelectedTemplateId(templateId);
-    
+
     dispatch({
       type: 'SET_DOCUMENT',
       payload: {
         templateId,
         url: templateUrl,
-        title: templates.find(t => t.id === templateId)?.name || '',
-      }
+        title: templates.find((t) => t.id === templateId)?.name || '',
+      },
     });
   };
 
@@ -80,7 +141,7 @@ export default function DocumentSelection() {
       payload: {
         url: fileData.url,
         title: fileData.name,
-      }
+      },
     });
 
     toast({
@@ -93,7 +154,7 @@ export default function DocumentSelection() {
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({
       type: 'SET_DOCUMENT',
-      payload: { title: e.target.value }
+      payload: { title: e.target.value },
     });
   };
 
@@ -101,7 +162,7 @@ export default function DocumentSelection() {
   const handleSaveAsTemplateChange = (checked: boolean) => {
     dispatch({
       type: 'SET_DOCUMENT',
-      payload: { saveAsTemplate: checked }
+      payload: { saveAsTemplate: checked },
     });
   };
 
@@ -109,42 +170,34 @@ export default function DocumentSelection() {
   const handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({
       type: 'SET_DOCUMENT',
-      payload: { templateName: e.target.value }
+      payload: { templateName: e.target.value },
     });
   };
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Document Selection</h2>
-        <p className="text-sm text-muted-foreground mt-2">
-          Choose an existing template or upload a new document to send for signing.
-        </p>
+        <h2 className='text-2xl font-semibold tracking-tight'>Document Selection</h2>
+        <p className='text-sm text-muted-foreground mt-2'>Choose an existing template or upload a new document to send for signing.</p>
       </div>
 
-      <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="upload">Upload New Document</TabsTrigger>
-          <TabsTrigger value="template">Use Template</TabsTrigger>
+      <Tabs defaultValue='upload' className='w-full'>
+        <TabsList className='grid grid-cols-2 mb-4'>
+          <TabsTrigger value='upload'>Upload New Document</TabsTrigger>
+          <TabsTrigger value='template'>Use Template</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="upload" className="space-y-6">
+
+        <TabsContent value='upload' className='space-y-6'>
           <Card>
-            <CardContent className="pt-6">
-              <div className="mb-4">
-                <Label htmlFor="document-title">Document Title</Label>
-                <Input 
-                  id="document-title" 
-                  className="mt-1" 
-                  placeholder="Enter document title"
-                  value={state.document.title}
-                  onChange={handleTitleChange}
-                />
+            <CardContent className='pt-6'>
+              <div className='mb-4'>
+                <Label htmlFor='document-title'>Document Title</Label>
+                <Input id='document-title' className='mt-1' placeholder='Enter document title' value={state.document.title} onChange={handleTitleChange} />
               </div>
-              
-              <div className="mt-4">
-                <FileUpload 
-                  onUploadComplete={handleUploadComplete} 
+
+              <div className='mt-4'>
+                <FileUpload
+                  onUploadComplete={handleUploadComplete}
                   onError={(message) => {
                     toast({
                       title: 'Upload Error',
@@ -154,25 +207,21 @@ export default function DocumentSelection() {
                   }}
                 />
               </div>
-              
+
               {state.document.url && (
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="save-template" 
-                      checked={state.document.saveAsTemplate}
-                      onCheckedChange={handleSaveAsTemplateChange}
-                    />
-                    <Label htmlFor="save-template">Save as template for future use</Label>
+                <div className='mt-6 space-y-4'>
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox id='save-template' checked={state.document.saveAsTemplate} onCheckedChange={handleSaveAsTemplateChange} />
+                    <Label htmlFor='save-template'>Save as template for future use</Label>
                   </div>
-                  
+
                   {state.document.saveAsTemplate && (
-                    <div className="pl-6">
-                      <Label htmlFor="template-name">Template Name</Label>
-                      <Input 
-                        id="template-name" 
-                        className="mt-1" 
-                        placeholder="Enter template name"
+                    <div className='pl-6'>
+                      <Label htmlFor='template-name'>Template Name</Label>
+                      <Input
+                        id='template-name'
+                        className='mt-1'
+                        placeholder='Enter template name'
                         value={state.document.templateName || state.document.title}
                         onChange={handleTemplateNameChange}
                       />
@@ -183,44 +232,98 @@ export default function DocumentSelection() {
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="template" className="space-y-4">
-          {isLoading ? (
-            <div className="text-center py-8">Loading templates...</div>
-          ) : templates.length === 0 ? (
-            <div className="text-center py-8">
-              <p>No templates found. Upload a document and save it as a template first.</p>
+
+        <TabsContent value='template' className='space-y-4'>
+          <div className='relative'>
+            <div className='relative mb-4'>
+              <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4' />
+              <Input placeholder='Search templates...' className='pl-10' value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <Card 
-                  key={template.id} 
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplateId === template.id ? 'ring-2 ring-blue-500' : ''
-                  }`}
-                  onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium">{template.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {template.description || 'No description'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Created: {new Date(template.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs rounded px-2 py-1 uppercase font-medium">
-                        {extractFileExtension(template.templateFilePath) || 'DOC'}
-                      </div>
-                    </div>
-                  </CardContent>
+
+            {isLoading ? (
+              <div className='text-center py-8'>Loading templates...</div>
+            ) : filteredTemplates.length === 0 ? (
+              <div className='text-center py-8'>
+                <p>
+                  {searchQuery.trim() !== '' ? 'No templates match your search.' : 'No templates found. Upload a document and save it as a template first.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <Card className='border shadow-sm'>
+                  <ScrollArea className='h-[360px]'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Created</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentTemplates.map((template) => (
+                          <TableRow
+                            key={template.id}
+                            className={`cursor-pointer transition-all ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                            onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
+                          >
+                            <TableCell className='flex items-center gap-2'>
+                              {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 text-blue-500 flex-shrink-0' />}
+                              <span className={selectedTemplateId === template.id ? 'font-medium' : ''}>{template.name}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className='inline-flex items-center rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 text-xs font-medium uppercase'>
+                                {extractFileExtension(template.templateFilePath) || 'DOC'}
+                              </span>
+                            </TableCell>
+                            <TableCell className='max-w-[200px] truncate'>{template.description || 'No description'}</TableCell>
+                            <TableCell>{new Date(template.createdAt).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
                 </Card>
-              ))}
-            </div>
-          )}
+
+                {totalPages > 1 && (
+                  <div className='mt-4'>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+
+                        {pageNumbers.map((page, index) =>
+                          page === 'ellipsis' ? (
+                            <PaginationItem key={`ellipsis-${index}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          ) : (
+                            <PaginationItem key={page}>
+                              <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ),
+                        )}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
