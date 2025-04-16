@@ -21,7 +21,10 @@ import { toast } from '@/components/ui/use-toast';
 import { extractFileExtension } from '@/lib/file-utils';
 import { useEffect, useState } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
-import { Search, CheckCircle2 } from 'lucide-react';
+import { Search, CheckCircle2, FileText, Calendar } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { getFileTypeIcon } from '@/lib/file-utils';
+import Image from 'next/image';
 
 interface Template {
   id: string;
@@ -38,10 +41,11 @@ export default function DocumentSelection() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const isMobile = useIsMobile();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const templatesPerPage = 6;
+  const templatesPerPage = isMobile ? 4 : 6;
 
   // Fetch available templates
   useEffect(() => {
@@ -109,14 +113,24 @@ export default function DocumentSelection() {
       pageNumbers.push(i);
     }
   } else {
-    pageNumbers.push(1);
-
-    if (currentPage <= 3) {
-      pageNumbers.push(2, 3, 'ellipsis', totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      pageNumbers.push('ellipsis', totalPages - 2, totalPages - 1, totalPages);
+    if (isMobile) {
+      // Simpler pagination for mobile
+      pageNumbers.push(1);
+      if (currentPage !== 1 && currentPage !== totalPages) {
+        pageNumbers.push(currentPage);
+      }
+      if (totalPages > 1) {
+        pageNumbers.push(totalPages);
+      }
     } else {
-      pageNumbers.push('ellipsis', currentPage, 'ellipsis', totalPages);
+      pageNumbers.push(1);
+      if (currentPage <= 3) {
+        pageNumbers.push(2, 3, 'ellipsis', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push('ellipsis', totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pageNumbers.push('ellipsis', currentPage, 'ellipsis', totalPages);
+      }
     }
   }
 
@@ -174,6 +188,58 @@ export default function DocumentSelection() {
     });
   };
 
+  // Render mobile template card
+  const renderMobileTemplateCard = (template: Template) => {
+    const isSelected = selectedTemplateId === template.id;
+    const fileExt = extractFileExtension(template.templateFilePath) || 'DOC';
+    const fileType = fileExt.toUpperCase();
+    const displayType =
+      fileExt === 'pdf'
+        ? 'PDF Document'
+        : fileExt === 'doc' || fileExt === 'docx'
+          ? 'Word Document'
+          : fileExt === 'xls' || fileExt === 'xlsx'
+            ? 'Excel Spreadsheet'
+            : fileExt === 'ppt' || fileExt === 'pptx'
+              ? 'PowerPoint'
+              : fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png' || fileExt === 'tiff' || fileExt === 'tif'
+                ? 'Image'
+                : 'Document';
+    const iconData = getFileTypeIcon(displayType);
+
+    return (
+      <Card
+        key={template.id}
+        className={`mb-3 cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+        onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
+      >
+        <CardContent className='py-3 px-4'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              <div className='bg-blue-100 dark:bg-blue-900 p-2 rounded-md'>
+                {iconData.image ? (
+                  <Image src={iconData.image} alt={displayType} width={16} height={16} className={iconData.className} />
+                ) : iconData.icon ? (
+                  <iconData.icon className={iconData.className} />
+                ) : (
+                  <FileText className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+                )}
+              </div>
+              <div>
+                <div className='font-medium line-clamp-1'>{template.name}</div>
+                <div className='flex items-center text-xs text-muted-foreground mt-1'>
+                  <Calendar className='h-3 w-3 mr-1' />
+                  {new Date(template.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            {isSelected && <CheckCircle2 className='h-5 w-5 text-blue-500' />}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className='space-y-6'>
       <div>
@@ -182,7 +248,7 @@ export default function DocumentSelection() {
       </div>
 
       <Tabs defaultValue='upload' className='w-full'>
-        <TabsList className='grid grid-cols-2 mb-4'>
+        <TabsList className={`${isMobile ? 'flex flex-col space-y-2' : 'grid grid-cols-2'} mb-4`}>
           <TabsTrigger value='upload'>Upload New Document</TabsTrigger>
           <TabsTrigger value='template'>Use Template</TabsTrigger>
         </TabsList>
@@ -190,11 +256,6 @@ export default function DocumentSelection() {
         <TabsContent value='upload' className='space-y-6'>
           <Card>
             <CardContent className='pt-6'>
-              <div className='mb-4'>
-                <Label htmlFor='document-title'>Document Title</Label>
-                <Input id='document-title' className='mt-1' placeholder='Enter document title' value={state.document.title} onChange={handleTitleChange} />
-              </div>
-
               <div className='mt-4'>
                 <FileUpload
                   onUploadComplete={handleUploadComplete}
@@ -216,7 +277,7 @@ export default function DocumentSelection() {
                   </div>
 
                   {state.document.saveAsTemplate && (
-                    <div className='pl-6'>
+                    <div className={`${isMobile ? '' : 'pl-6'}`}>
                       <Label htmlFor='template-name'>Template Name</Label>
                       <Input
                         id='template-name'
@@ -250,41 +311,66 @@ export default function DocumentSelection() {
               </div>
             ) : (
               <>
-                <Card className='border shadow-sm'>
-                  <ScrollArea className='h-[360px]'>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Created</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentTemplates.map((template) => (
-                          <TableRow
-                            key={template.id}
-                            className={`cursor-pointer transition-all ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                            onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
-                          >
-                            <TableCell className='flex items-center gap-2'>
-                              {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 text-blue-500 flex-shrink-0' />}
-                              <span className={selectedTemplateId === template.id ? 'font-medium' : ''}>{template.name}</span>
-                            </TableCell>
-                            <TableCell>
-                              <span className='inline-flex items-center rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 text-xs font-medium uppercase'>
-                                {extractFileExtension(template.templateFilePath) || 'DOC'}
-                              </span>
-                            </TableCell>
-                            <TableCell className='max-w-[200px] truncate'>{template.description || 'No description'}</TableCell>
-                            <TableCell>{new Date(template.createdAt).toLocaleDateString()}</TableCell>
+                {isMobile ? (
+                  <div className='space-y-2'>{currentTemplates.map((template) => renderMobileTemplateCard(template))}</div>
+                ) : (
+                  <Card className='border shadow-sm'>
+                    <ScrollArea className='h-[360px]'>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Created</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {currentTemplates.map((template) => (
+                            <TableRow
+                              key={template.id}
+                              className={`cursor-pointer transition-all ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                              onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
+                            >
+                              <TableCell className='flex items-center gap-2'>
+                                {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 text-blue-500 flex-shrink-0' />}
+                                <span className={selectedTemplateId === template.id ? 'font-medium' : ''}>{template.name}</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className='flex items-center gap-2'>
+                                  {(() => {
+                                    const fileExt = extractFileExtension(template.templateFilePath) || 'DOC';
+                                    const displayType =
+                                      fileExt === 'pdf'
+                                        ? 'PDF Document'
+                                        : fileExt === 'doc' || fileExt === 'docx'
+                                          ? 'Word Document'
+                                          : fileExt === 'xls' || fileExt === 'xlsx'
+                                            ? 'Excel Spreadsheet'
+                                            : fileExt === 'ppt' || fileExt === 'pptx'
+                                              ? 'PowerPoint'
+                                              : fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png' || fileExt === 'tiff' || fileExt === 'tif'
+                                                ? 'Image'
+                                                : 'Document';
+                                    const iconData = getFileTypeIcon(displayType);
+                                    return iconData.image ? (
+                                      <Image src={iconData.image} alt={displayType} width={16} height={16} className={iconData.className} />
+                                    ) : iconData.icon ? (
+                                      <iconData.icon className={iconData.className} />
+                                    ) : null;
+                                  })()}
+                                  <span className='inline-flex items-center rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 text-xs font-medium uppercase'>
+                                    {extractFileExtension(template.templateFilePath) || 'DOC'}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{new Date(template.createdAt).toLocaleDateString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </Card>
+                )}
 
                 {totalPages > 1 && (
                   <div className='mt-4'>
@@ -297,19 +383,32 @@ export default function DocumentSelection() {
                           />
                         </PaginationItem>
 
-                        {pageNumbers.map((page, index) =>
-                          page === 'ellipsis' ? (
-                            <PaginationItem key={`ellipsis-${index}`}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          ) : (
-                            <PaginationItem key={page}>
-                              <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
-                                {page}
-                              </PaginationLink>
-                            </PaginationItem>
-                          ),
-                        )}
+                        {!isMobile
+                          ? pageNumbers.map((page, index) =>
+                              page === 'ellipsis' ? (
+                                <PaginationItem key={`ellipsis-${index}`}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              ) : (
+                                <PaginationItem key={page}>
+                                  <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              ),
+                            )
+                          : // Simplified pagination for mobile
+                            pageNumbers.map((page, index) => (
+                              <PaginationItem key={`page-${index}`}>
+                                {page === 'ellipsis' ? (
+                                  <PaginationEllipsis />
+                                ) : (
+                                  <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
+                                    {page}
+                                  </PaginationLink>
+                                )}
+                              </PaginationItem>
+                            ))}
 
                         <PaginationItem>
                           <PaginationNext
