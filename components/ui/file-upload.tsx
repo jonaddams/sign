@@ -285,8 +285,8 @@ export function FileUpload({
           <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-900/20">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <span className="font-medium text-green-800 dark:text-green-300">
-                File successfully uploaded
+              <span className="sm:font-xs font-medium text-green-800 dark:text-green-300">
+                Successfully uploaded
               </span>
             </div>
             <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
@@ -300,7 +300,7 @@ export function FileUpload({
                   checked={saveAsTemplate}
                   onCheckedChange={onSaveAsTemplateChange}
                 />
-                <Label htmlFor="save-template">
+                <Label htmlFor="save-template sm:font-xs">
                   Save as template for future use
                 </Label>
               </div>
