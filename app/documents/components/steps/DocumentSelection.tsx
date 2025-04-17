@@ -177,6 +177,7 @@ export default function DocumentSelection() {
       payload: {
         url: fileData.url,
         title: fileData.name,
+        fileSize: fileData.size || 0, // Store file size in the document state
       },
     });
 

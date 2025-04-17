@@ -52,8 +52,11 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
       const documentTitle = state.document.templateName || state.document.title;
       const fileUrl = state.document.url;
 
-      // Get file type and size from the URL
+      // Get file type from the URL
       const fileType = fileUrl.split(".").pop() || "";
+
+      // Get file size from state if available or use 0 as fallback
+      const fileSize = state.document.fileSize || 0;
 
       // Call the templates API to save the template
       const response = await fetch("/api/templates", {
@@ -65,6 +68,7 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
           name: documentTitle,
           file_url: fileUrl,
           file_type: fileType,
+          file_size: fileSize,
         }),
       });
 
@@ -121,7 +125,7 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8">
+    <div className="mx-auto w-full max-w-5xl px-0 py-8 sm:px-4">
       <StepIndicator
         currentStep={state.currentStep}
         totalSteps={state.totalSteps}
