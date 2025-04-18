@@ -1,20 +1,13 @@
-"use client";
+'use client';
 
-import { toast } from "@/components/ui/use-toast";
-import { useState } from "react";
-import {
-  DocumentFlowProvider,
-  useDocumentFlow,
-} from "../context/DocumentFlowContext";
-import NavigationControls from "./NavigationControls";
-import StepIndicator from "./StepIndicator";
+import { toast } from '@/components/ui/use-toast';
+import { useState } from 'react';
+import { DocumentFlowProvider, useDocumentFlow } from '../context/DocumentFlowContext';
+import NavigationControls from './NavigationControls';
+import StepIndicator from './StepIndicator';
 
 // This will be a wrapper component that includes both the provider and the flow UI
-export default function DocumentFlow({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DocumentFlow({ children }: { children: React.ReactNode }) {
   return (
     <DocumentFlowProvider>
       <DocumentFlowContent>{children}</DocumentFlowContent>
@@ -53,16 +46,16 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
       const fileUrl = state.document.url;
 
       // Get file type from the URL
-      const fileType = fileUrl.split(".").pop() || "";
+      const fileType = fileUrl.split('.').pop() || '';
 
       // Get file size from state if available or use 0 as fallback
       const fileSize = state.document.fileSize || 0;
 
       // Call the templates API to save the template
-      const response = await fetch("/api/templates", {
-        method: "POST",
+      const response = await fetch('/api/templates', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: documentTitle,
@@ -73,20 +66,20 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save template");
+        throw new Error('Failed to save template');
       }
 
       // Display success message
       toast({
-        title: "Template Saved",
-        description: "Your document has been saved as a template.",
+        title: 'Template Saved',
+        description: 'Your document has been saved as a template.',
       });
     } catch (error) {
-      console.error("Error saving template:", error);
+      console.error('Error saving template:', error);
       toast({
-        title: "Error",
-        description: "Failed to save the template. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save the template. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -98,11 +91,11 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
       try {
         setIsSubmitting(true);
         // Logic to submit the document - will implement in a later step
-        console.log("Document submission would happen here");
+        console.log('Document submission would happen here');
         // For now, just log the state
-        console.log("Document flow state:", state);
+        console.log('Document flow state:', state);
       } catch (error) {
-        console.error("Error submitting document:", error);
+        console.error('Error submitting document:', error);
       } finally {
         setIsSubmitting(false);
       }
@@ -113,27 +106,22 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
       }
 
       // Move to the next step
-      dispatch({ type: "SET_STEP", payload: state.currentStep + 1 });
+      dispatch({ type: 'SET_STEP', payload: state.currentStep + 1 });
     }
   };
 
   // Function to handle moving to the previous step
   const handleBack = () => {
     if (state.currentStep > 1) {
-      dispatch({ type: "SET_STEP", payload: state.currentStep - 1 });
+      dispatch({ type: 'SET_STEP', payload: state.currentStep - 1 });
     }
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-0 py-8 sm:px-4">
-      <StepIndicator
-        currentStep={state.currentStep}
-        totalSteps={state.totalSteps}
-      />
+    <div className='mx-auto w-full max-w-7xl px-0 py-8 sm:px-4'>
+      <StepIndicator currentStep={state.currentStep} totalSteps={state.totalSteps} />
 
-      <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-zinc-900">
-        {children}
-      </div>
+      <div className='mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-zinc-900'>{children}</div>
 
       <NavigationControls
         currentStep={state.currentStep}
