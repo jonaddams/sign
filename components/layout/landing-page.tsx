@@ -1,7 +1,8 @@
 'use client';
 import { DocumentPreview } from '@/components/ui/document-preview';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Clock, Edit3, FileText, Shield, TabletSmartphone, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, FileText, Shield, TabletSmartphone, Users } from 'lucide-react';
+import { NutrientLogo } from '@/components/icons';
 import Link from 'next/link';
 
 // Make sure the component is properly exported
@@ -12,9 +13,9 @@ const LandingPage = () => {
       <header className='border-b border-gray-200 dark:border-zinc-800'>
         <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex h-16 items-center justify-between'>
-            <div className='flex items-center gap-1'>
-              <Edit3 size={20} className='mr-1 text-xl text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' />
-              <span className='text-lg font-semibold text-gray-900 dark:text-white'>Sign</span>
+            <div className='flex items-center gap-3'>
+              <NutrientLogo className='h-6 w-6 text-gray-800 dark:text-gray-200' />
+              <span className='text-lg font-semibold text-gray-900 dark:text-white'>Nutrient Sign</span>
             </div>
 
             <div className='flex items-center gap-4'>
@@ -133,9 +134,9 @@ const LandingPage = () => {
           <div className='flex flex-col items-center justify-between md:flex-row'>
             <div className='flex items-center gap-1'>
               <div className='flex h-8 w-8 items-center justify-center rounded-md'>
-                <Edit3 size={20} className='mr-1 text-xl text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' />
+                <NutrientLogo className='h-6 w-6 text-gray-800 dark:text-gray-200' />
               </div>
-              <span className='text-lg font-semibold text-gray-900 dark:text-white'>Sign</span>
+              <span className='text-lg font-semibold text-gray-900 dark:text-white'>Nutrient Sign</span>
             </div>
             <p className='mt-4 text-sm text-gray-600 md:mt-0 dark:text-gray-300'>&copy; {new Date().getFullYear()} Sign. All rights reserved.</p>
           </div>

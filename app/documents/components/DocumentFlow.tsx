@@ -107,6 +107,9 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
 
       // Move to the next step
       dispatch({ type: 'SET_STEP', payload: state.currentStep + 1 });
+    } else {
+      // If we can't move forward, dispatch a custom event to trigger validation in the current step
+      window.dispatchEvent(new Event('beforeDocumentFlowNext'));
     }
   };
 
@@ -118,7 +121,7 @@ function DocumentFlowContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className='mx-auto w-full max-w-7xl px-0 py-8 sm:px-4'>
+    <div className='mx-auto w-full px-0 py-8 sm:px-4'>
       <StepIndicator currentStep={state.currentStep} totalSteps={state.totalSteps} />
 
       <div className='mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-zinc-900'>{children}</div>

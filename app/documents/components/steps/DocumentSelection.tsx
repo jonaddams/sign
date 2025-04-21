@@ -29,6 +29,7 @@ interface Template {
   createdAt: string;
   templateFilePath: string;
   description?: string;
+  size?: number;
 }
 
 export default function DocumentSelection() {
@@ -53,8 +54,14 @@ export default function DocumentSelection() {
         if (!response.ok) throw new Error('Failed to fetch templates');
 
         const data = await response.json();
-        setTemplates(data.templates || []);
-        setFilteredTemplates(data.templates || []);
+        // Make sure we capture the size information from the API response
+        const templatesWithSize = (data.templates || []).map((template: any) => ({
+          ...template,
+          size: template.size || template.file_size || undefined,
+        }));
+
+        setTemplates(templatesWithSize);
+        setFilteredTemplates(templatesWithSize);
       } catch (error) {
         console.error('Error fetching templates:', error);
         toast({
@@ -133,16 +140,32 @@ export default function DocumentSelection() {
 
   // Handle template selection
   const handleSelectTemplate = (templateId: string, templateUrl: string) => {
-    setSelectedTemplateId(templateId);
+    // If the template is already selected, unselect it
+    if (selectedTemplateId === templateId) {
+      setSelectedTemplateId(null);
 
-    dispatch({
-      type: 'SET_DOCUMENT',
-      payload: {
-        templateId,
-        url: templateUrl,
-        title: templates.find((t) => t.id === templateId)?.name || '',
-      },
-    });
+      // Clear the template from the document state
+      dispatch({
+        type: 'SET_DOCUMENT',
+        payload: {
+          templateId: undefined,
+          url: undefined,
+          title: '',
+        },
+      });
+    } else {
+      // Otherwise, select the new template
+      setSelectedTemplateId(templateId);
+
+      dispatch({
+        type: 'SET_DOCUMENT',
+        payload: {
+          templateId,
+          url: templateUrl,
+          title: templates.find((t) => t.id === templateId)?.name || '',
+        },
+      });
+    }
   };
 
   // Handle document upload completion
@@ -247,10 +270,16 @@ export default function DocumentSelection() {
 
       <Tabs defaultValue='upload' className='w-full'>
         <TabsList className={isMobile ? 'flex h-auto w-full flex-col space-y-2 py-2' : 'mb-4 grid grid-cols-2'}>
-          <TabsTrigger value='upload' className={`${isMobile ? 'mb-2 w-full' : ''} cursor-pointer`}>
+          <TabsTrigger
+            value='upload'
+            className={`${isMobile ? 'mb-2 w-full' : ''} cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400`}
+          >
             Upload New Document
           </TabsTrigger>
-          <TabsTrigger value='template' className={`${isMobile ? 'w-full' : ''} cursor-pointer`}>
+          <TabsTrigger
+            value='template'
+            className={`${isMobile ? 'w-full' : ''} cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400`}
+          >
             Use Template
           </TabsTrigger>
         </TabsList>
@@ -303,6 +332,7 @@ export default function DocumentSelection() {
                           <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Type</TableHead>
+                            <TableHead>Size</TableHead>
                             <TableHead>Created</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -313,9 +343,17 @@ export default function DocumentSelection() {
                               className={`cursor-pointer transition-all ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                               onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
                             >
-                              <TableCell className='flex items-center gap-2'>
-                                {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 flex-shrink-0 text-blue-500' />}
-                                <span className={selectedTemplateId === template.id ? 'font-medium' : ''}>{template.name}</span>
+                              <TableCell className='w-1/3'>
+                                <div className='flex items-center'>
+                                  <div className='flex-grow truncate mr-2'>
+                                    <span className={`${selectedTemplateId === template.id ? 'font-medium' : ''} truncate`} title={template.name}>
+                                      {template.name}
+                                    </span>
+                                  </div>
+                                  <div className='w-5 flex-shrink-0'>
+                                    {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 text-blue-500' />}
+                                  </div>
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <div className='flex items-center gap-2'>
@@ -344,6 +382,15 @@ export default function DocumentSelection() {
                                     {extractFileExtension(template.templateFilePath) || 'DOC'}
                                   </span>
                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                {template.size
+                                  ? template.size < 1024
+                                    ? `${template.size} B`
+                                    : template.size < 1024 * 1024
+                                      ? `${(template.size / 1024).toFixed(1)} KB`
+                                      : `${(template.size / (1024 * 1024)).toFixed(1)} MB`
+                                  : 'N/A'}
                               </TableCell>
                               <TableCell>{new Date(template.createdAt).toLocaleDateString()}</TableCell>
                             </TableRow>

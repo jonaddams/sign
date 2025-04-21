@@ -31,6 +31,24 @@ export default function RecipientConfig() {
     });
   }, [state.recipients, state.userWillSign, isOnlySigner, validateAttempt]);
 
+  // Check if the DocumentFlow component is attempting to navigate to the next step
+  // This will set validateAttempt to true when the Next button is clicked
+  useEffect(() => {
+    // Create an event handler for the Navigation Controls' Next button
+    const handleBeforeNextStep = () => {
+      if (state.currentStep === 2 && !validateRecipients()) {
+        setValidateAttempt(true);
+      }
+    };
+
+    // Listen for the custom event
+    window.addEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
+
+    return () => {
+      window.removeEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
+    };
+  }, [state.currentStep, state.recipients, state.userWillSign, isOnlySigner]);
+
   // Validate required recipient fields
   const validateRecipients = () => {
     // If user is the only signer, step is valid
@@ -50,9 +68,19 @@ export default function RecipientConfig() {
 
     // For cases where we have recipients
     // Check that all recipients have required fields filled
-    const allRecipientsValid = state.recipients.every(
-      (recipient) => recipient.name.trim() !== '' && recipient.email.trim() !== '' && isValidEmail(recipient.email),
-    );
+    const allRecipientsValid = state.recipients.every((recipient) => {
+      // Basic validation for name and email
+      const hasValidName = recipient.name.trim() !== '';
+      const hasValidEmail = recipient.email.trim() !== '' && isValidEmail(recipient.email);
+
+      // For signers, validate that a deadline date is selected
+      if (recipient.role === 'signer') {
+        return hasValidName && hasValidEmail && recipient.deadline !== undefined;
+      }
+
+      // For other roles (viewer, cc), only name and email are required
+      return hasValidName && hasValidEmail;
+    });
 
     return allRecipientsValid;
   };
@@ -354,8 +382,9 @@ export default function RecipientConfig() {
                           id={`deadline-${recipient.id}`}
                           date={recipient.deadline}
                           setDate={(date) => updateRecipient(recipient.id, 'deadline', date)}
-                          className='w-full'
+                          className={`w-full ${validateAttempt && !recipient.deadline ? 'border-red-500' : ''}`}
                         />
+                        {validateAttempt && !recipient.deadline && <p className='text-xs text-red-500 mt-1'>Deadline is required for signers</p>}
                       </div>
                     )}
 

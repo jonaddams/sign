@@ -10,7 +10,6 @@ import {
   Inbox,
   Menu,
   MessagesSquare,
-  PenTool,
   Receipt,
   SendHorizontal,
   Settings,
@@ -20,6 +19,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
+import { NutrientLogo } from '@/components/icons';
 import { Home } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -52,11 +52,11 @@ export default function Sidebar() {
         onClick={handleNavigation}
         className={`flex items-center rounded-md px-3 py-2 text-sm transition-colors ${
           isActive
-            ? 'bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-white'
+            ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-[#1F1F23] dark:hover:text-white'
         }`}
       >
-        <Icon className='mr-3 h-4 w-4 flex-shrink-0' />
+        <Icon className={`mr-3 h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
         {children}
         {highlight && !isActive && (
           <span className='ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white'>3</span>
@@ -80,10 +80,10 @@ export default function Sidebar() {
         <div className='flex h-full flex-col'>
           <Link href='/' className='flex h-16 items-center border-gray-200 px-6 dark:border-[#1F1F23]'>
             <div className='flex items-center gap-3'>
-              <div className='flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100'>
-                <PenTool className='h-5 w-5 text-white dark:text-zinc-900' />
+              <div className='flex h-8 w-8 items-center justify-center rounded-md'>
+                <NutrientLogo className='h-6 w-6 text-white dark:text-zinc-900' />
               </div>
-              <span className='text-lg font-semibold text-gray-900 hover:cursor-pointer dark:text-white'>Sign</span>
+              <span className='text-lg font-semibold text-gray-900 hover:cursor-pointer dark:text-white'>Nutrient Sign</span>
             </div>
           </Link>
 
