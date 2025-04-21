@@ -1,4 +1,5 @@
 import { File } from 'lucide-react';
+import { ImageIcon } from '@/components/icons';
 
 type FileTypeIcon = {
   icon?: React.ComponentType<any>;
@@ -82,8 +83,8 @@ export const getFileTypeIcon = (type: string): FileTypeIcon => {
       };
     case 'Image':
       return {
-        image: '/file-icons/image.svg',
-        className: 'h-4 w-4',
+        icon: ImageIcon,
+        className: 'h-4 w-4 text-current',
       };
     default:
       return {

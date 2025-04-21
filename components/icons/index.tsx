@@ -2,6 +2,9 @@
 
 import type { SVGProps } from 'react';
 import { useEffect, useState } from 'react';
+import { ImageIcon } from './image-icon';
+
+export { ImageIcon };
 
 export function GoogleIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
