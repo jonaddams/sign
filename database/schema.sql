@@ -109,7 +109,8 @@ CREATE TABLE "documents" (
 	"document_file_path" text NOT NULL,
 	"document_file_hash" text,
 	"size" integer,
-	"esign_compliant" boolean DEFAULT true
+	"esign_compliant" boolean DEFAULT true,
+	"expires_at" timestamp
 );
 
 CREATE TABLE "signature_requests" (

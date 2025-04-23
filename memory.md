@@ -12,6 +12,18 @@ This file serves as a memory document to maintain context throughout the develop
 - API endpoint requirements are identified
 - Implementation schedule is being followed according to plan
 
+## Current Status Update (April 23, 2025)
+
+- Project plan is fully documented
+- Component structure for the documents route has been designed and initial implementation is complete
+- DocumentFlowContext and basic multi-step navigation is implemented
+- Step 1 (Document Selection/Upload) with template saving functionality is complete
+- Step 2 (Recipient Configuration) with signer order functionality is implemented
+- Working on adding document expiration dates feature to DocumentSelection step
+- Database modifications for document expiration are in progress
+- API endpoint requirements are identified and being implemented
+- Implementation schedule is being followed according to plan
+
 ## Nutrient.io SDK Integration
 
 ### Key Features
@@ -22,7 +34,8 @@ This file serves as a memory document to maintain context throughout the develop
 
 3. **Digital Signatures**: Nutrient's API will be used for cryptographic digital signatures.
 
-4. **Co-Pilot Integration**: The Nutrient.io SDK includes an AI co-pilot that can be accessed by mentioning `@nutrient-copilot` within the application. This feature allows users to ask questions about document handling, signature requirements, or get assistance with using the application.
+4. **Co-Pilot Integration**: The Nutrient.io SDK includes an AI co-pilot that can be accessed by mentioning `@nutrient-copilot` within the application. This
+   feature allows users to ask questions about document handling, signature requirements, or get assistance with using the application.
 
 ## Implementation Notes
 
@@ -54,6 +67,7 @@ This file serves as a memory document to maintain context throughout the develop
    - Choose from existing templates
    - Upload a new document
    - Option to save new uploads as templates
+   - Set document expiration date
 
 2. **Recipient Configuration**
 
@@ -62,7 +76,7 @@ This file serves as a memory document to maintain context throughout the develop
    - Option for sender to also sign
    - Option to be the only signer
    - Set signing order (sequential or parallel)
-   - Set deadlines for signing
+   - Set deadlines for individual signers
 
 3. **Field Placement via Nutrient Viewer**
 
@@ -136,6 +150,17 @@ This file serves as a memory document to maintain context throughout the develop
 - Implement deadline setting for signatures
 - Ensure proper validation for recipient information
 
+### Today's Tasks (April 23, 2025)
+
+- Add document expiration date field to DocumentSelection component
+- Modify database schema to add expires_at column to documents table
+- Create migration for the new column
+- Implement API endpoints for managing document expiration
+- Complete validation for expiration dates
+- Create background job for processing expired documents
+- Update document status API to include expiration information
+- Ensure proper integration with the signer order functionality
+
 ### Resume Points
 
 - After completing the state management setup, we can pause and resume with the UI components
@@ -149,3 +174,32 @@ This file serves as a memory document to maintain context throughout the develop
 - Need to implement `DocumentFlowContext` before any step components
 - Need to implement `StepIndicator` and `NavigationControls` before working on individual steps
 - Field placement step depends on proper integration with Nutrient Viewer SDK
+
+## Feature Implementation Details
+
+### Signer Order Implementation
+
+The signer order feature allows documents to be signed in sequential order (one after another) or in parallel (all at once). This feature is already supported
+by the current database structure:
+
+- The `document_participants` table has a `signing_order` column (integer field)
+- The UI for configuring signing order is implemented in `RecipientConfig.tsx`
+- Sequential signing requires:
+  - Only sending to the first signer initially
+  - Upon completion, sending to the next signer in order
+  - Tracking progress through the signing workflow
+
+### Document Expiration Implementation
+
+Document expiration allows setting a date after which the document can no longer be signed. Implementation includes:
+
+- Adding an `expires_at` timestamp column to the `documents` table
+- Adding expiration date field to the Document Selection UI
+- Creating validation to ensure expiration date is after all signer deadlines
+- Implementing backend logic to:
+  - Check document status against expiration date
+  - Mark documents as expired when the date passes
+  - Prevent further signing of expired documents
+  - Send notifications when documents are approaching expiration
+
+Both features enhance the document signing workflow and improve user control over the signing process.

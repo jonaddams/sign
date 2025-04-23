@@ -18,10 +18,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { extractFileExtension, getFileTypeIcon } from '@/lib/file-utils';
-import { Calendar, CheckCircle2, FileText, Search } from 'lucide-react';
+import { Calendar, CheckCircle2, FileText, Search, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
+import { ReactDatePickerCustom } from '@/components/ui/react-datepicker';
+import { Label } from '@/components/ui/label';
 
 interface Template {
   id: string;
@@ -185,6 +187,14 @@ export default function DocumentSelection() {
     });
   };
 
+  // Handle document expiration date change
+  const handleExpirationDateChange = (date: Date | undefined) => {
+    dispatch({
+      type: 'SET_DOCUMENT',
+      payload: { expiresAt: date },
+    });
+  };
+
   // Handle document title change
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({
@@ -301,6 +311,32 @@ export default function DocumentSelection() {
                   onSaveAsTemplateChange={handleSaveAsTemplateChange}
                 />
               </div>
+
+              {state.document.url && (
+                <div className='mt-6 border-t pt-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='document-title'>Document Title</Label>
+                    <Input id='document-title' value={state.document.title} onChange={handleTitleChange} placeholder='Enter document title' />
+                  </div>
+
+                  <div className='mt-4 space-y-2'>
+                    <div className='flex items-center'>
+                      <Label htmlFor='document-expiration'>Document Expiration Date</Label>
+                      <span className='ml-1 text-muted-foreground text-xs'>(Optional)</span>
+                    </div>
+                    <ReactDatePickerCustom
+                      id='document-expiration'
+                      date={state.document.expiresAt}
+                      setDate={handleExpirationDateChange}
+                      placeholder='Set document expiration date'
+                    />
+                    <div className='text-xs text-muted-foreground flex items-center items-start'>
+                      <Clock className='h-3 w-3 mr-1 sm:mt-1' />
+                      If set, the document cannot be signed after this date
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -398,6 +434,32 @@ export default function DocumentSelection() {
                         </TableBody>
                       </Table>
                     </ScrollArea>
+                  </Card>
+                )}
+
+                {/* Document Expiration Date section for templates */}
+                {selectedTemplateId && (
+                  <Card className='mt-4'>
+                    <CardContent className='pt-6'>
+                      <div className='space-y-4'>
+                        <div className='space-y-2'>
+                          <div className='flex items-center'>
+                            <Label htmlFor='template-document-expiration'>Document Expiration Date</Label>
+                            <span className='ml-1 text-muted-foreground text-xs'>(Optional)</span>
+                          </div>
+                          <ReactDatePickerCustom
+                            id='template-document-expiration'
+                            date={state.document.expiresAt}
+                            setDate={handleExpirationDateChange}
+                            placeholder='Set document expiration date'
+                          />
+                          <div className='text-sm text-muted-foreground flex items-center'>
+                            <Clock className='h-3 w-3 mr-1 sm:mt-1' />
+                            If set, the document cannot be signed after this date
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
                   </Card>
                 )}
 

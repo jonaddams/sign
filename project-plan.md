@@ -25,7 +25,10 @@
 
 ## Executive Summary
 
-Sign is a comprehensive electronic and digital signature application designed to streamline document workflows for businesses and individuals. The platform allows users to upload, send, sign, and manage documents securely while meeting legal requirements for electronic signatures across various jurisdictions. Our solution will rival established products like DocuSign, PandaDocs, and SignNow by offering competitive features with a modern, user-friendly interface, leveraging Nutrient.io's advanced document viewing and signing technology.
+Sign is a comprehensive electronic and digital signature application designed to streamline document workflows for businesses and individuals. The platform
+allows users to upload, send, sign, and manage documents securely while meeting legal requirements for electronic signatures across various jurisdictions. Our
+solution will rival established products like DocuSign, PandaDocs, and SignNow by offering competitive features with a modern, user-friendly interface,
+leveraging Nutrient.io's advanced document viewing and signing technology.
 
 ## Project Overview
 
@@ -184,6 +187,8 @@ The database schema is well-structured around the following key entities:
 - [ ] Basic field placement (date, signature, text) (Planned start: April 27, 2025)
 - [ ] Document completion certificate (Planned start: May 10, 2025)
 - [ ] Nutrient-Copilot integration for signature guidance (Ongoing throughout Phase 2)
+- [ ] Signer order implementation (sequential vs. parallel) (In progress - April 23, 2025)
+- [ ] Document expiration dates (Starting April 23, 2025)
 
 ### Phase 3: Advanced Features (3 Weeks)
 
@@ -250,7 +255,8 @@ The database schema is well-structured around the following key entities:
 
 ## Current Focus: Documents Route Implementation
 
-The `/documents` route is a critical part of our application, providing the core document signing workflow functionality. We will implement a multi-step interface that guides users through the entire process.
+The `/documents` route is a critical part of our application, providing the core document signing workflow functionality. We will implement a multi-step
+interface that guides users through the entire process.
 
 ### Multi-Step Flow Structure
 
@@ -275,7 +281,8 @@ The `/documents` route is a critical part of our application, providing the core
 - Checkbox for sender to also sign the document
 - Radio button option to be the only signer
 - Configuration for signing order (sequential or parallel)
-- Date picker for signing deadlines
+- Date picker for signing deadlines for individual signers
+- Validation for required recipient information
 
 ### Step 3: Field Placement
 
@@ -302,6 +309,7 @@ The `/documents` route is a critical part of our application, providing the core
 - Final document preview showing all placed fields
 - Summary of recipients and their roles
 - Summary of email subject and message
+- Document expiration date setting
 - Send button with confirmation dialog
 - Option to save as draft for later completion
 
@@ -549,6 +557,9 @@ The implementation will follow this component structure:
    - Build `DocumentSelection.tsx` component
    - Integrate with existing file upload functionality
    - Implement `RecipientConfig.tsx` component
+   - Add document expiration date field to DocumentSelection
+   - Finalize signer order implementation (sequential vs. parallel)
+   - Add database column for document expiration
 3. **Week 3 (April 30-May 6)**: Integrate Nutrient Viewer and implement field placement
    - Implement `FieldPlacement.tsx` component
    - Integrate with Nutrient.io SDK for document viewing
@@ -609,12 +620,10 @@ The following API endpoints need to be implemented to support the workflow:
   - POST: Add recipients to a document
   - GET: Get recipients for a document
 
+/api/documents/[id]/expiration
+  - POST: Set document expiration date
+  - DELETE: Remove document expiration
+
 /api/documents/[id]/send
   - POST: Send the document to recipients
 ```
-
-### Dependencies
-
-- Need to integrate properly with Nutrient.io Web SDK for document viewing
-- Need to ensure proper authentication is maintained throughout the flow
-- Email sending functionality requires SendGrid integration

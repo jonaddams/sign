@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { HelpCircle, Plus, Trash2, User } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DatePicker } from '@/components/ui/date-picker';
+// Replace the DatePicker import with ReactDatePickerCustom
+import { ReactDatePickerCustom } from '@/components/ui/react-datepicker';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function RecipientConfig() {
@@ -73,12 +74,7 @@ export default function RecipientConfig() {
       const hasValidName = recipient.name.trim() !== '';
       const hasValidEmail = recipient.email.trim() !== '' && isValidEmail(recipient.email);
 
-      // For signers, validate that a deadline date is selected
-      if (recipient.role === 'signer') {
-        return hasValidName && hasValidEmail && recipient.deadline !== undefined;
-      }
-
-      // For other roles (viewer, cc), only name and email are required
+      // Deadline is no longer required for individual recipients
       return hasValidName && hasValidEmail;
     });
 
@@ -236,17 +232,18 @@ export default function RecipientConfig() {
               )}
             </div>
 
-            {/* Signing order selection */}
-            {(state.recipients.length > 1 || (state.recipients.length === 1 && state.userWillSign)) && (
+            {/* Signing order selection - shown whenever there are multiple recipients or
+                when there's a single recipient and the user will also sign */}
+            {state.recipients.length > 1 && (
               <div className='space-y-2 border-t pt-4'>
-                <Label htmlFor='signing-order' className='font-medium'>
+                <Label htmlFor='signing-order' className='text-base font-medium'>
                   Signing Order
                 </Label>
                 <RadioGroup
                   id='signing-order'
                   value={state.signingOrder}
                   onValueChange={(value) => setSigningOrder(value as 'sequential' | 'parallel')}
-                  className='flex flex-col space-y-2'
+                  className='flex flex-col space-y-2 mt-2'
                 >
                   <div className='flex items-center space-x-2'>
                     <RadioGroupItem value='sequential' id='sequential' />
@@ -372,21 +369,6 @@ export default function RecipientConfig() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {recipient.role === 'signer' && (
-                      <div className={`${isMobile ? 'mt-2' : 'w-[180px]'}`}>
-                        <Label htmlFor={`deadline-${recipient.id}`} className='sr-only'>
-                          Signing Deadline
-                        </Label>
-                        <DatePicker
-                          id={`deadline-${recipient.id}`}
-                          date={recipient.deadline}
-                          setDate={(date) => updateRecipient(recipient.id, 'deadline', date)}
-                          className={`w-full ${validateAttempt && !recipient.deadline ? 'border-red-500' : ''}`}
-                        />
-                        {validateAttempt && !recipient.deadline && <p className='text-xs text-red-500 mt-1'>Deadline is required for signers</p>}
-                      </div>
-                    )}
 
                     {!isMobile && (
                       <div className='flex items-center justify-center flex-shrink-0'>

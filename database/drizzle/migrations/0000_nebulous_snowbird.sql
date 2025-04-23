@@ -2,6 +2,53 @@ CREATE TYPE "public"."document_access_level" AS ENUM('VIEWER', 'EDITOR', 'SIGNER
 CREATE TYPE "public"."document_status" AS ENUM('DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'DECLINED');--> statement-breakpoint
 CREATE TYPE "public"."signature_status" AS ENUM('PENDING', 'SIGNED', 'DECLINED');--> statement-breakpoint
 CREATE TYPE "public"."signature_type" AS ENUM('ELECTRONIC', 'DIGITAL');--> statement-breakpoint
+CREATE TABLE "account" (
+	"userId" text NOT NULL,
+	"type" text NOT NULL,
+	"provider" text NOT NULL,
+	"providerAccountId" text NOT NULL,
+	"refresh_token" text,
+	"access_token" text,
+	"expires_at" integer,
+	"token_type" text,
+	"scope" text,
+	"id_token" text,
+	"session_state" text
+);
+--> statement-breakpoint
+CREATE TABLE "authenticator" (
+	"credentialID" text NOT NULL,
+	"userId" text NOT NULL,
+	"providerAccountId" text NOT NULL,
+	"credentialPublicKey" text NOT NULL,
+	"counter" integer NOT NULL,
+	"credentialDeviceType" text NOT NULL,
+	"credentialBackedUp" boolean NOT NULL,
+	"transports" text,
+	CONSTRAINT "authenticator_credentialID_unique" UNIQUE("credentialID")
+);
+--> statement-breakpoint
+CREATE TABLE "session" (
+	"sessionToken" text PRIMARY KEY NOT NULL,
+	"userId" text NOT NULL,
+	"expires" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "user" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text,
+	"email" text,
+	"emailVerified" timestamp,
+	"image" text,
+	CONSTRAINT "user_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
+CREATE TABLE "verificationToken" (
+	"identifier" text NOT NULL,
+	"token" text NOT NULL,
+	"expires" timestamp NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "document_annotations" (
 	"id" text PRIMARY KEY NOT NULL,
 	"document_id" text NOT NULL,
@@ -62,7 +109,8 @@ CREATE TABLE "documents" (
 	"document_file_path" text NOT NULL,
 	"document_file_hash" text,
 	"size" integer,
-	"esign_compliant" boolean DEFAULT true
+	"esign_compliant" boolean DEFAULT true,
+	"expires_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "signature_requests" (
@@ -77,6 +125,9 @@ CREATE TABLE "signature_requests" (
 	"signature_certificate_path" text
 );
 --> statement-breakpoint
+ALTER TABLE "account" ADD CONSTRAINT "account_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "authenticator" ADD CONSTRAINT "authenticator_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session" ADD CONSTRAINT "session_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "document_annotations" ADD CONSTRAINT "document_annotations_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "document_annotations" ADD CONSTRAINT "document_annotations_creator_id_user_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "document_audit_log" ADD CONSTRAINT "document_audit_log_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

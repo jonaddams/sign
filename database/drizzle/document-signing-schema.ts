@@ -46,6 +46,9 @@ export const documents = pgTable('documents', {
   size: integer('size'),
 
   esignCompliant: boolean('esign_compliant').default(true),
+
+  // Document expiration timestamp
+  expiresAt: timestamp('expires_at', { mode: 'date' }),
 });
 
 // Document Participants Table
