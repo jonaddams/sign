@@ -13,6 +13,7 @@ import { extractFileExtension, getFileTypeDisplay, getFileTypeIcon } from '@/lib
 import { Download, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Template {
   id: string;
@@ -56,6 +57,7 @@ export default function TemplatesPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<{ url: string; id: string; isOpen: boolean } | null>(null);
+  const isMobile = useIsMobile();
 
   // Fetch templates on page load
   useEffect(() => {
@@ -289,7 +291,7 @@ export default function TemplatesPage() {
         )}
 
         <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
-          <CardContent className='p-0'>
+          <CardContent className={isMobile ? 'p-0 sm:p-0' : 'p-0'}>
             {isLoading ? (
               <div className='flex justify-center items-center p-8'>
                 <p className='text-zinc-500'>Loading templates...</p>
@@ -298,7 +300,70 @@ export default function TemplatesPage() {
               <div className='flex justify-center items-center p-8'>
                 <p className='text-zinc-500'>No templates found. Upload a template to get started.</p>
               </div>
+            ) : isMobile ? (
+              // Mobile card view layout
+              <div className='p-4 space-y-3'>
+                {templates.map((template) => (
+                  <Card key={template.id} className='border border-zinc-200 dark:border-zinc-700'>
+                    <CardContent className='p-3'>
+                      <div className='flex'>
+                        {/* Left column: File type icon aligned at top */}
+                        <div className='mr-3 self-start'>
+                          <div className='rounded-md bg-blue-100 p-2 dark:bg-blue-900 flex-shrink-0'>
+                            {(() => {
+                              const iconData = getFileTypeIcon(template.type);
+                              return iconData.image ? (
+                                <Image src={iconData.image} alt={template.type} width={16} height={16} className={iconData.className} />
+                              ) : iconData.icon ? (
+                                <iconData.icon className={`h-4 w-4 text-blue-600 dark:text-blue-400`} />
+                              ) : null;
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Right column: Two rows */}
+                        <div className='flex-1 flex flex-col'>
+                          {/* 1st row: File name */}
+                          <div className='font-medium text-sm mb-2'>{template.name}</div>
+
+                          {/* 2nd row: File size and action buttons */}
+                          <div className='flex justify-between items-center'>
+                            <div className='text-xs text-muted-foreground'>{template.size}</div>
+                            <div className='flex gap-2'>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                onClick={() => handlePreview(template)}
+                              >
+                                <Eye className='h-3.5 w-3.5' />
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                onClick={() => handleDownload(template)}
+                              >
+                                <Download className='h-3.5 w-3.5' />
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 text-red-500 dark:text-red-400'
+                                onClick={() => handleDelete(template)}
+                              >
+                                <Trash2 className='h-3.5 w-3.5' />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
+              // Desktop table view layout
               <Table>
                 <TableHeader>
                   <TableRow>
