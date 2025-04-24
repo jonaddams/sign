@@ -260,7 +260,11 @@ export default function DocumentSelection() {
                 <div className={`line-clamp-1 font-medium ${isMobile ? 'text-sm' : ''}`}>{template.name}</div>
                 <div className='text-muted-foreground mt-1 flex items-center text-xs'>
                   <Calendar className='mr-1 h-3 w-3' />
-                  {new Date(template.createdAt).toLocaleDateString()}
+                  {new Date(template.createdAt).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
                 </div>
               </div>
             </div>
@@ -428,7 +432,13 @@ export default function DocumentSelection() {
                                       : `${(template.size / (1024 * 1024)).toFixed(1)} MB`
                                   : 'N/A'}
                               </TableCell>
-                              <TableCell>{new Date(template.createdAt).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                {new Date(template.createdAt).toLocaleDateString('en-GB', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

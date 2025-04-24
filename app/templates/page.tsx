@@ -97,9 +97,9 @@ export default function TemplatesPage() {
             name: template.name,
             type: displayType,
             size: formattedSize,
-            modified: new Date(template.createdAt).toLocaleDateString('en-US', {
+            modified: new Date(template.createdAt).toLocaleDateString('en-GB', {
+              day: '2-digit',
               month: 'short',
-              day: 'numeric',
               year: 'numeric',
             }),
             url: template.templateFilePath,
