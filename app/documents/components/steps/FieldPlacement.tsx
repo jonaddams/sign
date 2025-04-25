@@ -208,17 +208,19 @@ export default function FieldPlacement() {
       {isMobile ? (
         // Mobile Layout - Vertical with fields at top
         <div className='flex flex-col space-y-4'>
-          {/* Horizontal field selector for mobile */}
-          <Card className='border border-gray-200 dark:border-gray-700'>
-            <CardContent className='py-4'>
-              <h3 className='font-medium mb-3 text-sm'>Available Fields</h3>
-              <div className='grid grid-cols-3 gap-2'>
-                <DraggableField icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
-                <DraggableField icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
-                <DraggableField icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Horizontal field selector for mobile - now sticky */}
+          <div className="sticky top-0 z-10">
+            <Card className='border border-gray-200 dark:border-gray-700'>
+              <CardContent className='py-4'>
+                <h3 className='font-medium mb-3 text-sm'>Available Fields</h3>
+                <div className='grid grid-cols-3 gap-2'>
+                  <DraggableField icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
+                  <DraggableField icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
+                  <DraggableField icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Document viewer for mobile - takes remaining height */}
           <Card className='border border-gray-200 dark:border-gray-700 overflow-hidden'>
