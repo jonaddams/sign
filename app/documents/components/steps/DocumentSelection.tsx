@@ -260,7 +260,7 @@ export default function DocumentSelection() {
                 <div className={`line-clamp-1 font-medium ${isMobile ? 'text-sm' : ''}`}>{template.name}</div>
                 <div className='text-muted-foreground mt-1 flex items-center text-xs'>
                   <Calendar className='mr-1 h-3 w-3' />
-                  {new Date(template.createdAt).toLocaleDateString('en-GB', {
+                  {new Date(template.createdAt).toLocaleDateString('en-US', {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',
@@ -334,7 +334,7 @@ export default function DocumentSelection() {
                       setDate={handleExpirationDateChange}
                       placeholder='Set document expiration date'
                     />
-                    <div className='text-xs text-muted-foreground flex items-center items-start'>
+                    <div className='text-xs text-muted-foreground flex items-center items-start items-start'>
                       <Clock className='h-3 w-3 mr-1 sm:mt-1' />
                       If set, the document cannot be signed after this date
                     </div>
@@ -433,7 +433,7 @@ export default function DocumentSelection() {
                                   : 'N/A'}
                               </TableCell>
                               <TableCell>
-                                {new Date(template.createdAt).toLocaleDateString('en-GB', {
+                                {new Date(template.createdAt).toLocaleDateString('en-US', {
                                   day: '2-digit',
                                   month: 'short',
                                   year: 'numeric',
@@ -463,8 +463,8 @@ export default function DocumentSelection() {
                             setDate={handleExpirationDateChange}
                             placeholder='Set document expiration date'
                           />
-                          <div className='text-sm text-muted-foreground flex items-center'>
-                            <Clock className='h-3 w-3 mr-1 sm:mt-1' />
+                          <div className='text-sm text-muted-foreground flex items-center items-start'>
+                            <Clock className='h-3 w-3 mr-2 mt-1' />
                             If set, the document cannot be signed after this date
                           </div>
                         </div>
