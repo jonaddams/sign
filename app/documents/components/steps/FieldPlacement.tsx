@@ -12,12 +12,21 @@ interface DraggableFieldProps {
   label: string;
   type: string;
   compact?: boolean;
+  onMobileDragStart?: (type: string) => void;
 }
 
-const DraggableField = ({ icon, label, type, compact = false }: DraggableFieldProps) => {
+const DraggableField = ({ icon, label, type, compact = false, onMobileDragStart }: DraggableFieldProps) => {
   // Function to handle drag start
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('fieldType', type);
+  };
+
+  // Touch event handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Call the mobile drag start handler
+    if (onMobileDragStart) {
+      onMobileDragStart(type);
+    }
   };
 
   if (compact) {
@@ -26,6 +35,7 @@ const DraggableField = ({ icon, label, type, compact = false }: DraggableFieldPr
         className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 cursor-move hover:border-blue-500 hover:shadow-sm dark:bg-zinc-800 dark:border-zinc-700'
         draggable
         onDragStart={handleDragStart}
+        onTouchStart={handleTouchStart}
       >
         <div className='text-blue-500 mb-1'>{icon}</div>
         <span className='text-xs font-medium'>{label}</span>
@@ -38,6 +48,7 @@ const DraggableField = ({ icon, label, type, compact = false }: DraggableFieldPr
       className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 cursor-move hover:border-blue-500 hover:shadow-sm dark:bg-zinc-800 dark:border-zinc-700'
       draggable
       onDragStart={handleDragStart}
+      onTouchStart={handleTouchStart}
     >
       <div className='mr-3 text-blue-500'>{icon}</div>
       <span className='text-sm font-medium'>{label}</span>
@@ -55,6 +66,70 @@ export default function FieldPlacement() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
+  
+  // States for mobile drag and drop
+  const [activeMobileField, setActiveMobileField] = useState<string | null>(null);
+  const [fieldPreview, setFieldPreview] = useState<{ x: number; y: number; visible: boolean }>({
+    x: 0,
+    y: 0,
+    visible: false,
+  });
+
+  // Handle mobile touch events
+  const handleMobileFieldSelect = (fieldType: string) => {
+    setActiveMobileField(fieldType);
+    // Start following touch movement
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    // Prevent scrolling while dragging
+    e.preventDefault();
+    
+    if (activeMobileField) {
+      const touch = e.touches[0];
+      setFieldPreview({
+        x: touch.clientX,
+        y: touch.clientY,
+        visible: true,
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    // Clean up event listeners
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
+    
+    if (activeMobileField && fieldPreview.visible) {
+      // Check if touch ended over the document viewer
+      const viewerElement = mobileContainerRef.current;
+      if (viewerElement) {
+        const viewerRect = viewerElement.getBoundingClientRect();
+        const touch = e.changedTouches[0];
+        
+        if (
+          touch.clientX >= viewerRect.left &&
+          touch.clientX <= viewerRect.right &&
+          touch.clientY >= viewerRect.top &&
+          touch.clientY <= viewerRect.bottom
+        ) {
+          // Convert touch coordinates to viewer coordinates
+          const x = touch.clientX - viewerRect.left;
+          const y = touch.clientY - viewerRect.top;
+          
+          // Place the field at these coordinates
+          console.log(`Placed ${activeMobileField} field at x=${Math.round(x)}, y=${Math.round(y)}`);
+          alert(`Added ${activeMobileField} field at x=${Math.round(x)}, y=${Math.round(y)}`);
+        }
+      }
+    }
+    
+    // Reset states
+    setActiveMobileField(null);
+    setFieldPreview({ x: 0, y: 0, visible: false });
+  };
 
   // Handle mounting
   useEffect(() => {
@@ -214,9 +289,27 @@ export default function FieldPlacement() {
               <CardContent className='py-4'>
                 <h3 className='font-medium mb-3 text-sm'>Available Fields</h3>
                 <div className='grid grid-cols-3 gap-2'>
-                  <DraggableField icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
-                  <DraggableField icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
-                  <DraggableField icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
+                  <DraggableField 
+                    icon={<Signature className='h-4 w-4' />} 
+                    label='Signature' 
+                    type='signature' 
+                    compact={true} 
+                    onMobileDragStart={handleMobileFieldSelect} 
+                  />
+                  <DraggableField 
+                    icon={<Edit className='h-4 w-4' />} 
+                    label='Initials' 
+                    type='initials' 
+                    compact={true} 
+                    onMobileDragStart={handleMobileFieldSelect} 
+                  />
+                  <DraggableField 
+                    icon={<CalendarDays className='h-4 w-4' />} 
+                    label='Date' 
+                    type='date' 
+                    compact={true} 
+                    onMobileDragStart={handleMobileFieldSelect} 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -240,6 +333,24 @@ export default function FieldPlacement() {
               <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' onDrop={handleDrop} onDragOver={handleDragOver} />
             </CardContent>
           </Card>
+
+          {/* Field preview that follows touch on mobile */}
+          {mounted && fieldPreview.visible && (
+            <div
+              className="fixed z-50 pointer-events-none"
+              style={{
+                left: fieldPreview.x - 25,
+                top: fieldPreview.y - 25,
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              <div className="w-16 h-16 rounded-md bg-blue-100 border-2 border-blue-500 flex items-center justify-center shadow-lg">
+                {activeMobileField === 'signature' && <Signature className="h-8 w-8 text-blue-500" />}
+                {activeMobileField === 'initials' && <Edit className="h-8 w-8 text-blue-500" />}
+                {activeMobileField === 'date' && <CalendarDays className="h-8 w-8 text-blue-500" />}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         // Desktop Layout - Horizontal with sidebar
