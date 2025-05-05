@@ -20,6 +20,7 @@
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.0.1",
     "@neondatabase/serverless": "^1.0.0",
+    "@nutrient-sdk/viewer": "^1.2.0",
     "@prisma/client": "^6.6.0",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",

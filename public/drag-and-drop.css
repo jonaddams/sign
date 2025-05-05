@@ -1,0 +1,30 @@
+/* PSPDFKit Overrides */
+.PSPDFKit-Form-Creator-Toolbar,
+.PSPDFKit-Form-Creator-Popover {
+  display: none !important;
+}
+
+/* Custom Renderers */
+.custom-signature-label {
+  background: #f0f3f9;
+  border: 1px solid #000 !important;
+  /* border: 1px solid #5e5ceb !important; */
+  color: #000;
+  display: flex;
+  font-size: 11px;
+  padding-left: 5px;
+  position: absolute;
+  text-align: left;
+  top: 0;
+  width: 100%;
+}
+
+.custom-signature-icon {
+  display: block;
+  height: auto;
+  left: 5px;
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  width: 17px;
+}

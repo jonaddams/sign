@@ -4,38 +4,32 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Signature, CalendarDays, Edit } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-interface DraggableFieldProps {
+function closestByClass(el: any, className: string): any {
+  return el && el.classList && el.classList.contains(className) ? el : el ? closestByClass(el.parentNode, className) : null;
+}
+
+interface FieldOptionProps {
   icon: React.ReactNode;
   label: string;
   type: string;
   compact?: boolean;
-  onMobileDragStart?: (type: string) => void;
 }
 
-const DraggableField = ({ icon, label, type, compact = false, onMobileDragStart }: DraggableFieldProps) => {
-  // Function to handle drag start
+const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
+  // Handle drag start to set the field type data
   const handleDragStart = (e: React.DragEvent) => {
+    console.log('Started dragging field:', type);
     e.dataTransfer.setData('fieldType', type);
-  };
-
-  // Touch event handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Call the mobile drag start handler
-    if (onMobileDragStart) {
-      onMobileDragStart(type);
-    }
   };
 
   if (compact) {
     return (
       <div
-        className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 cursor-move hover:border-blue-500 hover:shadow-sm dark:bg-zinc-800 dark:border-zinc-700'
+        className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
         draggable
         onDragStart={handleDragStart}
-        onTouchStart={handleTouchStart}
       >
         <div className='text-blue-500 mb-1'>{icon}</div>
         <span className='text-xs font-medium'>{label}</span>
@@ -45,10 +39,9 @@ const DraggableField = ({ icon, label, type, compact = false, onMobileDragStart 
 
   return (
     <div
-      className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 cursor-move hover:border-blue-500 hover:shadow-sm dark:bg-zinc-800 dark:border-zinc-700'
+      className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
       draggable
       onDragStart={handleDragStart}
-      onTouchStart={handleTouchStart}
     >
       <div className='mr-3 text-blue-500'>{icon}</div>
       <span className='text-sm font-medium'>{label}</span>
@@ -57,7 +50,7 @@ const DraggableField = ({ icon, label, type, compact = false, onMobileDragStart 
 };
 
 export default function FieldPlacement() {
-  const { state, dispatch } = useDocumentFlow();
+  const { state } = useDocumentFlow();
   const desktopContainerRef = useRef<HTMLDivElement>(null);
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const [isViewerLoaded, setIsViewerLoaded] = useState(false);
@@ -66,70 +59,10 @@ export default function FieldPlacement() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  
-  // States for mobile drag and drop
-  const [activeMobileField, setActiveMobileField] = useState<string | null>(null);
-  const [fieldPreview, setFieldPreview] = useState<{ x: number; y: number; visible: boolean }>({
-    x: 0,
-    y: 0,
-    visible: false,
-  });
+  const viewerInstanceRef = useRef<any>(null);
 
-  // Handle mobile touch events
-  const handleMobileFieldSelect = (fieldType: string) => {
-    setActiveMobileField(fieldType);
-    // Start following touch movement
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
-    // Prevent scrolling while dragging
-    e.preventDefault();
-    
-    if (activeMobileField) {
-      const touch = e.touches[0];
-      setFieldPreview({
-        x: touch.clientX,
-        y: touch.clientY,
-        visible: true,
-      });
-    }
-  };
-
-  const handleTouchEnd = (e: TouchEvent) => {
-    // Clean up event listeners
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleTouchEnd);
-    
-    if (activeMobileField && fieldPreview.visible) {
-      // Check if touch ended over the document viewer
-      const viewerElement = mobileContainerRef.current;
-      if (viewerElement) {
-        const viewerRect = viewerElement.getBoundingClientRect();
-        const touch = e.changedTouches[0];
-        
-        if (
-          touch.clientX >= viewerRect.left &&
-          touch.clientX <= viewerRect.right &&
-          touch.clientY >= viewerRect.top &&
-          touch.clientY <= viewerRect.bottom
-        ) {
-          // Convert touch coordinates to viewer coordinates
-          const x = touch.clientX - viewerRect.left;
-          const y = touch.clientY - viewerRect.top;
-          
-          // Place the field at these coordinates
-          console.log(`Placed ${activeMobileField} field at x=${Math.round(x)}, y=${Math.round(y)}`);
-          alert(`Added ${activeMobileField} field at x=${Math.round(x)}, y=${Math.round(y)}`);
-        }
-      }
-    }
-    
-    // Reset states
-    setActiveMobileField(null);
-    setFieldPreview({ x: 0, y: 0, visible: false });
-  };
+  // Debug state to track field placements
+  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string }[]>([]);
 
   // Handle mounting
   useEffect(() => {
@@ -149,7 +82,7 @@ export default function FieldPlacement() {
       setIsLoading(true);
       setError(null);
 
-      // Extract key from URL - similar to document-viewer.tsx
+      // Extract key from URL
       let docKey: string;
       try {
         if (state.document.url.startsWith('http')) {
@@ -177,17 +110,18 @@ export default function FieldPlacement() {
 
     return () => {
       // Cleanup viewer when component unmounts
-      if (desktopContainerRef.current && window.NutrientViewer && isViewerLoaded) {
-        console.log('Unloading desktop NutrientViewer');
-        window.NutrientViewer.unload(desktopContainerRef.current);
+      if (typeof window !== 'undefined' && window.NutrientViewer && isViewerLoaded) {
+        console.log('Unloading NutrientViewer');
+        if (desktopContainerRef.current) {
+          window.NutrientViewer.unload(desktopContainerRef.current);
+        }
+        if (mobileContainerRef.current) {
+          window.NutrientViewer.unload(mobileContainerRef.current);
+        }
+        setIsViewerLoaded(false);
       }
-      if (mobileContainerRef.current && window.NutrientViewer && isViewerLoaded) {
-        console.log('Unloading mobile NutrientViewer');
-        window.NutrientViewer.unload(mobileContainerRef.current);
-      }
-      setIsViewerLoaded(false);
     };
-  }, [state.document.url]);
+  }, [state.document.url, isViewerLoaded]);
 
   // Load the Nutrient Viewer SDK with the document
   useEffect(() => {
@@ -197,15 +131,19 @@ export default function FieldPlacement() {
     // Get the appropriate container based on view mode
     const container = isMobile ? mobileContainerRef.current : desktopContainerRef.current;
 
-    if (container) {
+    if (container && typeof window !== 'undefined' && window.NutrientViewer) {
       console.log(`Loading viewer in ${isMobile ? 'mobile' : 'desktop'} mode with proxy URL:`, proxyUrl);
       setIsLoading(true);
 
       // First, clean up any existing viewer instance
-      if (window.NutrientViewer && isViewerLoaded) {
+      if (isViewerLoaded) {
         console.log(`Unloading existing viewer before loading in ${isMobile ? 'mobile' : 'desktop'} mode`);
-        if (desktopContainerRef.current) window.NutrientViewer.unload(desktopContainerRef.current);
-        if (mobileContainerRef.current) window.NutrientViewer.unload(mobileContainerRef.current);
+        if (desktopContainerRef.current) {
+          window.NutrientViewer.unload(desktopContainerRef.current);
+        }
+        if (mobileContainerRef.current) {
+          window.NutrientViewer.unload(mobileContainerRef.current);
+        }
         setIsViewerLoaded(false);
       }
 
@@ -223,93 +161,207 @@ export default function FieldPlacement() {
             { type: 'spacer' },
           ];
 
-      // Check if NutrientViewer is available
-      if (window.NutrientViewer) {
-        try {
-          // Small delay to ensure container is ready, especially on mobile
-          setTimeout(() => {
-            window.NutrientViewer?.load({
-              container,
-              document: proxyUrl,
-              toolbarItems: toolBarItems,
-              licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+      try {
+        console.log('Creating NutrientViewer instance');
+
+        // Load the viewer using the same pattern as in pdf-viewer.jsx
+        window.NutrientViewer.load({
+          container,
+          document: proxyUrl,
+          toolbarItems: toolBarItems,
+          licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+        })
+          .then((instance: any) => {
+            console.log('NutrientViewer instance loaded successfully');
+            viewerInstanceRef.current = instance;
+
+            // Setup drag and drop on content document
+            console.log('Setting up drag and drop handlers');
+
+            // Drag and drop event listeners debugging:
+            instance.contentDocument.addEventListener('dragover', (event: any) => {
+              // Prevent default to allow drop
+              event.preventDefault();
+              console.log('addEventListener dragover event detected');
+
+              // Set the dropEffect to show it's a copy operation
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'copy';
+              }
+
+              // Find the page element under the cursor
+              const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
+              if (pageElement) {
+                console.log('Dragging over page element:', pageElement);
+              }
             });
+
+            instance.contentDocument.addEventListener('dragenter', (event: any) => {
+              // Prevent default to allow the drag
+              event.preventDefault();
+              console.log('addEventListener dragenter event detected');
+            });
+
+            instance.contentDocument.addEventListener('dragleave', (event: any) => {
+              console.log('addEventListener dragleave event detected');
+            });
+
+            instance.contentDocument.addEventListener('dragend', (event: any) => {
+              console.log('addEventListener dragend event detected');
+            });
+
+            instance.contentDocument.addEventListener('drop', (event: any) => {
+              // These are critical to make drop work
+              event.preventDefault();
+              event.stopPropagation();
+
+              console.log('addEventListener drop event detected');
+
+              // Get the field type from the dataTransfer
+              const fieldType = event.dataTransfer.getData('fieldType');
+              console.log('Field type from drop event:', fieldType);
+
+              if (!fieldType) {
+                console.log('No field type found in drag data');
+                return;
+              }
+
+              // Find the page element
+              const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
+              console.log('Page element at drop position:', pageElement);
+
+              if (pageElement && window.NutrientViewer) {
+                const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
+                console.log('Drop on page:', pageIndex);
+
+                try {
+                  // Create a client rect at the drop position
+                  const clientRect = new window.NutrientViewer.Geometry.Rect({
+                    left: event.clientX,
+                    top: event.clientY,
+                    width: fieldType === 'initials' ? 100 : 200,
+                    height: 50,
+                  });
+
+                  console.log('Client rect:', clientRect);
+
+                  // Transform to page coordinates
+                  const pageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
+                  console.log('Page rect:', pageRect);
+
+                  // Create a unique field name
+                  const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+                  // Create widget annotation
+                  const widget = new window.NutrientViewer.Annotations.WidgetAnnotation({
+                    boundingBox: pageRect,
+                    formFieldName: fieldName,
+                    id: window.NutrientViewer.generateInstantId(),
+                    pageIndex,
+                    name: fieldName,
+                  });
+
+                  // Create the form field based on type
+                  let formField;
+
+                  if (fieldType === 'signature') {
+                    formField = new window.NutrientViewer.FormFields.SignatureFormField({
+                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                      name: fieldName,
+                    });
+                  } else if (fieldType === 'initials') {
+                    formField = new window.NutrientViewer.FormFields.SignatureFormField({
+                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                      name: fieldName,
+                      type: 'INITIALS',
+                    });
+                  } else if (fieldType === 'date') {
+                    formField = new window.NutrientViewer.FormFields.TextFormField({
+                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                      name: fieldName,
+                      defaultValue: new Date().toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      }),
+                    });
+                  }
+
+                  // Set form creator mode
+                  instance.setViewState((viewState: any) => viewState.set('interactionMode', window.NutrientViewer.InteractionMode.FORM_CREATOR));
+
+                  // Create the annotations
+                  if (formField) {
+                    instance
+                      .create([widget, formField])
+                      .then(() => {
+                        console.log(`Created ${fieldType} field at position (${Math.round(pageRect.left)}, ${Math.round(pageRect.top)})`);
+
+                        // Add to our debug state for tracking
+                        setFieldPlacements((prev) => [
+                          ...prev,
+                          {
+                            type: fieldType,
+                            position: `(${Math.round(pageRect.left)}, ${Math.round(pageRect.top)})`,
+                          },
+                        ]);
+                      })
+                      .catch((error: any) => {
+                        console.error('Error creating form field:', error);
+                      });
+                  }
+                } catch (error) {
+                  console.error('Error in form field creation:', error);
+                }
+              } else {
+                console.log('No page element found at drop position');
+              }
+            });
+
             setIsViewerLoaded(true);
             setIsLoading(false);
-            console.log(`NutrientViewer loaded successfully in ${isMobile ? 'mobile' : 'desktop'} mode`);
-          }, 100);
-        } catch (error) {
-          console.error('Error loading document viewer:', error);
-          setError('Failed to load document viewer');
-          setIsLoading(false);
-        }
-      } else {
-        console.error('NutrientViewer SDK not loaded');
-        setError('Document viewer not available');
+
+            setIsViewerLoaded(true);
+            setIsLoading(false);
+          })
+          .catch((error: any) => {
+            console.error('Error loading NutrientViewer:', error);
+            setError('Failed to load document viewer');
+            setIsLoading(false);
+          });
+      } catch (error) {
+        console.error('Error loading document viewer:', error);
+        setError('Failed to load document viewer');
         setIsLoading(false);
       }
+    } else {
+      console.error('NutrientViewer SDK not loaded or container not available');
+      if (!window.NutrientViewer) {
+        setError('Document viewer not available');
+      }
+      setIsLoading(false);
     }
   }, [proxyUrl, mounted, isMobile]);
-
-  // Handle drop on the viewer
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const fieldType = e.dataTransfer.getData('fieldType');
-
-    // Get coordinates relative to the viewer
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    console.log(`Dropped field type: ${fieldType} at position: x=${x}, y=${y}`);
-
-    // Here you would normally call the Nutrient SDK API to place an annotation
-    // For now, we'll just log it
-    alert(`Added ${fieldType} field at x=${Math.round(x)}, y=${Math.round(y)}`);
-  };
-
-  // Allow dropping
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
 
   return (
     <div className='space-y-6'>
       <div>
         <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
-        <p className='text-muted-foreground mt-2 text-sm'>Drag and drop fields onto the document where you want recipients to sign.</p>
+        <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
       </div>
 
       {isMobile ? (
         // Mobile Layout - Vertical with fields at top
         <div className='flex flex-col space-y-4'>
-          {/* Horizontal field selector for mobile - now sticky */}
-          <div className="sticky top-0 z-10">
+          {/* Horizontal field selector for mobile - sticky */}
+          <div className='sticky top-0 z-10'>
             <Card className='border border-gray-200 dark:border-gray-700'>
               <CardContent className='py-4'>
                 <h3 className='font-medium mb-3 text-sm'>Available Fields</h3>
                 <div className='grid grid-cols-3 gap-2'>
-                  <DraggableField 
-                    icon={<Signature className='h-4 w-4' />} 
-                    label='Signature' 
-                    type='signature' 
-                    compact={true} 
-                    onMobileDragStart={handleMobileFieldSelect} 
-                  />
-                  <DraggableField 
-                    icon={<Edit className='h-4 w-4' />} 
-                    label='Initials' 
-                    type='initials' 
-                    compact={true} 
-                    onMobileDragStart={handleMobileFieldSelect} 
-                  />
-                  <DraggableField 
-                    icon={<CalendarDays className='h-4 w-4' />} 
-                    label='Date' 
-                    type='date' 
-                    compact={true} 
-                    onMobileDragStart={handleMobileFieldSelect} 
-                  />
+                  <FieldOption icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
+                  <FieldOption icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
+                  <FieldOption icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
                 </div>
               </CardContent>
             </Card>
@@ -330,41 +382,37 @@ export default function FieldPlacement() {
                 </div>
               )}
 
-              <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' onDrop={handleDrop} onDragOver={handleDragOver} />
+              <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' />
             </CardContent>
           </Card>
-
-          {/* Field preview that follows touch on mobile */}
-          {mounted && fieldPreview.visible && (
-            <div
-              className="fixed z-50 pointer-events-none"
-              style={{
-                left: fieldPreview.x - 25,
-                top: fieldPreview.y - 25,
-                transform: 'translate(-50%, -50%)'
-              }}
-            >
-              <div className="w-16 h-16 rounded-md bg-blue-100 border-2 border-blue-500 flex items-center justify-center shadow-lg">
-                {activeMobileField === 'signature' && <Signature className="h-8 w-8 text-blue-500" />}
-                {activeMobileField === 'initials' && <Edit className="h-8 w-8 text-blue-500" />}
-                {activeMobileField === 'date' && <CalendarDays className="h-8 w-8 text-blue-500" />}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         // Desktop Layout - Horizontal with sidebar
         <div className='flex gap-6 h-[calc(100vh-250px)] min-h-[500px]'>
-          {/* Left sidebar with draggable fields */}
+          {/* Left sidebar with field options */}
           <div className='w-64 shrink-0'>
             <Card>
               <CardContent className='pt-6'>
                 <h3 className='font-medium mb-4'>Available Fields</h3>
                 <div className='space-y-2'>
-                  <DraggableField icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
-                  <DraggableField icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
-                  <DraggableField icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
+                  <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
+                  <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
+                  <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
                 </div>
+
+                {/* Debug info */}
+                {fieldPlacements.length > 0 && (
+                  <div className='mt-6 border-t pt-4'>
+                    <h4 className='text-sm font-medium mb-2'>Field Placements:</h4>
+                    <div className='text-xs space-y-1'>
+                      {fieldPlacements.map((field, i) => (
+                        <div key={i}>
+                          {field.type}: {field.position}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -385,14 +433,7 @@ export default function FieldPlacement() {
                   </div>
                 )}
 
-                <div
-                  id='nutrient-viewer-container'
-                  ref={desktopContainerRef}
-                  className='h-full w-full'
-                  style={{ minHeight: '500px' }}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                />
+                <div id='nutrient-viewer-container' ref={desktopContainerRef} className='h-full w-full' style={{ minHeight: '500px' }} />
               </CardContent>
             </Card>
           </div>
