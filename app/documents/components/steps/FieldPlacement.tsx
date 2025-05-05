@@ -22,6 +22,27 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   const handleDragStart = (e: React.DragEvent) => {
     console.log('Started dragging field:', type);
     e.dataTransfer.setData('fieldType', type);
+
+    // Store the position where the user grabbed the element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    // Calculate the percentage offset within the draggable element
+    // This is more reliable across different sized elements
+    const offsetXPercent = offsetX / rect.width;
+    const offsetYPercent = offsetY / rect.height;
+
+    // Store both the raw offsets and the percentage offsets
+    e.dataTransfer.setData('offsetX', offsetX.toString());
+    e.dataTransfer.setData('offsetY', offsetY.toString());
+    e.dataTransfer.setData('offsetXPercent', offsetXPercent.toString());
+    e.dataTransfer.setData('offsetYPercent', offsetYPercent.toString());
+    e.dataTransfer.setData('elementWidth', rect.width.toString());
+    e.dataTransfer.setData('elementHeight', rect.height.toString());
+
+    console.log(`Drag offset: X=${offsetX}px (${(offsetXPercent * 100).toFixed(1)}%), Y=${offsetY}px (${(offsetYPercent * 100).toFixed(1)}%)`);
+    console.log(`Element dimensions: Width=${rect.width}px, Height=${rect.height}px`);
   };
 
   if (compact) {
@@ -175,9 +196,6 @@ export default function FieldPlacement() {
             console.log('NutrientViewer instance loaded successfully');
             viewerInstanceRef.current = instance;
 
-            // Setup drag and drop on content document
-            console.log('Setting up drag and drop handlers');
-
             // Drag and drop event listeners debugging:
             instance.contentDocument.addEventListener('dragover', (event: any) => {
               // Prevent default to allow drop
@@ -199,15 +217,6 @@ export default function FieldPlacement() {
             instance.contentDocument.addEventListener('dragenter', (event: any) => {
               // Prevent default to allow the drag
               event.preventDefault();
-              console.log('addEventListener dragenter event detected');
-            });
-
-            instance.contentDocument.addEventListener('dragleave', (event: any) => {
-              console.log('addEventListener dragleave event detected');
-            });
-
-            instance.contentDocument.addEventListener('dragend', (event: any) => {
-              console.log('addEventListener dragend event detected');
             });
 
             instance.contentDocument.addEventListener('drop', (event: any) => {
@@ -226,6 +235,23 @@ export default function FieldPlacement() {
                 return;
               }
 
+              // Get the drag offsets to adjust placement
+              const offsetXStr = event.dataTransfer.getData('offsetX') || '0';
+              const offsetYStr = event.dataTransfer.getData('offsetY') || '0';
+              const offsetXPercentStr = event.dataTransfer.getData('offsetXPercent') || '0.5';
+              const offsetYPercentStr = event.dataTransfer.getData('offsetYPercent') || '0.5';
+              const elementWidthStr = event.dataTransfer.getData('elementWidth') || '0';
+              const elementHeightStr = event.dataTransfer.getData('elementHeight') || '0';
+
+              const offsetX = parseInt(offsetXStr, 10);
+              const offsetY = parseInt(offsetYStr, 10);
+              const offsetXPercent = parseFloat(offsetXPercentStr);
+              const offsetYPercent = parseFloat(offsetYPercentStr);
+              const elementWidth = parseInt(elementWidthStr, 10);
+              const elementHeight = parseInt(elementHeightStr, 10);
+
+              console.log(`Using drag offsets: X=${offsetX}px (${(offsetXPercent * 100).toFixed(1)}%), Y=${offsetY}px (${(offsetYPercent * 100).toFixed(1)}%)`);
+
               // Find the page element
               const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
               console.log('Page element at drop position:', pageElement);
@@ -235,26 +261,39 @@ export default function FieldPlacement() {
                 console.log('Drop on page:', pageIndex);
 
                 try {
-                  // Create a client rect at the drop position
+                  // Get the page element's bounding rectangle
+                  const pageBoundingRect = pageElement.getBoundingClientRect();
+
+                  console.log('Drop coordinates - clientX:', event.clientX, 'clientY:', event.clientY);
+                  console.log('Page coordinates - left:', pageBoundingRect.left, 'top:', pageBoundingRect.top);
+
+                  // Define field dimensions
+                  const fieldWidth = fieldType === 'initials' ? 100 : 200;
+                  const fieldHeight = 50;
+
+                  // Calculate offset position for more accurate placement
+                  // Adjust coordinates to place field relative to where it was grabbed
                   const clientRect = new window.NutrientViewer.Geometry.Rect({
-                    left: event.clientX,
-                    top: event.clientY,
-                    width: fieldType === 'initials' ? 100 : 200,
-                    height: 50,
+                    left: event.clientX - offsetX,
+                    top: event.clientY - offsetY,
+                    width: fieldWidth,
+                    height: fieldHeight,
                   });
 
+                  console.log('Using drag offsets - X:', offsetX, 'Y:', offsetY);
+                  console.log('Adjusted client rect position - left:', event.clientX - offsetX, 'top:', event.clientY - offsetY);
                   console.log('Client rect:', clientRect);
 
                   // Transform to page coordinates
-                  const pageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
-                  console.log('Page rect:', pageRect);
+                  const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
+                  console.log('Transformed page rect:', transformedPageRect);
 
                   // Create a unique field name
                   const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
                   // Create widget annotation
                   const widget = new window.NutrientViewer.Annotations.WidgetAnnotation({
-                    boundingBox: pageRect,
+                    boundingBox: transformedPageRect,
                     formFieldName: fieldName,
                     id: window.NutrientViewer.generateInstantId(),
                     pageIndex,
@@ -279,11 +318,6 @@ export default function FieldPlacement() {
                     formField = new window.NutrientViewer.FormFields.TextFormField({
                       annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
                       name: fieldName,
-                      defaultValue: new Date().toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      }),
                     });
                   }
 
@@ -295,14 +329,14 @@ export default function FieldPlacement() {
                     instance
                       .create([widget, formField])
                       .then(() => {
-                        console.log(`Created ${fieldType} field at position (${Math.round(pageRect.left)}, ${Math.round(pageRect.top)})`);
+                        console.log(`Created ${fieldType} field at position (${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`);
 
                         // Add to our debug state for tracking
                         setFieldPlacements((prev) => [
                           ...prev,
                           {
                             type: fieldType,
-                            position: `(${Math.round(pageRect.left)}, ${Math.round(pageRect.top)})`,
+                            position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
                           },
                         ]);
                       })
