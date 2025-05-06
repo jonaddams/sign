@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang='en' suppressHydrationWarning className={caveat.variable}>
       <head>
-        <Script id='nutrient-viewer-sdk' src='https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.1.0/nutrient-viewer.js' strategy='beforeInteractive' />
+        <Script id='nutrient-viewer-sdk' src='https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.2.0/nutrient-viewer.js' strategy='beforeInteractive' />
       </head>
       <body className={inter.className}>
         <ThemeProvider>

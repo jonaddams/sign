@@ -5,10 +5,11 @@ import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Signature, CalendarDays, Edit } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
+import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
 
-function closestByClass(el: any, className: string): any {
-  return el && el.classList && el.classList.contains(className) ? el : el ? closestByClass(el.parentNode, className) : null;
-}
+// Define the instance type for local use
+type NutrientViewerInstance = NutrientViewerSDK.Instance;
 
 interface FieldOptionProps {
   icon: React.ReactNode;
@@ -40,9 +41,6 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     e.dataTransfer.setData('offsetYPercent', offsetYPercent.toString());
     e.dataTransfer.setData('elementWidth', rect.width.toString());
     e.dataTransfer.setData('elementHeight', rect.height.toString());
-
-    console.log(`Drag offset: X=${offsetX}px (${(offsetXPercent * 100).toFixed(1)}%), Y=${offsetY}px (${(offsetYPercent * 100).toFixed(1)}%)`);
-    console.log(`Element dimensions: Width=${rect.width}px, Height=${rect.height}px`);
   };
 
   if (compact) {
@@ -80,7 +78,10 @@ export default function FieldPlacement() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  const viewerInstanceRef = useRef<any>(null);
+  const viewerInstanceRef = useRef<NutrientViewerInstance | null>(null);
+
+  // Get a reference to the SDK
+  const nutrientSDK = useRef<ReturnType<typeof getNutrientViewer>>(null);
 
   // Debug state to track field placements
   const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string }[]>([]);
@@ -134,10 +135,10 @@ export default function FieldPlacement() {
       if (typeof window !== 'undefined' && window.NutrientViewer && isViewerLoaded) {
         console.log('Unloading NutrientViewer');
         if (desktopContainerRef.current) {
-          window.NutrientViewer.unload(desktopContainerRef.current);
+          safeUnloadViewer(desktopContainerRef.current);
         }
         if (mobileContainerRef.current) {
-          window.NutrientViewer.unload(mobileContainerRef.current);
+          safeUnloadViewer(mobileContainerRef.current);
         }
         setIsViewerLoaded(false);
       }
@@ -152,7 +153,10 @@ export default function FieldPlacement() {
     // Get the appropriate container based on view mode
     const container = isMobile ? mobileContainerRef.current : desktopContainerRef.current;
 
-    if (container && typeof window !== 'undefined' && window.NutrientViewer) {
+    // Get the SDK with type safety
+    nutrientSDK.current = getNutrientViewer();
+
+    if (container && nutrientSDK.current) {
       console.log(`Loading viewer in ${isMobile ? 'mobile' : 'desktop'} mode with proxy URL:`, proxyUrl);
       setIsLoading(true);
 
@@ -160,10 +164,10 @@ export default function FieldPlacement() {
       if (isViewerLoaded) {
         console.log(`Unloading existing viewer before loading in ${isMobile ? 'mobile' : 'desktop'} mode`);
         if (desktopContainerRef.current) {
-          window.NutrientViewer.unload(desktopContainerRef.current);
+          safeUnloadViewer(desktopContainerRef.current);
         }
         if (mobileContainerRef.current) {
-          window.NutrientViewer.unload(mobileContainerRef.current);
+          safeUnloadViewer(mobileContainerRef.current);
         }
         setIsViewerLoaded(false);
       }
@@ -186,13 +190,13 @@ export default function FieldPlacement() {
         console.log('Creating NutrientViewer instance');
 
         // Load the viewer using the same pattern as in pdf-viewer.jsx
-        window.NutrientViewer.load({
+        safeLoadViewer({
           container,
           document: proxyUrl,
           toolbarItems: toolBarItems,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
         })
-          .then((instance: any) => {
+          .then((instance: NutrientViewerInstance) => {
             console.log('NutrientViewer instance loaded successfully');
             viewerInstanceRef.current = instance;
 
@@ -256,11 +260,19 @@ export default function FieldPlacement() {
               const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
               console.log('Page element at drop position:', pageElement);
 
-              if (pageElement && window.NutrientViewer) {
+              if (pageElement) {
                 const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
                 console.log('Drop on page:', pageIndex);
 
                 try {
+                  // Get the runtime SDK with all properties
+                  const nutrientRuntime = getNutrientViewerRuntime();
+
+                  if (!nutrientRuntime) {
+                    console.error('NutrientViewer runtime not available');
+                    return;
+                  }
+
                   // Get the page element's bounding rectangle
                   const pageBoundingRect = pageElement.getBoundingClientRect();
 
@@ -273,7 +285,7 @@ export default function FieldPlacement() {
 
                   // Calculate offset position for more accurate placement
                   // Adjust coordinates to place field relative to where it was grabbed
-                  const clientRect = new window.NutrientViewer.Geometry.Rect({
+                  const clientRect = new nutrientRuntime.Geometry.Rect({
                     left: event.clientX - offsetX,
                     top: event.clientY - offsetY,
                     width: fieldWidth,
@@ -291,11 +303,11 @@ export default function FieldPlacement() {
                   // Create a unique field name
                   const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-                  // Create widget annotation
-                  const widget = new window.NutrientViewer.Annotations.WidgetAnnotation({
+                  // Create widget annotation with typed SDK
+                  const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
                     boundingBox: transformedPageRect,
                     formFieldName: fieldName,
-                    id: window.NutrientViewer.generateInstantId(),
+                    id: nutrientRuntime.generateInstantId(),
                     pageIndex,
                     name: fieldName,
                   });
@@ -304,25 +316,30 @@ export default function FieldPlacement() {
                   let formField;
 
                   if (fieldType === 'signature') {
-                    formField = new window.NutrientViewer.FormFields.SignatureFormField({
-                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                    formField = new nutrientRuntime.FormFields.SignatureFormField({
+                      annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                       name: fieldName,
                     });
                   } else if (fieldType === 'initials') {
-                    formField = new window.NutrientViewer.FormFields.SignatureFormField({
-                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                    formField = new nutrientRuntime.FormFields.SignatureFormField({
+                      annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                       name: fieldName,
                       type: 'INITIALS',
                     });
                   } else if (fieldType === 'date') {
-                    formField = new window.NutrientViewer.FormFields.TextFormField({
-                      annotationIds: new window.NutrientViewer.Immutable.List([widget.id]),
+                    formField = new nutrientRuntime.FormFields.TextFormField({
+                      annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                       name: fieldName,
+                      defaultValue: new Date().toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      }),
                     });
                   }
 
                   // Set form creator mode
-                  instance.setViewState((viewState: any) => viewState.set('interactionMode', window.NutrientViewer.InteractionMode.FORM_CREATOR));
+                  instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
 
                   // Create the annotations
                   if (formField) {
@@ -452,9 +469,9 @@ export default function FieldPlacement() {
           </div>
 
           {/* Document viewer */}
-          <div className='flex-1 relative border border-gray-200 dark:border-gray-700'>
+          <div className='flex-1'>
             <Card className='h-full'>
-              <CardContent className='p-0 h-full'>
+              <CardContent className='p-0 h-full relative'>
                 {isLoading && (
                   <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
                     <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { safeLoadViewer, safeUnloadViewer } from '@/lib/nutrient-viewer';
 
 interface DocumentViewerProps {
   documentUrl: string;
@@ -11,16 +12,6 @@ interface DocumentViewerProps {
   isOpen: boolean;
   preview?: boolean;
   onClose: () => void;
-}
-
-declare global {
-  interface Window {
-    NutrientViewer?: {
-      load: (options: { container: HTMLElement; document: string; toolbarItems?: any[]; licenseKey?: string }) => void;
-      unload: (container: HTMLElement | null) => void;
-      defaultToolbarItems?: any[];
-    };
-  }
 }
 
 export default function DocumentViewer({ documentUrl, documentId, isOpen, onClose, preview }: DocumentViewerProps) {
@@ -75,9 +66,9 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
           document.body.style.overflow = '';
 
           // Unload viewer if it was loaded
-          if (containerRef.current && window.NutrientViewer && isViewerLoaded) {
+          if (containerRef.current && isViewerLoaded) {
             console.log('Unloading NutrientViewer');
-            window.NutrientViewer.unload(containerRef.current);
+            safeUnloadViewer(containerRef.current);
             setIsViewerLoaded(false);
           }
         };
@@ -114,27 +105,22 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
             { type: 'zoom-mode' },
             { type: 'spacer' },
           ]
-        : (window.NutrientViewer?.defaultToolbarItems ?? []);
+        : [];
 
       // Check if NutrientViewer is available
-      if (window.NutrientViewer) {
-        try {
-          window.NutrientViewer.load({
-            container,
-            document: proxyUrl,
-            toolbarItems: toolBarItems,
-            licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
-          });
-          setIsViewerLoaded(true);
-          console.log('NutrientViewer loaded successfully');
-          console.log('licenseKey', process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY);
-        } catch (error) {
-          console.error('Error loading document viewer:', error);
-          setError('Failed to load document viewer');
-        }
-      } else {
-        console.error('NutrientViewer SDK not loaded');
-        setError('Document viewer not available');
+      try {
+        safeLoadViewer({
+          container,
+          document: proxyUrl,
+          toolbarItems: toolBarItems,
+          licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+        });
+        setIsViewerLoaded(true);
+        console.log('NutrientViewer loaded successfully');
+        console.log('licenseKey', process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY);
+      } catch (error) {
+        console.error('Error loading document viewer:', error);
+        setError('Failed to load document viewer');
       }
     }
     // This effect is always called regardless of conditions
