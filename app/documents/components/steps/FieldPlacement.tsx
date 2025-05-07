@@ -3,13 +3,14 @@
 import React, { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn } from 'lucide-react';
+import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn, Tag } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
 import { Label } from '@/components/ui/label';
 import { CustomSwitch } from '@/components/ui/custom-switch';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // Create context for sharing form placement mode
 interface FormPlacementContextType {
@@ -1211,7 +1212,13 @@ export default function FieldPlacement() {
     <FormPlacementContext.Provider value={{ formPlacementMode }}>
       <div className='space-y-6'>
         <div>
-          <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
+          <div className='flex items-center justify-between'>
+            <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
+            <Badge variant='outline' className='ml-2 flex items-center gap-1'>
+              <Tag className='h-3 w-3' />
+              <span>v1.3.0</span>
+            </Badge>
+          </div>
           <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
         </div>
 
