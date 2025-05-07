@@ -867,55 +867,76 @@ export default function FieldPlacement() {
                       return;
                     }
 
-                    // Try to find a page element at these coordinates
-                    const elementAtPoint = document.elementFromPoint(touchX, touchY);
-                    if (elementAtPoint) {
-                      console.log('[Mobile Debug] Found element at point:', elementAtPoint.tagName, elementAtPoint.className);
-                      const pageElement = closestByClass(elementAtPoint, 'PSPDFKit-Page');
-                      if (pageElement) {
-                        console.log('[Mobile Debug] Found page element:', pageElement.tagName, pageElement.className);
+                    console.log('[Mobile Debug] Looking for document container');
+                    // Instead of trying to place at the touch point, find the document container and place in the visible area
+                    const docContainer = instance.contentDocument.querySelector('.PSPDFKit-Page');
 
-                        // Proceed with field creation on this page
-                        const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
-                        const fieldType = event.detail.fieldType;
+                    if (docContainer) {
+                      console.log('[Mobile Debug] Found document container:', docContainer.tagName, docContainer.className);
 
-                        console.log('[Mobile Debug] About to create field on page:', pageIndex);
+                      // Get the page index from the container
+                      const pageIndex = parseInt(docContainer.dataset.pageIndex, 10);
+                      console.log('[Mobile Debug] Target page index:', pageIndex);
 
-                        // Add a slight delay before creating the field
-                        setTimeout(() => {
-                          createFieldOnPage(fieldType, touchX, touchY, pageElement, pageIndex, instance, mobileRuntime)
-                            .then((fieldName) => {
-                              if (fieldName) {
-                                console.log('[Mobile Debug] Successfully created field with name:', fieldName);
-                              } else {
-                                console.error('[Mobile Debug] Failed to create field - returned null');
+                      // Get the container's position
+                      const rect = docContainer.getBoundingClientRect();
+                      console.log('[Mobile Debug] Document container bounds:', rect);
+
+                      // Place the field in the center of the visible document area
+                      const centerX = rect.left + rect.width / 2;
+                      const centerY = rect.top + rect.height / 3; // Place it in the upper third for better visibility
+
+                      console.log('[Mobile Debug] Will place field at center point:', { centerX, centerY });
+
+                      // Add a slight delay before creating the field
+                      setTimeout(() => {
+                        createFieldOnPage(event.detail.fieldType, centerX, centerY, docContainer, pageIndex, instance, mobileRuntime)
+                          .then((fieldName) => {
+                            if (fieldName) {
+                              console.log('[Mobile Debug] Successfully created field with name:', fieldName);
+
+                              // Add haptic feedback if supported
+                              if (navigator.vibrate) {
+                                navigator.vibrate(50); // Short vibration to indicate success
                               }
-                            })
-                            .catch((err) => {
-                              console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
-                            });
-                        }, 100);
-                      } else {
-                        // If we couldn't find a page, try to get the first visible page
-                        console.log('[Mobile Debug] No page at touch point, trying to find any visible page');
-                        const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
+                            } else {
+                              console.error('[Mobile Debug] Failed to create field - returned null');
+                            }
+                          })
+                          .catch((err) => {
+                            console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+                          });
+                      }, 100);
+                    } else {
+                      console.error('[Mobile Debug] No document pages found. Trying to find any viewport element.');
+
+                      // Fallback: try to find any viewport element
+                      const viewport = instance.contentDocument.querySelector('.PSPDFKit-Viewport');
+                      if (viewport) {
+                        console.log('[Mobile Debug] Found viewport:', viewport);
+
+                        // Look for pages within the viewport
+                        const pages = viewport.querySelectorAll('.PSPDFKit-Page');
                         if (pages && pages.length > 0) {
                           const firstPage = pages[0] as HTMLElement;
-                          console.log('[Mobile Debug] Using first visible page instead:', firstPage);
+                          console.log('[Mobile Debug] Using first page in viewport:', firstPage);
+
                           const pageIndex = parseInt(firstPage.dataset.pageIndex, 10);
-
-                          // Create field in the center of this page instead
                           const rect = firstPage.getBoundingClientRect();
-                          const centerX = rect.left + rect.width / 2;
-                          const centerY = rect.top + rect.height / 2;
 
-                          createFieldOnPage(fieldType, centerX, centerY, firstPage, pageIndex, instance, nutrientRuntime);
+                          // Center position
+                          const centerX = rect.left + rect.width / 2;
+                          const centerY = rect.top + rect.height / 3;
+
+                          setTimeout(() => {
+                            createFieldOnPage(event.detail.fieldType, centerX, centerY, firstPage, pageIndex, instance, mobileRuntime);
+                          }, 100);
                         } else {
-                          console.error('[Mobile Debug] No pages found in the document');
+                          console.error('[Mobile Debug] No pages found in viewport');
                         }
+                      } else {
+                        console.error('[Mobile Debug] No viewport found');
                       }
-                    } else {
-                      console.error('[Mobile Debug] No element found at touch point:', { touchX, touchY });
                     }
                   } catch (error) {
                     console.error('[Mobile Debug] Error in immediate field creation:', error);
