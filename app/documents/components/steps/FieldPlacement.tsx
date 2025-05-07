@@ -855,25 +855,46 @@ export default function FieldPlacement() {
                   touchStartY = event.detail.touchY || 0;
 
                   // IMMEDIATE TEST: Try to create field right away based on event coordinates
-                  // This helps us detect if the issue is with the touchend event or with the field creation itself
                   try {
                     console.log('[Mobile Debug] Testing immediate field creation with:', event.detail);
                     const touchX = event.detail.touchX;
                     const touchY = event.detail.touchY;
 
+                    // Make sure the runtime is available before proceeding
+                    const mobileRuntime = getNutrientViewerRuntime();
+                    if (!mobileRuntime) {
+                      console.error('[Mobile Debug] NutrientRuntime is not available for immediate field creation');
+                      return;
+                    }
+
                     // Try to find a page element at these coordinates
                     const elementAtPoint = document.elementFromPoint(touchX, touchY);
                     if (elementAtPoint) {
-                      console.log('[Mobile Debug] Found element at point:', elementAtPoint);
+                      console.log('[Mobile Debug] Found element at point:', elementAtPoint.tagName, elementAtPoint.className);
                       const pageElement = closestByClass(elementAtPoint, 'PSPDFKit-Page');
                       if (pageElement) {
-                        console.log('[Mobile Debug] Found page element:', pageElement);
+                        console.log('[Mobile Debug] Found page element:', pageElement.tagName, pageElement.className);
 
                         // Proceed with field creation on this page
                         const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
                         const fieldType = event.detail.fieldType;
 
-                        createFieldOnPage(fieldType, touchX, touchY, pageElement, pageIndex, instance, nutrientRuntime);
+                        console.log('[Mobile Debug] About to create field on page:', pageIndex);
+
+                        // Add a slight delay before creating the field
+                        setTimeout(() => {
+                          createFieldOnPage(fieldType, touchX, touchY, pageElement, pageIndex, instance, mobileRuntime)
+                            .then((fieldName) => {
+                              if (fieldName) {
+                                console.log('[Mobile Debug] Successfully created field with name:', fieldName);
+                              } else {
+                                console.error('[Mobile Debug] Failed to create field - returned null');
+                              }
+                            })
+                            .catch((err) => {
+                              console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+                            });
+                        }, 100);
                       } else {
                         // If we couldn't find a page, try to get the first visible page
                         console.log('[Mobile Debug] No page at touch point, trying to find any visible page');
