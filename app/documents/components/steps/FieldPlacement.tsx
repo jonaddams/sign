@@ -899,6 +899,28 @@ export default function FieldPlacement() {
                               if (navigator.vibrate) {
                                 navigator.vibrate(50); // Short vibration to indicate success
                               }
+
+                              // Add visual feedback by briefly flashing a success message
+                              const successMessage = document.createElement('div');
+                              successMessage.className =
+                                'fixed top-1/4 left-1/2 transform -translate-x-1/2 py-2 px-4 bg-green-500 text-white rounded-md z-50 shadow-lg';
+                              successMessage.textContent = `${event.detail.fieldType} field added`;
+                              document.body.appendChild(successMessage);
+
+                              // Remove the message after a short delay
+                              setTimeout(() => {
+                                document.body.removeChild(successMessage);
+                              }, 1500);
+
+                              // Update field placement list
+                              setFieldPlacements((prev) => [
+                                ...prev,
+                                {
+                                  type: event.detail.fieldType,
+                                  position: `Center of page ${pageIndex + 1}`,
+                                  name: fieldName,
+                                },
+                              ]);
                             } else {
                               console.error('[Mobile Debug] Failed to create field - returned null');
                             }
