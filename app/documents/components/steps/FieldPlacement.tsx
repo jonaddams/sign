@@ -408,139 +408,7 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
   }
 };
 
-// This function uses a direct, simplified approach for creating fields on mobile
-const createDirectMobileField = (fieldType: string) => {
-  try {
-    console.log('[Mobile Direct] Attempting direct field creation for type:', fieldType);
-
-    // Get the viewer instance
-    const instance = viewerInstanceRef.current;
-    if (!instance) {
-      console.error('[Mobile Direct] Viewer instance not available');
-      return false;
-    }
-
-    // Get the runtime
-    const runtime = getNutrientViewerRuntime();
-    if (!runtime) {
-      console.error('[Mobile Direct] Runtime not available');
-      return false;
-    }
-
-    // Get the current page index
-    let pageIndex = 0;
-    try {
-      // First approach - using view state
-      const viewState = instance.getViewState();
-      if (viewState && typeof viewState.get === 'function') {
-        const currentPage = viewState.get('currentPageIndex');
-        if (currentPage !== undefined) {
-          pageIndex = currentPage;
-          console.log('[Mobile Direct] Found current page in view state:', pageIndex);
-        }
-      }
-    } catch (error) {
-      console.error('[Mobile Direct] Error getting page from view state:', error);
-    }
-
-    console.log('[Mobile Direct] Creating field on page:', pageIndex);
-
-    // Use hardcoded PDF coordinates that work reliably
-    const pdfWidth = fieldType === 'initials' ? 75 : 150;
-    const pdfHeight = 50;
-
-    // Create a reliable field name
-    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-    // Create reliable PDF coordinates (no transformation)
-    const pdfRect = new runtime.Geometry.Rect({
-      left: 100,
-      top: 100,
-      width: pdfWidth,
-      height: pdfHeight,
-    });
-
-    console.log('[Mobile Direct] Creating field with rect:', pdfRect);
-
-    // Create the widget annotation
-    const widget = new runtime.Annotations.WidgetAnnotation({
-      boundingBox: pdfRect,
-      formFieldName: fieldName,
-      id: runtime.generateInstantId(),
-      pageIndex,
-      name: fieldName,
-    });
-
-    // Create the appropriate form field
-    let formField;
-    if (fieldType === 'signature') {
-      formField = new runtime.FormFields.SignatureFormField({
-        annotationIds: new runtime.Immutable.List([widget.id]),
-        name: fieldName,
-      });
-    } else if (fieldType === 'initials') {
-      formField = new runtime.FormFields.SignatureFormField({
-        annotationIds: new runtime.Immutable.List([widget.id]),
-        name: fieldName,
-        type: 'INITIALS',
-      });
-    } else if (fieldType === 'date') {
-      formField = new runtime.FormFields.TextFormField({
-        annotationIds: new runtime.Immutable.List([widget.id]),
-        name: fieldName,
-        defaultValue: new Date().toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
-      });
-    }
-
-    // Set interaction mode
-    instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
-
-    // Create the field directly
-    if (formField) {
-      return instance
-        .create([widget, formField])
-        .then(() => {
-          console.log('[Mobile Direct] Successfully created field!');
-
-          // Add to our list
-          setFieldPlacements((prev) => [
-            ...prev,
-            {
-              type: fieldType,
-              position: `Page ${pageIndex + 1}`,
-              name: fieldName,
-            },
-          ]);
-
-          // Show toast
-          const toast = document.createElement('div');
-          toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
-          toast.innerText = `Added ${fieldType} field to page ${pageIndex + 1}`;
-          document.body.appendChild(toast);
-
-          setTimeout(() => {
-            document.body.removeChild(toast);
-          }, 2000);
-
-          return true;
-        })
-        .catch((error) => {
-          console.error('[Mobile Direct] Field creation failed:', error);
-          return false;
-        });
-    }
-
-    return false;
-  } catch (error) {
-    console.error('[Mobile Direct] Top-level error in field creation:', error);
-    return false;
-  }
-};
-
+// Moved inside the component
 export default function FieldPlacement() {
   const { state } = useDocumentFlow();
   const desktopContainerRef = useRef<HTMLDivElement>(null);
@@ -562,6 +430,140 @@ export default function FieldPlacement() {
 
   // State to track debug logs for the mobile view
   const [debugLogs, setDebugLogs] = useState<{ time: string; message: string }[]>([]);
+
+  // This function uses a direct, simplified approach for creating fields on mobile
+  // Moved inside the component to access refs and state
+  const createDirectMobileField = (fieldType: string) => {
+    try {
+      console.log('[Mobile Direct] Attempting direct field creation for type:', fieldType);
+
+      // Get the viewer instance
+      const instance = viewerInstanceRef.current;
+      if (!instance) {
+        console.error('[Mobile Direct] Viewer instance not available');
+        return false;
+      }
+
+      // Get the runtime
+      const runtime = getNutrientViewerRuntime();
+      if (!runtime) {
+        console.error('[Mobile Direct] Runtime not available');
+        return false;
+      }
+
+      // Get the current page index
+      let pageIndex = 0;
+      try {
+        // First approach - using view state
+        const viewState = instance.getViewState();
+        if (viewState && typeof viewState.get === 'function') {
+          const currentPage = viewState.get('currentPageIndex');
+          if (currentPage !== undefined) {
+            pageIndex = currentPage;
+            console.log('[Mobile Direct] Found current page in view state:', pageIndex);
+          }
+        }
+      } catch (error) {
+        console.error('[Mobile Direct] Error getting page from view state:', error);
+      }
+
+      console.log('[Mobile Direct] Creating field on page:', pageIndex);
+
+      // Use hardcoded PDF coordinates that work reliably
+      const pdfWidth = fieldType === 'initials' ? 75 : 150;
+      const pdfHeight = 50;
+
+      // Create a reliable field name
+      const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      // Create reliable PDF coordinates (no transformation)
+      const pdfRect = new runtime.Geometry.Rect({
+        left: 100,
+        top: 100,
+        width: pdfWidth,
+        height: pdfHeight,
+      });
+
+      console.log('[Mobile Direct] Creating field with rect:', pdfRect);
+
+      // Create the widget annotation
+      const widget = new runtime.Annotations.WidgetAnnotation({
+        boundingBox: pdfRect,
+        formFieldName: fieldName,
+        id: runtime.generateInstantId(),
+        pageIndex,
+        name: fieldName,
+      });
+
+      // Create the appropriate form field
+      let formField;
+      if (fieldType === 'signature') {
+        formField = new runtime.FormFields.SignatureFormField({
+          annotationIds: new runtime.Immutable.List([widget.id]),
+          name: fieldName,
+        });
+      } else if (fieldType === 'initials') {
+        formField = new runtime.FormFields.SignatureFormField({
+          annotationIds: new runtime.Immutable.List([widget.id]),
+          name: fieldName,
+          type: 'INITIALS',
+        });
+      } else if (fieldType === 'date') {
+        formField = new runtime.FormFields.TextFormField({
+          annotationIds: new runtime.Immutable.List([widget.id]),
+          name: fieldName,
+          defaultValue: new Date().toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+        });
+      }
+
+      // Set interaction mode
+      instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+
+      // Create the field directly
+      if (formField) {
+        return instance
+          .create([widget, formField])
+          .then(() => {
+            console.log('[Mobile Direct] Successfully created field!');
+
+            // Add to our list
+            setFieldPlacements((prev) => [
+              ...prev,
+              {
+                type: fieldType,
+                position: `Page ${pageIndex + 1}`,
+                name: fieldName,
+              },
+            ]);
+
+            // Show toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
+            toast.innerText = `Added ${fieldType} field to page ${pageIndex + 1}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+              document.body.removeChild(toast);
+            }, 2000);
+
+            return true;
+          })
+          .catch((error) => {
+            console.error('[Mobile Direct] Field creation failed:', error);
+            return false;
+          });
+      }
+
+      return false;
+    } catch (error) {
+      console.error('[Mobile Direct] Top-level error in field creation:', error);
+      return false;
+    }
+  };
 
   // Function to add a log entry
   const addLogEntry = (message: string) => {
