@@ -573,10 +573,25 @@ export default function FieldPlacement() {
                     const fieldWidth = activeTouchFieldType === 'initials' ? 100 : 200;
                     const fieldHeight = 50;
 
-                    // Calculate placement position
+                    // Calculate placement position for mobile
+                    // Adding better positioning logic specifically for touch devices
+                    const pageBoundingRect = pageElement.getBoundingClientRect();
+                    console.log('[Mobile] Page element bounds:', {
+                      left: pageBoundingRect.left,
+                      top: pageBoundingRect.top,
+                      width: pageBoundingRect.width,
+                      height: pageBoundingRect.height,
+                    });
+
+                    // Calculate relative position within the page
+                    const relativeX = touchEndX - pageBoundingRect.left;
+                    const relativeY = touchEndY - pageBoundingRect.top;
+                    console.log('[Mobile] Touch relative position:', { relativeX, relativeY });
+
+                    // Create the rect in client space relative to where the user touched
                     const clientRect = new nutrientRuntime.Geometry.Rect({
-                      left: touchEndX - fieldWidth / 2, // Center the field horizontally at touch point
-                      top: touchEndY - 25, // Place field under the touch point
+                      left: touchEndX - fieldWidth / 2, // Center horizontally at touch point
+                      top: touchEndY - fieldHeight / 2, // Center vertically at touch point
                       width: fieldWidth,
                       height: fieldHeight,
                     });
