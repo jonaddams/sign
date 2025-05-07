@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Signature, CalendarDays, Edit, ScrollText, Trash } from 'lucide-react';
+import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
@@ -129,18 +129,33 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
 
       logDragEvent(`Touch ended on field type: ${type}`, { touchX, touchY });
 
-      // Dispatch a custom event that our document viewer can listen for
-      const customEvent = new CustomEvent('nutrient:fieldDragStart', {
-        detail: {
-          fieldType: type,
-          touchX,
-          touchY,
-        },
-        bubbles: true,
-      });
+      // On mobile devices, use simpler direct field creation approach
+      if (window.innerWidth < 768) {
+        // Mobile breakpoint
+        // Find viewer instance
+        if (window.NutrientViewer) {
+          const instance = viewerInstanceRef.current;
+          const runtime = getNutrientViewerRuntime();
 
-      // Dispatch the event
-      window.dispatchEvent(customEvent);
+          if (instance && runtime) {
+            // Use direct fixed-coordinate placement for mobile
+            createMobileField(type, instance, runtime);
+          }
+        }
+      } else {
+        // For larger screens, use the existing event dispatch method
+        const customEvent = new CustomEvent('nutrient:fieldDragStart', {
+          detail: {
+            fieldType: type,
+            touchX,
+            touchY,
+          },
+          bubbles: true,
+        });
+
+        // Dispatch the event
+        window.dispatchEvent(customEvent);
+      }
     }
   };
 
@@ -278,6 +293,116 @@ const createFieldOnPage = (
     return null;
   } catch (error) {
     console.error('[Mobile Debug] Exception in createFieldOnPage:', error);
+    return null;
+  }
+};
+
+// Helper function to create a field with fixed and reliable positioning
+// Uses hardware-independent positioning to work on all mobile devices
+const createMobileField = (fieldType: string, instance: NutrientViewerInstance, runtime: any) => {
+  try {
+    console.log('[Mobile] Creating field using fixed positioning approach');
+
+    // Find the first page to place the field on
+    const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
+    if (!pages || pages.length === 0) {
+      console.error('[Mobile] No pages found in document');
+      return null;
+    }
+
+    const firstPage = pages[0] as HTMLElement;
+    const pageIndex = parseInt(firstPage.dataset.pageIndex || '0', 10);
+
+    // Create a unique field name
+    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // Directly use PDF coordinates for reliable placement
+    // These values are in PDF coordinate space which is more reliable than screen coordinates
+    const pdfWidth = fieldType === 'initials' ? 75 : 150;
+    const pdfHeight = 40;
+
+    // Place at fixed position 100 units from left and top
+    // This ensures consistent placement regardless of screen size or zoom level
+    const pdfRect = new runtime.Geometry.Rect({
+      left: 100,
+      top: 100,
+      width: pdfWidth,
+      height: pdfHeight,
+    });
+
+    console.log('[Mobile] Creating field with fixed PDF coordinates:', pdfRect);
+
+    // Create widget annotation
+    const widget = new runtime.Annotations.WidgetAnnotation({
+      boundingBox: pdfRect,
+      formFieldName: fieldName,
+      id: runtime.generateInstantId(),
+      pageIndex,
+      name: fieldName,
+    });
+
+    // Create form field based on type
+    let formField;
+    if (fieldType === 'signature') {
+      formField = new runtime.FormFields.SignatureFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+      });
+    } else if (fieldType === 'initials') {
+      formField = new runtime.FormFields.SignatureFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+        type: 'INITIALS',
+      });
+    } else if (fieldType === 'date') {
+      formField = new runtime.FormFields.TextFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+        defaultValue: new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      });
+    }
+
+    // Set form creator mode
+    instance.setViewState((viewState: any) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+
+    // Create the annotations
+    if (formField) {
+      return instance
+        .create([widget, formField])
+        .then(() => {
+          console.log('[Mobile] Successfully created field at fixed position');
+
+          // Visual feedback
+          const toast = document.createElement('div');
+          toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50';
+          toast.textContent = `${fieldType} field added`;
+          document.body.appendChild(toast);
+
+          // Remove toast after 2 seconds
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 2000);
+
+          // Vibrate if supported
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+
+          return fieldName;
+        })
+        .catch((err) => {
+          console.error('[Mobile] Error creating field:', err);
+          return null;
+        });
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Mobile] Error in createMobileField:', error);
     return null;
   }
 };
