@@ -1,12 +1,23 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Signature, CalendarDays, Edit } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
+import { Label } from '@/components/ui/label';
+import { CustomSwitch } from '@/components/ui/custom-switch';
+
+// Create context for sharing form placement mode
+interface FormPlacementContextType {
+  formPlacementMode: boolean;
+}
+
+const FormPlacementContext = createContext<FormPlacementContextType>({
+  formPlacementMode: true,
+});
 
 // Define the instance type for local use
 type NutrientViewerInstance = NutrientViewerSDK.Instance;
@@ -18,9 +29,24 @@ interface FieldOptionProps {
   compact?: boolean;
 }
 
+// Enhanced field placement interface to store annotation name
+interface FieldPlacement {
+  type: string;
+  position: string;
+  name: string; // Store the field name to find it in the DOM
+}
+
 const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
+  const { formPlacementMode } = useContext(FormPlacementContext);
+
   // Handle drag start to set the field type data
   const handleDragStart = (e: React.DragEvent) => {
+    // Prevent dragging if not in edit mode
+    if (!formPlacementMode) {
+      e.preventDefault();
+      return;
+    }
+
     console.log('Started dragging field:', type);
     e.dataTransfer.setData('fieldType', type);
 
@@ -79,12 +105,13 @@ export default function FieldPlacement() {
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
   const viewerInstanceRef = useRef<NutrientViewerInstance | null>(null);
+  const [formPlacementMode, setFormPlacementMode] = useState(true); // State for form placement mode
 
   // Get a reference to the SDK
   const nutrientSDK = useRef<ReturnType<typeof getNutrientViewer>>(null);
 
   // Debug state to track field placements
-  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string }[]>([]);
+  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string; name: string }[]>([]);
 
   // Handle mounting
   useEffect(() => {
@@ -195,6 +222,7 @@ export default function FieldPlacement() {
           document: proxyUrl,
           toolbarItems: toolBarItems,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+          styleSheets: ['/styles/viewer.css'],
         })
           .then((instance: NutrientViewerInstance) => {
             console.log('NutrientViewer instance loaded successfully');
@@ -354,6 +382,7 @@ export default function FieldPlacement() {
                           {
                             type: fieldType,
                             position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
+                            name: fieldName,
                           },
                         ]);
                       })
@@ -371,6 +400,40 @@ export default function FieldPlacement() {
 
             setIsViewerLoaded(true);
             setIsLoading(false);
+
+            // Add event listener for clicking on form field annotations
+            instance.contentDocument.addEventListener('click', (event: MouseEvent) => {
+              const target = event.target as Element;
+
+              // Check if clicked element is a form field annotation widget
+              const annotationWidget = closestByClass(target, 'PSPDFKit-Annotation-Widget');
+              if (annotationWidget) {
+                // Get the field name
+                const fieldName = annotationWidget.getAttribute('name');
+                if (fieldName) {
+                  console.log(`Clicked on annotation field: ${fieldName}`);
+
+                  // Find the corresponding field in our placements list and highlight it
+                  const fieldIndex = fieldPlacements.findIndex((field) => field.name === fieldName);
+                  if (fieldIndex >= 0) {
+                    // Highlight the field in the list
+                    const fieldElement = document.getElementById(`field-placement-${fieldIndex}`);
+                    if (fieldElement) {
+                      // Add a highlight class
+                      fieldElement.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
+
+                      // Remove the highlight after a delay
+                      setTimeout(() => {
+                        fieldElement.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
+                      }, 1500);
+
+                      // Scroll the field into view in the list if needed
+                      fieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }
+                }
+              }
+            });
 
             setIsViewerLoaded(true);
             setIsLoading(false);
@@ -394,84 +457,64 @@ export default function FieldPlacement() {
     }
   }, [proxyUrl, mounted, isMobile]);
 
+  // Toggle form placement mode when the switch changes
+  useEffect(() => {
+    if (viewerInstanceRef.current && mounted) {
+      const nutrientRuntime = getNutrientViewerRuntime();
+
+      if (nutrientRuntime) {
+        console.log(`Setting form placement mode: ${formPlacementMode ? 'ON' : 'OFF'}`);
+
+        if (formPlacementMode) {
+          // Enable form creator mode
+          viewerInstanceRef.current.setViewState((viewState) => viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR));
+        } else {
+          // Disable form creator mode
+          viewerInstanceRef.current.setViewState((viewState) => viewState.set('formDesignMode', false));
+        }
+      }
+    }
+  }, [formPlacementMode, mounted]);
+
   return (
-    <div className='space-y-6'>
-      <div>
-        <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
-        <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
-      </div>
-
-      {isMobile ? (
-        // Mobile Layout - Vertical with fields at top
-        <div className='flex flex-col space-y-4'>
-          {/* Horizontal field selector for mobile - sticky */}
-          <div className='sticky top-0 z-10'>
-            <Card className='border border-gray-200 dark:border-gray-700'>
-              <CardContent className='py-4'>
-                <h3 className='font-medium mb-3 text-sm'>Available Fields</h3>
-                <div className='grid grid-cols-3 gap-2'>
-                  <FieldOption icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
-                  <FieldOption icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
-                  <FieldOption icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Document viewer for mobile - takes remaining height */}
-          <Card className='border border-gray-200 dark:border-gray-700 overflow-hidden'>
-            <CardContent className='p-0 relative' style={{ height: '70vh' }}>
-              {isLoading && (
-                <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
-                  <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
-                </div>
-              )}
-
-              {error && (
-                <div className='absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10'>
-                  <div className='text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg'>{error}</div>
-                </div>
-              )}
-
-              <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' />
-            </CardContent>
-          </Card>
+    <FormPlacementContext.Provider value={{ formPlacementMode }}>
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
+          <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
         </div>
-      ) : (
-        // Desktop Layout - Horizontal with sidebar
-        <div className='flex gap-6 h-[calc(100vh-250px)] min-h-[500px]'>
-          {/* Left sidebar with field options */}
-          <div className='w-64 shrink-0'>
-            <Card>
-              <CardContent className='pt-6'>
-                <h3 className='font-medium mb-4'>Available Fields</h3>
-                <div className='space-y-2'>
-                  <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
-                  <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
-                  <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
-                </div>
 
-                {/* Debug info */}
-                {fieldPlacements.length > 0 && (
-                  <div className='mt-6 border-t pt-4'>
-                    <h4 className='text-sm font-medium mb-2'>Field Placements:</h4>
-                    <div className='text-xs space-y-1'>
-                      {fieldPlacements.map((field, i) => (
-                        <div key={i}>
-                          {field.type}: {field.position}
-                        </div>
-                      ))}
+        {isMobile ? (
+          // Mobile Layout - Vertical with fields at top
+          <div className='flex flex-col space-y-4'>
+            {/* Horizontal field selector for mobile - sticky */}
+            <div className='sticky top-0 z-10'>
+              <Card className='border border-gray-200 dark:border-gray-700'>
+                <CardContent className='py-4'>
+                  <h3 className='font-medium mb-3'>Available Fields</h3>
+
+                  <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
+                    <div className='flex items-center gap-2'>
+                      <div className={`w-2 h-2 rounded-full ${formPlacementMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
+                        Edit Mode
+                      </Label>
                     </div>
+                    <CustomSwitch id='form-placement-mode' checked={formPlacementMode} onCheckedChange={setFormPlacementMode} />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Document viewer */}
-          <div className='flex-1'>
-            <Card className='h-full'>
-              <CardContent className='p-0 h-full relative'>
+                  <div className='space-y-2'>
+                    <FieldOption icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
+                    <FieldOption icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
+                    <FieldOption icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Document viewer for mobile - takes remaining height */}
+            <Card className='border border-gray-200 dark:border-gray-700 overflow-hidden'>
+              <CardContent className='p-0 relative' style={{ height: '70vh' }}>
                 {isLoading && (
                   <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
                     <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
@@ -484,12 +527,104 @@ export default function FieldPlacement() {
                   </div>
                 )}
 
-                <div id='nutrient-viewer-container' ref={desktopContainerRef} className='h-full w-full' style={{ minHeight: '500px' }} />
+                <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' />
               </CardContent>
             </Card>
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          // Desktop Layout - Horizontal with sidebar
+          <div className='flex gap-6 h-[calc(100vh-250px)] min-h-[500px]'>
+            {/* Left sidebar with field options */}
+            <div className='w-64 shrink-0'>
+              <Card>
+                <CardContent className='pt-6'>
+                  <h3 className='font-medium mb-3'>Available Fields</h3>
+
+                  <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
+                    <div className='flex items-center gap-2'>
+                      <div className={`w-2 h-2 rounded-full ${formPlacementMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
+                        Edit Mode
+                      </Label>
+                    </div>
+                    <CustomSwitch id='form-placement-mode' checked={formPlacementMode} onCheckedChange={setFormPlacementMode} />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
+                    <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
+                    <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
+                  </div>
+
+                  {/* Debug info */}
+                  {fieldPlacements.length > 0 && (
+                    <div className='mt-6 border-t pt-4'>
+                      <h4 className='text-sm font-medium mb-2'>Field Placements:</h4>
+                      <div className='text-xs space-y-1'>
+                        {fieldPlacements.map((field, i) => (
+                          <div
+                            id={`field-placement-${i}`}
+                            key={i}
+                            className='p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center'
+                            onClick={() => {
+                              if (viewerInstanceRef.current) {
+                                console.log(`Focusing field: ${field.name}`);
+                                try {
+                                  // Focus the annotation in the viewer
+                                  const annotationElement = viewerInstanceRef.current.contentDocument.querySelector(
+                                    `.PSPDFKit-Annotation-Widget[name='${field.name}']`,
+                                  );
+
+                                  if (annotationElement) {
+                                    // Focus the element
+                                    annotationElement.focus();
+                                    // Scroll to it
+                                    annotationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    console.log('Annotation element focused:', annotationElement);
+                                  } else {
+                                    console.log(`Annotation element with name '${field.name}' not found`);
+                                  }
+                                } catch (error) {
+                                  console.error('Error focusing annotation:', error);
+                                }
+                              }
+                            }}
+                          >
+                            <div className='flex-1'>
+                              <span className='font-medium'>{field.type}</span>: {field.position}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Document viewer */}
+            <div className='flex-1'>
+              <Card className='h-full'>
+                <CardContent className='p-0 h-full relative'>
+                  {isLoading && (
+                    <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
+                      <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className='absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10'>
+                      <div className='text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg'>{error}</div>
+                    </div>
+                  )}
+
+                  <div id='nutrient-viewer-container' ref={desktopContainerRef} className='h-full w-full' style={{ minHeight: '500px' }} />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </FormPlacementContext.Provider>
   );
 }
