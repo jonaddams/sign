@@ -882,18 +882,92 @@ export default function FieldPlacement() {
                       const rect = docContainer.getBoundingClientRect();
                       console.log('[Mobile Debug] Document container bounds:', rect);
 
-                      // Place the field in the center of the visible document area
+                      // Document space coordinates may be inverted compared to screen coordinates
+                      // Place the field in a more consistently visible location
                       const centerX = rect.left + rect.width / 2;
-                      const centerY = rect.top + rect.height / 3; // Place it in the upper third for better visibility
+                      const centerY = rect.top + rect.height / 2; // Center of page for better visibility
 
                       console.log('[Mobile Debug] Will place field at center point:', { centerX, centerY });
 
-                      // Add a slight delay before creating the field
-                      setTimeout(() => {
-                        createFieldOnPage(event.detail.fieldType, centerX, centerY, docContainer, pageIndex, instance, mobileRuntime)
-                          .then((fieldName) => {
-                            if (fieldName) {
-                              console.log('[Mobile Debug] Successfully created field with name:', fieldName);
+                      // Create the field with a completely different approach for mobile:
+                      // Using PDF coordinates directly instead of screen coordinates
+                      try {
+                        // Create a unique field name
+                        const fieldName = `${event.detail.fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+                        // For reliable placement, create a temporary widget to get proper transform values
+                        const tempRect = new mobileRuntime.Geometry.Rect({
+                          left: centerX,
+                          top: centerY,
+                          width: 5, // Tiny test point
+                          height: 5,
+                        });
+
+                        // Find where this point maps to in PDF space
+                        const tempTransformed = instance.transformContentClientToPageSpace(tempRect, pageIndex);
+                        console.log('[Mobile Debug] Test point transformed to:', tempTransformed);
+
+                        // Now create a properly sized field at those PDF coordinates
+                        const pdfWidth = event.detail.fieldType === 'initials' ? 75 : 150;
+                        const pdfHeight = 50;
+
+                        const pdfRect = new mobileRuntime.Geometry.Rect({
+                          // Center the field at the test point's position
+                          left: tempTransformed.left - pdfWidth / 2,
+                          top: tempTransformed.top - pdfHeight / 2,
+                          width: pdfWidth,
+                          height: pdfHeight,
+                        });
+
+                        console.log('[Mobile Debug] Creating PDF-space field with rect:', pdfRect);
+
+                        // Create widget annotation directly in PDF space
+                        const widget = new mobileRuntime.Annotations.WidgetAnnotation({
+                          boundingBox: pdfRect,
+                          formFieldName: fieldName,
+                          id: mobileRuntime.generateInstantId(),
+                          pageIndex,
+                          name: fieldName,
+                        });
+
+                        // Create the form field based on type
+                        let formField;
+
+                        if (event.detail.fieldType === 'signature') {
+                          console.log('[Mobile Debug] Creating signature field');
+                          formField = new mobileRuntime.FormFields.SignatureFormField({
+                            annotationIds: new mobileRuntime.Immutable.List([widget.id]),
+                            name: fieldName,
+                          });
+                        } else if (event.detail.fieldType === 'initials') {
+                          console.log('[Mobile Debug] Creating initials field');
+                          formField = new mobileRuntime.FormFields.SignatureFormField({
+                            annotationIds: new mobileRuntime.Immutable.List([widget.id]),
+                            name: fieldName,
+                            type: 'INITIALS',
+                          });
+                        } else if (event.detail.fieldType === 'date') {
+                          console.log('[Mobile Debug] Creating date field');
+                          formField = new mobileRuntime.FormFields.TextFormField({
+                            annotationIds: new mobileRuntime.Immutable.List([widget.id]),
+                            name: fieldName,
+                            defaultValue: new Date().toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            }),
+                          });
+                        }
+
+                        // Ensure form creator mode is active
+                        instance.setViewState((viewState: any) => viewState.set('interactionMode', mobileRuntime?.InteractionMode.FORM_CREATOR));
+
+                        // Create annotations
+                        if (formField) {
+                          instance
+                            .create([widget, formField])
+                            .then(() => {
+                              console.log('[Mobile Debug] Successfully created field:', fieldName);
 
                               // Add haptic feedback if supported
                               if (navigator.vibrate) {
@@ -921,14 +995,14 @@ export default function FieldPlacement() {
                                   name: fieldName,
                                 },
                               ]);
-                            } else {
-                              console.error('[Mobile Debug] Failed to create field - returned null');
-                            }
-                          })
-                          .catch((err) => {
-                            console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
-                          });
-                      }, 100);
+                            })
+                            .catch((err) => {
+                              console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+                            });
+                        }
+                      } catch (error) {
+                        console.error('[Mobile Debug] Error in immediate field creation:', error);
+                      }
                     } else {
                       console.error('[Mobile Debug] No document pages found. Trying to find any viewport element.');
 
