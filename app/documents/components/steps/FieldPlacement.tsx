@@ -3,12 +3,13 @@
 import React, { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Signature, CalendarDays, Edit } from 'lucide-react';
+import { Signature, CalendarDays, Edit, ScrollText, Trash } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
 import { Label } from '@/components/ui/label';
 import { CustomSwitch } from '@/components/ui/custom-switch';
+import { Button } from '@/components/ui/button';
 
 // Create context for sharing form placement mode
 interface FormPlacementContextType {
@@ -176,6 +177,111 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   );
 };
 
+// Helper function to create a field on a page
+const createFieldOnPage = (
+  fieldType: string,
+  clientX: number,
+  clientY: number,
+  pageElement: HTMLElement,
+  pageIndex: number,
+  instance: NutrientViewerInstance,
+  nutrientRuntime: any,
+) => {
+  try {
+    console.log('[Mobile Debug] Creating field on page', { fieldType, clientX, clientY, pageIndex });
+
+    if (!nutrientRuntime) {
+      console.error('[Mobile Debug] NutrientRuntime not available');
+      return;
+    }
+
+    // Define field dimensions
+    const fieldWidth = fieldType === 'initials' ? 100 : 200;
+    const fieldHeight = 50;
+
+    // Get page coordinates
+    const pageBoundingRect = pageElement.getBoundingClientRect();
+    console.log('[Mobile Debug] Page bounds:', pageBoundingRect);
+
+    // Center the field at touch coordinates
+    const clientRect = new nutrientRuntime.Geometry.Rect({
+      left: clientX - fieldWidth / 2,
+      top: clientY - fieldHeight / 2,
+      width: fieldWidth,
+      height: fieldHeight,
+    });
+
+    console.log('[Mobile Debug] Client rect:', clientRect);
+
+    // Convert to page coordinates
+    const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
+    console.log('[Mobile Debug] Transformed page rect:', transformedPageRect);
+
+    // Create unique field name
+    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // Create widget annotation
+    const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
+      boundingBox: transformedPageRect,
+      formFieldName: fieldName,
+      id: nutrientRuntime.generateInstantId(),
+      pageIndex,
+      name: fieldName,
+    });
+
+    // Create form field based on type
+    let formField;
+
+    if (fieldType === 'signature') {
+      console.log('[Mobile Debug] Creating signature field');
+      formField = new nutrientRuntime.FormFields.SignatureFormField({
+        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+        name: fieldName,
+      });
+    } else if (fieldType === 'initials') {
+      console.log('[Mobile Debug] Creating initials field');
+      formField = new nutrientRuntime.FormFields.SignatureFormField({
+        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+        name: fieldName,
+        type: 'INITIALS',
+      });
+    } else if (fieldType === 'date') {
+      console.log('[Mobile Debug] Creating date field');
+      formField = new nutrientRuntime.FormFields.TextFormField({
+        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+        name: fieldName,
+        defaultValue: new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      });
+    }
+
+    // Ensure form creator mode is active
+    instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
+
+    // Create annotations
+    if (formField) {
+      return instance
+        .create([widget, formField])
+        .then(() => {
+          console.log('[Mobile Debug] Successfully created field:', fieldName);
+          return fieldName;
+        })
+        .catch((error: any) => {
+          console.error('[Mobile Debug] Error creating field:', error);
+          return null;
+        });
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Mobile Debug] Exception in createFieldOnPage:', error);
+    return null;
+  }
+};
+
 export default function FieldPlacement() {
   const { state } = useDocumentFlow();
   const desktopContainerRef = useRef<HTMLDivElement>(null);
@@ -195,11 +301,66 @@ export default function FieldPlacement() {
   // Debug state to track field placements
   const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string; name: string }[]>([]);
 
+  // State to track debug logs for the mobile view
+  const [debugLogs, setDebugLogs] = useState<{ time: string; message: string }[]>([]);
+
+  // Function to add a log entry
+  const addLogEntry = (message: string) => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    setDebugLogs((prev) => [
+      { time: timeString, message },
+      ...prev.slice(0, 99), // Keep latest 100 logs
+    ]);
+  };
+
   // Handle mounting
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Override console logging methods to add to our debug logs for mobile view
+  useEffect(() => {
+    if (isMobile && mounted) {
+      // Store original console methods
+      const originalConsoleLog = console.log;
+      const originalConsoleError = console.error;
+
+      // Override console.log
+      console.log = (...args) => {
+        // Call original method
+        originalConsoleLog(...args);
+
+        // Add to our log if it's a mobile-related log
+        const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+
+        if (message.includes('[Mobile]') || message.includes('[Mobile Debug]')) {
+          addLogEntry(message);
+        }
+      };
+
+      // Override console.error for mobile debugging
+      console.error = (...args) => {
+        // Call original method
+        originalConsoleError(...args);
+
+        // Add to our log if it's a mobile-related error
+        const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+
+        if (message.includes('[Mobile]') || message.includes('[Mobile Debug]')) {
+          addLogEntry(`ERROR: ${message}`);
+        }
+      };
+
+      // Restore original methods on cleanup
+      return () => {
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+      };
+    }
+  }, [isMobile, mounted, addLogEntry]);
 
   // Set up document viewer when component mounts
   useEffect(() => {
@@ -623,17 +784,20 @@ export default function FieldPlacement() {
                     let formField;
 
                     if (activeTouchFieldType === 'signature') {
+                      console.log('[Mobile] Creating signature field');
                       formField = new nutrientRuntime.FormFields.SignatureFormField({
                         annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                         name: fieldName,
                       });
                     } else if (activeTouchFieldType === 'initials') {
+                      console.log('[Mobile] Creating initials field');
                       formField = new nutrientRuntime.FormFields.SignatureFormField({
                         annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                         name: fieldName,
                         type: 'INITIALS',
                       });
                     } else if (activeTouchFieldType === 'date') {
+                      console.log('[Mobile] Creating date field');
                       formField = new nutrientRuntime.FormFields.TextFormField({
                         annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                         name: fieldName,
@@ -689,6 +853,52 @@ export default function FieldPlacement() {
                   activeTouchFieldType = event.detail.fieldType;
                   touchStartX = event.detail.touchX || 0;
                   touchStartY = event.detail.touchY || 0;
+
+                  // IMMEDIATE TEST: Try to create field right away based on event coordinates
+                  // This helps us detect if the issue is with the touchend event or with the field creation itself
+                  try {
+                    console.log('[Mobile Debug] Testing immediate field creation with:', event.detail);
+                    const touchX = event.detail.touchX;
+                    const touchY = event.detail.touchY;
+
+                    // Try to find a page element at these coordinates
+                    const elementAtPoint = document.elementFromPoint(touchX, touchY);
+                    if (elementAtPoint) {
+                      console.log('[Mobile Debug] Found element at point:', elementAtPoint);
+                      const pageElement = closestByClass(elementAtPoint, 'PSPDFKit-Page');
+                      if (pageElement) {
+                        console.log('[Mobile Debug] Found page element:', pageElement);
+
+                        // Proceed with field creation on this page
+                        const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
+                        const fieldType = event.detail.fieldType;
+
+                        createFieldOnPage(fieldType, touchX, touchY, pageElement, pageIndex, instance, nutrientRuntime);
+                      } else {
+                        // If we couldn't find a page, try to get the first visible page
+                        console.log('[Mobile Debug] No page at touch point, trying to find any visible page');
+                        const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
+                        if (pages && pages.length > 0) {
+                          const firstPage = pages[0] as HTMLElement;
+                          console.log('[Mobile Debug] Using first visible page instead:', firstPage);
+                          const pageIndex = parseInt(firstPage.dataset.pageIndex, 10);
+
+                          // Create field in the center of this page instead
+                          const rect = firstPage.getBoundingClientRect();
+                          const centerX = rect.left + rect.width / 2;
+                          const centerY = rect.top + rect.height / 2;
+
+                          createFieldOnPage(fieldType, centerX, centerY, firstPage, pageIndex, instance, nutrientRuntime);
+                        } else {
+                          console.error('[Mobile Debug] No pages found in the document');
+                        }
+                      }
+                    } else {
+                      console.error('[Mobile Debug] No element found at touch point:', { touchX, touchY });
+                    }
+                  } catch (error) {
+                    console.error('[Mobile Debug] Error in immediate field creation:', error);
+                  }
                 }
               }) as EventListener);
             }
@@ -786,6 +996,43 @@ export default function FieldPlacement() {
                 )}
 
                 <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' />
+              </CardContent>
+            </Card>
+
+            {/* Mobile Event Log for Debugging */}
+            <Card className='border border-gray-200 dark:border-gray-700'>
+              <CardContent className='py-4'>
+                <div className='flex items-center justify-between mb-3'>
+                  <div className='flex items-center gap-2'>
+                    <ScrollText className='h-4 w-4 text-blue-500' />
+                    <h3 className='font-medium'>Debug Event Log</h3>
+                  </div>
+                  <div className='flex gap-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => navigator.clipboard.writeText(debugLogs.map((log) => `${log.time}: ${log.message}`).join('\n'))}
+                    >
+                      Copy
+                    </Button>
+                    <Button variant='outline' size='sm' onClick={() => setDebugLogs([])}>
+                      <Trash className='h-4 w-4' />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className='max-h-[200px] overflow-y-auto border rounded-md p-2 bg-gray-50 dark:bg-zinc-800 text-xs font-mono'>
+                  {debugLogs.length === 0 ? (
+                    <div className='text-center text-muted-foreground py-4'>No events logged yet</div>
+                  ) : (
+                    debugLogs.map((log, i) => (
+                      <div key={i} className={`mb-1 ${log.message.includes('ERROR') ? 'text-red-500' : ''}`}>
+                        <span className='text-gray-500 dark:text-gray-400 mr-2'>{log.time}</span>
+                        <span>{log.message}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
