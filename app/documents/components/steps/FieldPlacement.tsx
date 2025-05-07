@@ -929,7 +929,7 @@ export default function FieldPlacement() {
                           const centerY = rect.top + rect.height / 3;
 
                           setTimeout(() => {
-                            createFieldOnPage(event.detail.fieldType, centerX, centerY, firstPage, pageIndex, instance, mobileRuntime);
+                            createFieldOnPage(event.detail.fieldType, centerX, centerY, firstPage, pageIndex, mobileRuntime);
                           }, 100);
                         } else {
                           console.error('[Mobile Debug] No pages found in viewport');
@@ -1049,21 +1049,12 @@ export default function FieldPlacement() {
                     <ScrollText className='h-4 w-4 text-blue-500' />
                     <h3 className='font-medium'>Debug Event Log</h3>
                   </div>
-                  <div className='flex gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => navigator.clipboard.writeText(debugLogs.map((log) => `${log.time}: ${log.message}`).join('\n'))}
-                    >
-                      Copy
-                    </Button>
-                    <Button variant='outline' size='sm' onClick={() => setDebugLogs([])}>
-                      <Trash className='h-4 w-4' />
-                    </Button>
-                  </div>
+                  <Button variant='outline' size='sm' onClick={() => setDebugLogs([])}>
+                    <Trash className='h-4 w-4' />
+                  </Button>
                 </div>
 
-                <div className='max-h-[200px] overflow-y-auto border rounded-md p-2 bg-gray-50 dark:bg-zinc-800 text-xs font-mono'>
+                <div className='border rounded-md p-2 bg-gray-50 dark:bg-zinc-800 text-xs font-mono'>
                   {debugLogs.length === 0 ? (
                     <div className='text-center text-muted-foreground py-4'>No events logged yet</div>
                   ) : (
