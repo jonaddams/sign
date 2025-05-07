@@ -40,11 +40,34 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   const { formPlacementMode } = useContext(FormPlacementContext);
   // Reference to track touch position
   const touchStartRef = useRef({ x: 0, y: 0 });
+  // Ref to store the element for adding non-passive event listeners
+  const elementRef = useRef<HTMLDivElement>(null);
 
   // For logging in Vercel deployments
   const logDragEvent = (message: string, data?: any) => {
     console.log(`[Mobile Drag] ${message}`, data ? data : '');
   };
+
+  // Set up non-passive touch events
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+
+    // Manual event listeners with { passive: false } to properly handle preventDefault
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!formPlacementMode) return;
+      e.preventDefault(); // This will work now with passive: false
+      e.stopPropagation();
+    };
+
+    // Add event listener with { passive: false }
+    element.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    // Clean up
+    return () => {
+      element.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [formPlacementMode]);
 
   // Handle drag start to set the field type data
   const handleDragStart = (e: React.DragEvent) => {
@@ -76,7 +99,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     e.dataTransfer.setData('elementHeight', rect.height.toString());
   };
 
-  // Add touch event handlers to better support mobile
+  // React handlers for touch events
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!formPlacementMode) return;
 
@@ -90,10 +113,10 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     }
   };
 
+  // This is kept but won't call preventDefault() since we handle that in the useEffect
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!formPlacementMode) return;
-    // Prevent scrolling when dragging a field
-    e.preventDefault();
+    // Don't call preventDefault here as it will trigger the warning
+    // It's handled by the non-passive event listener in useEffect
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -123,6 +146,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   if (compact) {
     return (
       <div
+        ref={elementRef}
         className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
         draggable
         onDragStart={handleDragStart}
@@ -138,6 +162,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
 
   return (
     <div
+      ref={elementRef}
       className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
       draggable
       onDragStart={handleDragStart}
