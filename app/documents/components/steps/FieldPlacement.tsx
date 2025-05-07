@@ -422,17 +422,24 @@ const createDirectMobileField = (fieldType: string) => {
       return false;
     }
 
-    // Get the current page index from the viewer if possible
+    // Get the current page index directly from the view state
     let pageIndex = 0; // Default to first page
-
     try {
-      // Try to read the current page index from the viewer
       const viewState = instance.getViewState();
-      if (viewState && viewState.get('currentPageIndex') !== undefined) {
-        pageIndex = viewState.get('currentPageIndex');
-        console.log('[Mobile Direct] Using current page index:', pageIndex);
-      } else {
-        console.log('[Mobile Direct] Defaulting to page index 0');
+      pageIndex = viewState.get('currentPageIndex');
+      console.log('[Mobile Direct] Using current page from view state:', pageIndex);
+
+      // Alternative method to get current page
+      if (pageIndex === undefined) {
+        // Try getting it via the instance
+        const currentPageIndex = instance.viewState?.currentPageIndex;
+        if (currentPageIndex !== undefined) {
+          pageIndex = currentPageIndex;
+          console.log('[Mobile Direct] Using currentPageIndex from instance.viewState:', pageIndex);
+        } else {
+          console.log('[Mobile Direct] Defaulting to page index 0');
+          pageIndex = 0;
+        }
       }
     } catch (pageError) {
       console.error('[Mobile Direct] Error getting current page:', pageError);
@@ -445,6 +452,32 @@ const createDirectMobileField = (fieldType: string) => {
     const pdfWidth = fieldType === 'initials' ? 75 : 150;
     const pdfHeight = 40;
 
+    // Get a reference to the current page element
+    let currentPageElement = null;
+    try {
+      // Find the current visible page element
+      const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
+      if (pages && pages.length > 0) {
+        // Try to find the page matching our pageIndex
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i] as HTMLElement;
+          if (parseInt(page.dataset.pageIndex || '0', 10) === pageIndex) {
+            currentPageElement = page;
+            break;
+          }
+        }
+
+        // If we didn't find the matching page, use the first visible one
+        if (!currentPageElement) {
+          currentPageElement = pages[0] as HTMLElement;
+          pageIndex = parseInt(currentPageElement.dataset.pageIndex || '0', 10);
+          console.log('[Mobile Direct] Using first visible page with index:', pageIndex);
+        }
+      }
+    } catch (error) {
+      console.error('[Mobile Direct] Error finding page element:', error);
+    }
+
     // Create the field at a fixed position in PDF space (top center of page)
     const pdfRect = new runtime.Geometry.Rect({
       left: 225, // Center position horizontally on a typical PDF
@@ -453,7 +486,7 @@ const createDirectMobileField = (fieldType: string) => {
       height: pdfHeight,
     });
 
-    console.log('[Mobile Direct] Creating field with PDF coordinates:', pdfRect);
+    console.log('[Mobile Direct] Creating field with PDF coordinates on page', pageIndex, pdfRect);
 
     // Create the widget annotation
     const widget = new runtime.Annotations.WidgetAnnotation({
@@ -497,14 +530,14 @@ const createDirectMobileField = (fieldType: string) => {
       instance
         .create([widget, formField])
         .then(() => {
-          console.log('[Mobile Direct] Successfully created field');
+          console.log('[Mobile Direct] Successfully created field on page', pageIndex);
 
           // Add to our debug state for tracking
           setFieldPlacements((prev) => [
             ...prev,
             {
               type: fieldType,
-              position: `PDF position (225, 100)`,
+              position: `Page ${pageIndex + 1}`,
               name: fieldName,
             },
           ]);
@@ -512,7 +545,7 @@ const createDirectMobileField = (fieldType: string) => {
           // Show visual feedback
           const toast = document.createElement('div');
           toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
-          toast.innerText = `Added ${fieldType} field`;
+          toast.innerText = `Added ${fieldType} field to page ${pageIndex + 1}`;
           document.body.appendChild(toast);
 
           // Vibrate if supported
@@ -1363,7 +1396,7 @@ export default function FieldPlacement() {
             <div className='sticky top-0 z-20'>
               <Card className='border border-gray-200 dark:border-gray-700'>
                 <CardContent className='py-4'>
-                  <h3 className='font-medium mb-3'>Available Fields</h3>
+                  <h3 className='font-medium mb-3'>Click to add fields</h3>
 
                   <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
                     <div className='flex items-center gap-2'>
@@ -1375,29 +1408,24 @@ export default function FieldPlacement() {
                     <CustomSwitch id='form-placement-mode' checked={formPlacementMode} onCheckedChange={setFormPlacementMode} />
                   </div>
 
-                  <div className='space-y-2'>
-                    <FieldOption icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
-                    <FieldOption icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
-                    <FieldOption icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
-                  </div>
-
-                  {/* Direct buttons for mobile - guaranteed to work */}
-                  <div className='mt-4 pt-4 border-t'>
-                    <h4 className='text-sm font-medium mb-2'>Quick Add:</h4>
-                    <div className='flex gap-2 flex-wrap'>
-                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('signature')}>
-                        <Signature className='h-3 w-3 mr-1' />
-                        Add Signature
-                      </Button>
-                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('initials')}>
-                        <Edit className='h-3 w-3 mr-1' />
-                        Add Initials
-                      </Button>
-                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('date')}>
-                        <CalendarDays className='h-3 w-3 mr-1' />
-                        Add Date
-                      </Button>
-                    </div>
+                  {/* Direct buttons for mobile - simplified approach */}
+                  <div className='grid grid-cols-2 gap-2'>
+                    <Button
+                      variant='outline'
+                      className='h-auto py-3 flex flex-col items-center justify-center col-span-2'
+                      onClick={() => createDirectMobileField('signature')}
+                    >
+                      <Signature className='h-5 w-5 mb-1' />
+                      <span>Add Signature</span>
+                    </Button>
+                    <Button variant='outline' className='h-auto py-2' onClick={() => createDirectMobileField('initials')}>
+                      <Edit className='h-4 w-4 mr-2' />
+                      <span>Add Initials</span>
+                    </Button>
+                    <Button variant='outline' className='h-auto py-2' onClick={() => createDirectMobileField('date')}>
+                      <CalendarDays className='h-4 w-4 mr-2' />
+                      <span>Add Date</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
