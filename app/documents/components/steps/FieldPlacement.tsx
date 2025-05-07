@@ -38,6 +38,13 @@ interface FieldPlacement {
 
 const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
   const { formPlacementMode } = useContext(FormPlacementContext);
+  // Reference to track touch position
+  const touchStartRef = useRef({ x: 0, y: 0 });
+
+  // For logging in Vercel deployments
+  const logDragEvent = (message: string, data?: any) => {
+    console.log(`[Mobile Drag] ${message}`, data ? data : '');
+  };
 
   // Handle drag start to set the field type data
   const handleDragStart = (e: React.DragEvent) => {
@@ -47,7 +54,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
       return;
     }
 
-    console.log('Started dragging field:', type);
+    logDragEvent(`Started dragging field: ${type}`);
     e.dataTransfer.setData('fieldType', type);
 
     // Store the position where the user grabbed the element
@@ -69,12 +76,59 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     e.dataTransfer.setData('elementHeight', rect.height.toString());
   };
 
+  // Add touch event handlers to better support mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!formPlacementMode) return;
+
+    // Record the starting touch position
+    if (e.touches && e.touches[0]) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+      logDragEvent('Touch started', touchStartRef.current);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!formPlacementMode) return;
+    // Prevent scrolling when dragging a field
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!formPlacementMode) return;
+
+    if (e.changedTouches && e.changedTouches[0]) {
+      const touchX = e.changedTouches[0].clientX;
+      const touchY = e.changedTouches[0].clientY;
+
+      logDragEvent(`Touch ended on field type: ${type}`, { touchX, touchY });
+
+      // Dispatch a custom event that our document viewer can listen for
+      const customEvent = new CustomEvent('nutrient:fieldDragStart', {
+        detail: {
+          fieldType: type,
+          touchX,
+          touchY,
+        },
+        bubbles: true,
+      });
+
+      // Dispatch the event
+      window.dispatchEvent(customEvent);
+    }
+  };
+
   if (compact) {
     return (
       <div
         className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
         draggable
         onDragStart={handleDragStart}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div className='text-blue-500 mb-1'>{icon}</div>
         <span className='text-xs font-medium'>{label}</span>
@@ -87,6 +141,9 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
       className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
       draggable
       onDragStart={handleDragStart}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className='mr-3 text-blue-500'>{icon}</div>
       <span className='text-sm font-medium'>{label}</span>
@@ -434,6 +491,167 @@ export default function FieldPlacement() {
                 }
               }
             });
+
+            // Add specific touch event listeners for mobile
+            if (isMobile) {
+              // Track if we're in the process of a mobile field dragging operation
+              let mobileFieldDragActive = false;
+              let activeTouchFieldType = '';
+              let touchStartX = 0;
+              let touchStartY = 0;
+
+              // Add touch handling to the document
+              instance.contentDocument.addEventListener('touchstart', (event) => {
+                console.log('[Mobile] Touch start event in document viewer');
+              });
+
+              // Handle touch move in the document
+              instance.contentDocument.addEventListener('touchmove', (event) => {
+                if (mobileFieldDragActive && event.touches && event.touches[0]) {
+                  console.log('[Mobile] Touch move with active field:', activeTouchFieldType);
+                  event.preventDefault(); // Prevent scrolling during field placement
+                }
+              });
+
+              // Handle touch end in the document
+              instance.contentDocument.addEventListener('touchend', (event) => {
+                if (mobileFieldDragActive) {
+                  console.log('[Mobile] Touch end with active field:', activeTouchFieldType);
+
+                  // Get touch end position
+                  const touchEndX = event.changedTouches[0].clientX;
+                  const touchEndY = event.changedTouches[0].clientY;
+
+                  // Get element under the touch point
+                  const elementAtPoint = document.elementFromPoint(touchEndX, touchEndY);
+                  if (!elementAtPoint) return;
+
+                  // Find the page element
+                  const pageElement = closestByClass(elementAtPoint, 'PSPDFKit-Page');
+                  if (!pageElement) {
+                    console.log('[Mobile] No page element found at touch end');
+                    mobileFieldDragActive = false;
+                    return;
+                  }
+
+                  try {
+                    const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
+                    const nutrientRuntime = getNutrientViewerRuntime();
+
+                    if (!nutrientRuntime) {
+                      console.error('[Mobile] NutrientViewer runtime not available');
+                      mobileFieldDragActive = false;
+                      return;
+                    }
+
+                    // Define field dimensions
+                    const fieldWidth = activeTouchFieldType === 'initials' ? 100 : 200;
+                    const fieldHeight = 50;
+
+                    // Calculate placement position
+                    const clientRect = new nutrientRuntime.Geometry.Rect({
+                      left: touchEndX - fieldWidth / 2, // Center the field horizontally at touch point
+                      top: touchEndY - 25, // Place field under the touch point
+                      width: fieldWidth,
+                      height: fieldHeight,
+                    });
+
+                    console.log('[Mobile] Placing field at:', {
+                      touchEndX,
+                      touchEndY,
+                      fieldWidth,
+                      fieldHeight,
+                      pageIndex,
+                    });
+
+                    // Transform to page coordinates
+                    const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
+
+                    // Create a unique field name
+                    const fieldName = `${activeTouchFieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+                    // Create widget annotation
+                    const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
+                      boundingBox: transformedPageRect,
+                      formFieldName: fieldName,
+                      id: nutrientRuntime.generateInstantId(),
+                      pageIndex,
+                      name: fieldName,
+                    });
+
+                    // Create form field based on type
+                    let formField;
+
+                    if (activeTouchFieldType === 'signature') {
+                      formField = new nutrientRuntime.FormFields.SignatureFormField({
+                        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+                        name: fieldName,
+                      });
+                    } else if (activeTouchFieldType === 'initials') {
+                      formField = new nutrientRuntime.FormFields.SignatureFormField({
+                        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+                        name: fieldName,
+                        type: 'INITIALS',
+                      });
+                    } else if (activeTouchFieldType === 'date') {
+                      formField = new nutrientRuntime.FormFields.TextFormField({
+                        annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
+                        name: fieldName,
+                        defaultValue: new Date().toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        }),
+                      });
+                    }
+
+                    // Set form creator mode
+                    instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
+
+                    // Create the annotations
+                    if (formField) {
+                      instance
+                        .create([widget, formField])
+                        .then(() => {
+                          console.log(
+                            `[Mobile] Created ${activeTouchFieldType} field at position (${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
+                          );
+
+                          // Add to our debug state for tracking
+                          setFieldPlacements((prev) => [
+                            ...prev,
+                            {
+                              type: activeTouchFieldType,
+                              position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
+                              name: fieldName,
+                            },
+                          ]);
+                        })
+                        .catch((error: any) => {
+                          console.error('[Mobile] Error creating form field:', error);
+                        });
+                    }
+                  } catch (error) {
+                    console.error('[Mobile] Error in touch-based form field creation:', error);
+                  }
+
+                  // Reset mobile drag state
+                  mobileFieldDragActive = false;
+                  activeTouchFieldType = '';
+                }
+              });
+
+              // Add a global listener to track field type for mobile drag operations
+              window.addEventListener('nutrient:fieldDragStart', ((event: CustomEvent) => {
+                if (event.detail && event.detail.fieldType) {
+                  console.log('[Mobile] Custom field drag start event captured:', event.detail);
+                  mobileFieldDragActive = true;
+                  activeTouchFieldType = event.detail.fieldType;
+                  touchStartX = event.detail.touchX || 0;
+                  touchStartY = event.detail.touchY || 0;
+                }
+              }) as EventListener);
+            }
 
             setIsViewerLoaded(true);
             setIsLoading(false);
