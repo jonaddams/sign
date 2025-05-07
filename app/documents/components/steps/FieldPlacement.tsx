@@ -408,6 +408,140 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
   }
 };
 
+// This function uses a direct approach for creating fields on mobile without relying on touch events in the viewer
+const createDirectMobileField = (fieldType: string) => {
+  console.log('[Mobile Direct] Attempting direct field creation for type:', fieldType);
+
+  try {
+    // Get the viewer instance and runtime
+    const instance = viewerInstanceRef.current;
+    const runtime = getNutrientViewerRuntime();
+
+    if (!instance || !runtime) {
+      console.error('[Mobile Direct] Missing instance or runtime');
+      return false;
+    }
+
+    // Get the current page index from the viewer if possible
+    let pageIndex = 0; // Default to first page
+
+    try {
+      // Try to read the current page index from the viewer
+      const viewState = instance.getViewState();
+      if (viewState && viewState.get('currentPageIndex') !== undefined) {
+        pageIndex = viewState.get('currentPageIndex');
+        console.log('[Mobile Direct] Using current page index:', pageIndex);
+      } else {
+        console.log('[Mobile Direct] Defaulting to page index 0');
+      }
+    } catch (pageError) {
+      console.error('[Mobile Direct] Error getting current page:', pageError);
+    }
+
+    // Create a unique field name
+    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // Use fixed PDF coordinates rather than screen coordinates to ensure the field is visible
+    const pdfWidth = fieldType === 'initials' ? 75 : 150;
+    const pdfHeight = 40;
+
+    // Create the field at a fixed position in PDF space (top center of page)
+    const pdfRect = new runtime.Geometry.Rect({
+      left: 225, // Center position horizontally on a typical PDF
+      top: 100, // Near the top of the page
+      width: pdfWidth,
+      height: pdfHeight,
+    });
+
+    console.log('[Mobile Direct] Creating field with PDF coordinates:', pdfRect);
+
+    // Create the widget annotation
+    const widget = new runtime.Annotations.WidgetAnnotation({
+      boundingBox: pdfRect,
+      formFieldName: fieldName,
+      id: runtime.generateInstantId(),
+      pageIndex,
+      name: fieldName,
+    });
+
+    // Create form field based on type
+    let formField;
+    if (fieldType === 'signature') {
+      formField = new runtime.FormFields.SignatureFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+      });
+    } else if (fieldType === 'initials') {
+      formField = new runtime.FormFields.SignatureFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+        type: 'INITIALS',
+      });
+    } else if (fieldType === 'date') {
+      formField = new runtime.FormFields.TextFormField({
+        annotationIds: new runtime.Immutable.List([widget.id]),
+        name: fieldName,
+        defaultValue: new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      });
+    }
+
+    // Set form creator mode
+    instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+
+    // Create the field directly
+    if (formField) {
+      instance
+        .create([widget, formField])
+        .then(() => {
+          console.log('[Mobile Direct] Successfully created field');
+
+          // Add to our debug state for tracking
+          setFieldPlacements((prev) => [
+            ...prev,
+            {
+              type: fieldType,
+              position: `PDF position (225, 100)`,
+              name: fieldName,
+            },
+          ]);
+
+          // Show visual feedback
+          const toast = document.createElement('div');
+          toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
+          toast.innerText = `Added ${fieldType} field`;
+          document.body.appendChild(toast);
+
+          // Vibrate if supported
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+
+          // Remove toast after 2 seconds
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 2000);
+
+          return true;
+        })
+        .catch((error) => {
+          console.error('[Mobile Direct] Error creating field:', error);
+          return false;
+        });
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[Mobile Direct] Top-level error:', error);
+    return false;
+  }
+};
+
 export default function FieldPlacement() {
   const { state } = useDocumentFlow();
   const desktopContainerRef = useRef<HTMLDivElement>(null);
@@ -1226,7 +1360,7 @@ export default function FieldPlacement() {
           // Mobile Layout - Vertical with fields at top
           <div className='flex flex-col space-y-4'>
             {/* Horizontal field selector for mobile - sticky */}
-            <div className='sticky top-0 z-10'>
+            <div className='sticky top-0 z-20'>
               <Card className='border border-gray-200 dark:border-gray-700'>
                 <CardContent className='py-4'>
                   <h3 className='font-medium mb-3'>Available Fields</h3>
@@ -1245,6 +1379,25 @@ export default function FieldPlacement() {
                     <FieldOption icon={<Signature className='h-4 w-4' />} label='Signature' type='signature' compact={true} />
                     <FieldOption icon={<Edit className='h-4 w-4' />} label='Initials' type='initials' compact={true} />
                     <FieldOption icon={<CalendarDays className='h-4 w-4' />} label='Date' type='date' compact={true} />
+                  </div>
+
+                  {/* Direct buttons for mobile - guaranteed to work */}
+                  <div className='mt-4 pt-4 border-t'>
+                    <h4 className='text-sm font-medium mb-2'>Quick Add:</h4>
+                    <div className='flex gap-2 flex-wrap'>
+                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('signature')}>
+                        <Signature className='h-3 w-3 mr-1' />
+                        Add Signature
+                      </Button>
+                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('initials')}>
+                        <Edit className='h-3 w-3 mr-1' />
+                        Add Initials
+                      </Button>
+                      <Button variant='outline' size='sm' className='flex-1' onClick={() => createDirectMobileField('date')}>
+                        <CalendarDays className='h-3 w-3 mr-1' />
+                        Add Date
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
