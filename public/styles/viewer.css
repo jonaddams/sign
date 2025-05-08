@@ -1,3 +1,4 @@
-div.PSPDFKit-Form-Creator-Toolbar {
+.PSPDFKit-Form-Creator-Toolbar,
+.PSPDFKit-Form-Creator-Popover {
   display: none;
 }

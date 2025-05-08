@@ -451,20 +451,49 @@ export default function FieldPlacement() {
         return false;
       }
 
-      // Get the current page index
+      // Get the current page index - multiple approaches for better reliability
       let pageIndex = 0;
       try {
-        // First approach - using view state
-        const viewState = instance.getViewState();
-        if (viewState && typeof viewState.get === 'function') {
-          const currentPage = viewState.get('currentPageIndex');
-          if (currentPage !== undefined) {
-            pageIndex = currentPage;
-            console.log('[Mobile Direct] Found current page in view state:', pageIndex);
+        // Try different approaches to get the current page index
+
+        // Approach 1: Try accessing viewState as a property
+        if (instance.viewState && typeof instance.viewState.currentPageIndex !== 'undefined') {
+          pageIndex = instance.viewState.currentPageIndex;
+          console.log('[Mobile Direct] Found current page using viewState property:', pageIndex);
+        }
+        // Approach 2: Try using getViewState if it exists as a method
+        else if (typeof instance.getViewState === 'function') {
+          const viewState = instance.getViewState();
+          if (viewState && typeof viewState.get === 'function') {
+            const currentPage = viewState.get('currentPageIndex');
+            if (currentPage !== undefined) {
+              pageIndex = currentPage;
+              console.log('[Mobile Direct] Found current page using getViewState():', pageIndex);
+            }
+          }
+        }
+        // Approach 3: Looking for the active page in the DOM
+        else {
+          console.log('[Mobile Direct] Attempting to find current page from DOM');
+          // Find all pages in the document
+          const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
+          if (pages && pages.length > 0) {
+            // Find which page is visible in the viewport
+            for (let i = 0; i < pages.length; i++) {
+              const page = pages[i] as HTMLElement;
+              const rect = page.getBoundingClientRect();
+              // If page is visible (at least partially) in viewport
+              if (rect.top < window.innerHeight && rect.bottom > 0) {
+                pageIndex = parseInt(page.dataset.pageIndex || '0', 10);
+                console.log('[Mobile Direct] Found visible page in DOM with index:', pageIndex);
+                break;
+              }
+            }
           }
         }
       } catch (error) {
-        console.error('[Mobile Direct] Error getting page from view state:', error);
+        console.error('[Mobile Direct] Error getting current page:', error);
+        console.log('[Mobile Direct] Defaulting to page index 0');
       }
 
       console.log('[Mobile Direct] Creating field on page:', pageIndex);
@@ -520,8 +549,15 @@ export default function FieldPlacement() {
         });
       }
 
-      // Set interaction mode
-      instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+      // Set interaction mode - using try/catch for better reliability
+      try {
+        // Set form creator mode
+        if (typeof instance.setViewState === 'function') {
+          instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+        }
+      } catch (error) {
+        console.error('[Mobile Direct] Error setting interaction mode:', error);
+      }
 
       // Create the field directly
       if (formField) {
@@ -545,6 +581,11 @@ export default function FieldPlacement() {
             toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
             toast.innerText = `Added ${fieldType} field to page ${pageIndex + 1}`;
             document.body.appendChild(toast);
+
+            // Vibrate for feedback if supported
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
 
             setTimeout(() => {
               document.body.removeChild(toast);
