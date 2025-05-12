@@ -1,0 +1,149 @@
+// This file provides context for the field placement functionality
+// with support for recipient navigation and field assignment
+
+import React, { createContext, useState, useContext, useCallback, useMemo } from 'react';
+import { Recipient } from './DocumentFlowContext';
+
+interface FormPlacementContextType {
+  formPlacementMode: boolean;
+  setFormPlacementMode: React.Dispatch<React.SetStateAction<boolean>>;
+  currentRecipient: Recipient | null;
+  currentRecipientIndex: number;
+  signerRecipients: Recipient[];
+  goToNextRecipient: () => void;
+  goToPreviousRecipient: () => void;
+  recipientColors: { [email: string]: string };
+
+  // New field tracking properties
+  recipientFieldCounts: {
+    [email: string]: {
+      signature: number;
+      initials: number;
+      date: number;
+    };
+  };
+  updateFieldCount: (recipientEmail: string, fieldType: string, increment: boolean) => void;
+
+  // New validation properties
+  allSignersHaveSignatures: boolean;
+  signersWithoutSignatures: string[]; // Emails of signers who still need signatures
+  recipientHasSignature: (email: string) => boolean;
+}
+
+// Create the context with default values
+export const FormPlacementContext = createContext<FormPlacementContextType>({
+  formPlacementMode: false,
+  setFormPlacementMode: () => {},
+  currentRecipient: null,
+  currentRecipientIndex: 0,
+  signerRecipients: [],
+  goToNextRecipient: () => {},
+  goToPreviousRecipient: () => {},
+  recipientColors: {},
+  recipientFieldCounts: {},
+  updateFieldCount: () => {},
+  allSignersHaveSignatures: false,
+  signersWithoutSignatures: [],
+  recipientHasSignature: () => false,
+});
+
+// A hook to use the form placement context
+export const useFormPlacement = () => useContext(FormPlacementContext);
+
+// Provider component that wraps parts of the app that need the context
+export const FormPlacementProvider: React.FC<{
+  children: React.ReactNode;
+  recipients: Recipient[];
+}> = ({ children, recipients }) => {
+  const [formPlacementMode, setFormPlacementMode] = useState(false);
+  const [currentRecipientIndex, setCurrentRecipientIndex] = useState(0);
+
+  // New state for tracking field counts per recipient
+  const [recipientFieldCounts, setRecipientFieldCounts] = useState<{
+    [email: string]: { signature: number; initials: number; date: number };
+  }>({});
+
+  // Filter just signer recipients
+  const signerRecipients = recipients.filter((r) => r.role === 'signer');
+
+  // Get current recipient
+  const currentRecipient = signerRecipients.length > 0 ? signerRecipients[currentRecipientIndex] : null;
+
+  // Generate a unique color for each recipient
+  const recipientColors = signerRecipients.reduce(
+    (acc, recipient, index) => {
+      const hue = (index * 137.5) % 360; // Generate evenly spaced hues
+      acc[recipient.email] = `hsla(${hue}, 70%, 85%, 0.3)`; // Light, semi-transparent colors
+      return acc;
+    },
+    {} as { [email: string]: string },
+  );
+
+  // Navigation functions
+  const goToNextRecipient = () => {
+    if (currentRecipientIndex < signerRecipients.length - 1) {
+      setCurrentRecipientIndex(currentRecipientIndex + 1);
+    }
+  };
+
+  const goToPreviousRecipient = () => {
+    if (currentRecipientIndex > 0) {
+      setCurrentRecipientIndex(currentRecipientIndex - 1);
+    }
+  };
+
+  // Update field counts for a recipient
+  const updateFieldCount = useCallback((email: string, fieldType: string, increment: boolean) => {
+    setRecipientFieldCounts((prev) => {
+      // Get current counts or initialize with zeros
+      const currentCounts = prev[email] || { signature: 0, initials: 0, date: 0 };
+
+      // Make sure we never go below zero
+      const newCount = Math.max(0, currentCounts[fieldType as keyof typeof currentCounts] + (increment ? 1 : -1));
+
+      return {
+        ...prev,
+        [email]: {
+          ...currentCounts,
+          [fieldType]: newCount,
+        },
+      };
+    });
+  }, []);
+
+  // Computed validation properties
+  const allSignersHaveSignatures = useMemo(() => {
+    return signerRecipients.every((recipient) => (recipientFieldCounts[recipient.email]?.signature || 0) > 0);
+  }, [signerRecipients, recipientFieldCounts]);
+
+  const signersWithoutSignatures = useMemo(() => {
+    return signerRecipients.filter((recipient) => (recipientFieldCounts[recipient.email]?.signature || 0) === 0).map((recipient) => recipient.email);
+  }, [signerRecipients, recipientFieldCounts]);
+
+  // Helper function to check if a recipient has a signature
+  const recipientHasSignature = useCallback(
+    (email: string) => {
+      return (recipientFieldCounts[email]?.signature || 0) > 0;
+    },
+    [recipientFieldCounts],
+  );
+
+  // Value object passed to consumers
+  const value = {
+    formPlacementMode,
+    setFormPlacementMode,
+    currentRecipient,
+    currentRecipientIndex,
+    signerRecipients,
+    goToNextRecipient,
+    goToPreviousRecipient,
+    recipientColors,
+    recipientFieldCounts,
+    updateFieldCount,
+    allSignersHaveSignatures,
+    signersWithoutSignatures,
+    recipientHasSignature,
+  };
+
+  return <FormPlacementContext.Provider value={value}>{children}</FormPlacementContext.Provider>;
+};

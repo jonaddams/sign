@@ -1,0 +1,44 @@
+/* Custom field styling for the document field placement */
+
+.custom-field-container {
+  border: 2px solid;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  opacity: 0.9;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 60px;
+}
+
+.custom-field-recipient {
+  font-size: 12px;
+  font-weight: 600;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 2px 4px;
+  border-radius: 3px;
+  max-width: calc(100% - 8px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-field-type {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.custom-field-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  opacity: 0.7;
+}

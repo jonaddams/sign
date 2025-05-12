@@ -21,10 +21,10 @@ function fileToDataURL(file) {
 
 function createCustomSignatureNode(name) {
   const div = document.createElement('div');
-  div.innerHTML = `<div class="custom-signature-label">${name}</div>
-      <div>
-          <img class="custom-signature-icon" src="/signature.svg" alt="signature-icon"/>
-      </div>`;
+  div.innerHTML = `<div class="custom-signature-field">
+    <img class="custom-signature-icon" src="/signature.svg" alt="signature-icon"/>
+    <span class="custom-signature-name">${name}</span>
+  </div>`;
   return div;
 }
 
@@ -76,7 +76,7 @@ export default function PdfViewer() {
         customRenderers: {
           Annotation: getAnnotationRenderers,
         },
-        styleSheets: ['/drag-and-drop.css'],
+        styleSheets: ['/styles/viewer.css'],
       }).then(async (instance) => {
         const signaturesString = localStorage.getItem(process.env.STORAGE_KEY);
         if (signaturesString) {

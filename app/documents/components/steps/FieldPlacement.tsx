@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useContext, createContext } from 'react';
+import React, { useEffect, useRef, useState, useContext, createContext, useCallback, useMemo } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn, Tag } from 'lucide-react';
+import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn, Tag, ChevronLeft, ChevronRight, User, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
@@ -11,18 +11,16 @@ import { Label } from '@/components/ui/label';
 import { CustomSwitch } from '@/components/ui/custom-switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FormPlacementContext, useFormPlacement, FormPlacementProvider } from '../../context/FormPlacementContext';
 
-// Create context for sharing form placement mode
-interface FormPlacementContextType {
-  formPlacementMode: boolean;
-}
-
-const FormPlacementContext = createContext<FormPlacementContextType>({
-  formPlacementMode: true,
-});
+// Import the custom CSS for field styling
+import '@/public/styles/custom-fields.css';
 
 // Define the instance type for local use
 type NutrientViewerInstance = NutrientViewerSDK.Instance;
+
+// Create a shared context for the viewer reference
+const ViewerContext = createContext<React.MutableRefObject<NutrientViewerInstance | null> | null>(null);
 
 interface FieldOptionProps {
   icon: React.ReactNode;
@@ -36,10 +34,23 @@ interface FieldPlacement {
   type: string;
   position: string;
   name: string; // Store the field name to find it in the DOM
+  recipient?: string;
+}
+
+// Define interfaces for document flow state
+interface DocumentState {
+  url?: string;
+  // Add other document properties that might be needed
+}
+
+interface DocumentFlowState {
+  document: DocumentState;
+  // Add other state properties that might be needed
 }
 
 const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
   const { formPlacementMode } = useContext(FormPlacementContext);
+  const viewerInstanceRef = useContext(ViewerContext);
   // Reference to track touch position
   const touchStartRef = useRef({ x: 0, y: 0 });
   // Ref to store the element for adding non-passive event listeners
@@ -134,7 +145,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
       if (window.innerWidth < 768) {
         // Mobile breakpoint
         // Find viewer instance
-        if (window.NutrientViewer) {
+        if (window.NutrientViewer && viewerInstanceRef) {
           const instance = viewerInstanceRef.current;
           const runtime = getNutrientViewerRuntime();
 
@@ -202,6 +213,8 @@ const createFieldOnPage = (
   pageIndex: number,
   instance: NutrientViewerInstance,
   nutrientRuntime: any,
+  currentRecipient?: any,
+  setFieldPlacements?: any,
 ) => {
   try {
     console.log('[Mobile Debug] Creating field on page', { fieldType, clientX, clientY, pageIndex });
@@ -234,7 +247,7 @@ const createFieldOnPage = (
     console.log('[Mobile Debug] Transformed page rect:', transformedPageRect);
 
     // Create unique field name
-    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const fieldName = `${fieldType}_${currentRecipient ? currentRecipient.email.split('@')[0] : 'unknown'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     // Create widget annotation
     const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
@@ -275,7 +288,12 @@ const createFieldOnPage = (
     }
 
     // Ensure form creator mode is active
-    instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
+    instance.setViewState((viewState: any) => {
+      if (nutrientRuntime?.InteractionMode?.FORM_CREATOR) {
+        return viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR);
+      }
+      return viewState;
+    });
 
     // Create annotations
     if (formField) {
@@ -283,6 +301,18 @@ const createFieldOnPage = (
         .create([widget, formField])
         .then(() => {
           console.log('[Mobile Debug] Successfully created field:', fieldName);
+
+          // Add to field placements with recipient info
+          setFieldPlacements((prev: FieldPlacement[]) => [
+            ...prev,
+            {
+              type: fieldType,
+              position: `Page ${pageIndex + 1} at y=${transformedPageRect.top}`,
+              name: fieldName,
+              recipient: currentRecipient?.email,
+            } as FieldPlacement,
+          ]);
+
           return fieldName;
         })
         .catch((error: any) => {
@@ -312,7 +342,7 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
     }
 
     const firstPage = pages[0] as HTMLElement;
-    const pageIndex = parseInt(firstPage.dataset.pageIndex || '0', 10);
+    const pageIndex = parseInt((firstPage as HTMLElement).dataset.pageIndex || '0', 10);
 
     // Create a unique field name
     const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -368,7 +398,12 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
     }
 
     // Set form creator mode
-    instance.setViewState((viewState: any) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
+    instance.setViewState((viewState: any) => {
+      if (runtime?.InteractionMode?.FORM_CREATOR) {
+        return viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR);
+      }
+      return viewState;
+    });
 
     // Create the annotations
     if (formField) {
@@ -408,9 +443,183 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
   }
 };
 
+// Create custom renderer for fields with recipient names
+const getAnnotationRenderers =
+  (runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }) =>
+  ({ annotation }: any) => {
+    // Skip if no annotation name or it's not one of our fields
+    if (!annotation.name || !['signature', 'initials', 'date'].some((type) => annotation.name.startsWith(type))) {
+      return null;
+    }
+
+    const recipientName = currentRecipient?.name || 'Unknown';
+    const recipientEmail = currentRecipient?.email || '';
+
+    // Create a div to hold our custom field
+    const div = document.createElement('div');
+    div.className = 'custom-field-container';
+
+    // Add background color based on recipient's color
+    const fieldColor = recipientEmail && recipientColors[recipientEmail] ? recipientColors[recipientEmail] : 'hsl(210, 65%, 85%)'; // Default color if none assigned
+
+    // Apply the color as a subtle border and background
+    div.style.borderColor = fieldColor;
+    div.style.backgroundColor = fieldColor;
+
+    // Field type icon and label
+    let icon = '/signature.svg';
+    let fieldTypeLabel = 'Signature';
+
+    if (annotation.name.startsWith('initials')) {
+      icon = '/file-icons/initials-icon.svg';
+      fieldTypeLabel = 'Initials';
+    } else if (annotation.name.startsWith('date')) {
+      icon = '/file-icons/date-icon.svg';
+      fieldTypeLabel = 'Date';
+    }
+
+    // Add recipient label and icon
+    div.innerHTML = `
+      <div class="custom-field-recipient">${recipientName}</div>
+      <div class="custom-field-type">
+        <img class="custom-field-icon" src="${icon}" alt="${fieldTypeLabel}" />
+      </div>
+    `;
+
+    // Return the custom renderer configuration
+    return {
+      node: div,
+      append: true,
+    };
+  };
+
+// Create a new RecipientNavigation component for switching between recipients
+const RecipientNavigation = () => {
+  const { currentRecipientIndex, signerRecipients, goToPreviousRecipient, goToNextRecipient, recipientColors, recipientHasSignature } =
+    useContext(FormPlacementContext);
+
+  if (signerRecipients.length <= 1) {
+    return null; // Don't show navigation if there's only one recipient
+  }
+
+  const currentRecipient = signerRecipients[currentRecipientIndex];
+
+  return (
+    <div className='space-y-3'>
+      <div className='flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
+        <div className='flex items-center space-x-2'>
+          <User className='h-4 w-4 text-blue-500' />
+          <span className='text-sm font-medium'>
+            {currentRecipient.name} ({currentRecipientIndex + 1}/{signerRecipients.length})
+          </span>
+        </div>
+
+        {/* Status indicator */}
+        {recipientHasSignature(currentRecipient.email) ? (
+          <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1'>
+            <CheckCircle className='h-3 w-3' /> Ready
+          </Badge>
+        ) : (
+          <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1'>
+            <AlertTriangle className='h-3 w-3' /> Needs signature
+          </Badge>
+        )}
+      </div>
+
+      {/* Compact recipient list with status indicators */}
+      <div className='grid grid-cols-1 gap-2 mb-3 max-h-48 overflow-y-auto'>
+        {signerRecipients.map((recipient, index) => {
+          const hasSignature = recipientHasSignature(recipient.email);
+          return (
+            <div
+              key={recipient.email}
+              className={`flex items-center justify-between p-2 rounded cursor-pointer
+                        ${
+                          index === currentRecipientIndex
+                            ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
+                            : 'border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+              onClick={() => {
+                // Use existing navigation functions rather than direct index setting
+                const currentIndex = currentRecipientIndex;
+                if (index < currentIndex) {
+                  // Need to navigate backward
+                  for (let i = 0; i < currentIndex - index; i++) {
+                    goToPreviousRecipient();
+                  }
+                } else if (index > currentIndex) {
+                  // Need to navigate forward
+                  for (let i = 0; i < index - currentIndex; i++) {
+                    goToNextRecipient();
+                  }
+                }
+              }}
+            >
+              <div className='flex items-center space-x-2'>
+                <div className='h-3 w-3 rounded-full' style={{ backgroundColor: recipientColors[recipient.email] }} />
+                <span className='text-sm truncate'>{recipient.name}</span>
+              </div>
+
+              {/* Status dot */}
+              <div className='flex items-center space-x-1'>
+                <span className='text-xs text-gray-500 dark:text-gray-400'>{hasSignature ? 'Ready' : 'Needs signature'}</span>
+                <div className={`h-2 w-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-amber-500'}`} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className='flex items-center space-x-2'>
+        <Button variant='outline' size='sm' onClick={goToPreviousRecipient} disabled={currentRecipientIndex === 0} className='h-8 px-2'>
+          <ChevronLeft className='h-4 w-4 mr-1' />
+          Previous
+        </Button>
+        <Button variant='outline' size='sm' onClick={goToNextRecipient} disabled={currentRecipientIndex === signerRecipients.length - 1} className='h-8 px-2'>
+          Next
+          <ChevronRight className='h-4 w-4 ml-1' />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Moved inside the component
 export default function FieldPlacement() {
-  const { state } = useDocumentFlow();
+  // Instead of directly using useDocumentFlow, we'll use a pattern that's safe
+  // by accessing the DocumentFlow context through the existing hook
+  const documentFlowState = useDocumentFlow();
+  const { state, dispatch } = documentFlowState || {
+    state: { document: { url: undefined } } as DocumentFlowState,
+    dispatch: () => {},
+  };
+
+  // Define a local useState for form placement mode to ensure it's always functional
+  const [localFormPlacementMode, setLocalFormPlacementMode] = useState(false);
+
+  // Extract recipients from the document flow state
+  const recipients = state.recipients || [];
+
+  // Wrap the component content with the FormPlacementProvider to ensure context is available
+  return (
+    <FormPlacementProvider recipients={recipients}>
+      <FieldPlacementContent localMode={localFormPlacementMode} setLocalMode={setLocalFormPlacementMode} documentState={state} documentDispatch={dispatch} />
+    </FormPlacementProvider>
+  );
+}
+
+// Separate content component that uses the FormPlacementContext
+function FieldPlacementContent({
+  localMode,
+  setLocalMode,
+  documentState,
+  documentDispatch,
+}: {
+  localMode: boolean;
+  setLocalMode: React.Dispatch<React.SetStateAction<boolean>>;
+  documentState: any;
+  documentDispatch: any;
+}) {
   const desktopContainerRef = useRef<HTMLDivElement>(null);
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const [isViewerLoaded, setIsViewerLoaded] = useState(false);
@@ -420,191 +629,40 @@ export default function FieldPlacement() {
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
   const viewerInstanceRef = useRef<NutrientViewerInstance | null>(null);
-  const [formPlacementMode, setFormPlacementMode] = useState(true); // State for form placement mode
 
-  // Get a reference to the SDK
+  // Use FormPlacementContext for field tracking
+  const {
+    formPlacementMode,
+    setFormPlacementMode,
+    currentRecipient,
+    currentRecipientIndex,
+    signerRecipients,
+    goToNextRecipient,
+    goToPreviousRecipient,
+    recipientColors,
+    updateFieldCount,
+    allSignersHaveSignatures,
+    signersWithoutSignatures,
+    recipientHasSignature,
+  } = useContext(FormPlacementContext);
+
+  // Synchronize local mode state with context
+  useEffect(() => {
+    // When local mode changes, update context
+    setFormPlacementMode(localMode);
+  }, [localMode, setFormPlacementMode]);
+
+  // Synchronize context mode with local state
+  useEffect(() => {
+    // When context changes, update local state
+    setLocalMode(formPlacementMode);
+  }, [formPlacementMode, setLocalMode]);
+
+  // Local state for UI-specific features
   const nutrientSDK = useRef<ReturnType<typeof getNutrientViewer>>(null);
-
-  // Debug state to track field placements
-  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string; name: string }[]>([]);
-
-  // State to track debug logs for the mobile view
+  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string; name: string; recipient?: string }[]>([]);
+  const [fieldPositions, setFieldPositions] = useState<{ [pageIndex: number]: number }>({});
   const [debugLogs, setDebugLogs] = useState<{ time: string; message: string }[]>([]);
-
-  // This function uses a direct, simplified approach for creating fields on mobile
-  // Moved inside the component to access refs and state
-  const createDirectMobileField = (fieldType: string) => {
-    try {
-      console.log('[Mobile Direct] Attempting direct field creation for type:', fieldType);
-
-      // Get the viewer instance
-      const instance = viewerInstanceRef.current;
-      if (!instance) {
-        console.error('[Mobile Direct] Viewer instance not available');
-        return false;
-      }
-
-      // Get the runtime
-      const runtime = getNutrientViewerRuntime();
-      if (!runtime) {
-        console.error('[Mobile Direct] Runtime not available');
-        return false;
-      }
-
-      // Get the current page index - multiple approaches for better reliability
-      let pageIndex = 0;
-      try {
-        // Try different approaches to get the current page index
-
-        // Approach 1: Try accessing viewState as a property
-        if (instance.viewState && typeof instance.viewState.currentPageIndex !== 'undefined') {
-          pageIndex = instance.viewState.currentPageIndex;
-          console.log('[Mobile Direct] Found current page using viewState property:', pageIndex);
-        }
-        // Approach 2: Try using getViewState if it exists as a method
-        else if (typeof instance.getViewState === 'function') {
-          const viewState = instance.getViewState();
-          if (viewState && typeof viewState.get === 'function') {
-            const currentPage = viewState.get('currentPageIndex');
-            if (currentPage !== undefined) {
-              pageIndex = currentPage;
-              console.log('[Mobile Direct] Found current page using getViewState():', pageIndex);
-            }
-          }
-        }
-        // Approach 3: Looking for the active page in the DOM
-        else {
-          console.log('[Mobile Direct] Attempting to find current page from DOM');
-          // Find all pages in the document
-          const pages = instance.contentDocument.querySelectorAll('.PSPDFKit-Page');
-          if (pages && pages.length > 0) {
-            // Find which page is visible in the viewport
-            for (let i = 0; i < pages.length; i++) {
-              const page = pages[i] as HTMLElement;
-              const rect = page.getBoundingClientRect();
-              // If page is visible (at least partially) in viewport
-              if (rect.top < window.innerHeight && rect.bottom > 0) {
-                pageIndex = parseInt(page.dataset.pageIndex || '0', 10);
-                console.log('[Mobile Direct] Found visible page in DOM with index:', pageIndex);
-                break;
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Mobile Direct] Error getting current page:', error);
-        console.log('[Mobile Direct] Defaulting to page index 0');
-      }
-
-      console.log('[Mobile Direct] Creating field on page:', pageIndex);
-
-      // Use hardcoded PDF coordinates that work reliably
-      const pdfWidth = fieldType === 'initials' ? 75 : 150;
-      const pdfHeight = 50;
-
-      // Create a reliable field name
-      const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-      // Create reliable PDF coordinates (no transformation)
-      const pdfRect = new runtime.Geometry.Rect({
-        left: 100,
-        top: 100,
-        width: pdfWidth,
-        height: pdfHeight,
-      });
-
-      console.log('[Mobile Direct] Creating field with rect:', pdfRect);
-
-      // Create the widget annotation
-      const widget = new runtime.Annotations.WidgetAnnotation({
-        boundingBox: pdfRect,
-        formFieldName: fieldName,
-        id: runtime.generateInstantId(),
-        pageIndex,
-        name: fieldName,
-      });
-
-      // Create the appropriate form field
-      let formField;
-      if (fieldType === 'signature') {
-        formField = new runtime.FormFields.SignatureFormField({
-          annotationIds: new runtime.Immutable.List([widget.id]),
-          name: fieldName,
-        });
-      } else if (fieldType === 'initials') {
-        formField = new runtime.FormFields.SignatureFormField({
-          annotationIds: new runtime.Immutable.List([widget.id]),
-          name: fieldName,
-          type: 'INITIALS',
-        });
-      } else if (fieldType === 'date') {
-        formField = new runtime.FormFields.TextFormField({
-          annotationIds: new runtime.Immutable.List([widget.id]),
-          name: fieldName,
-          defaultValue: new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          }),
-        });
-      }
-
-      // Set interaction mode - using try/catch for better reliability
-      try {
-        // Set form creator mode
-        if (typeof instance.setViewState === 'function') {
-          instance.setViewState((viewState) => viewState.set('interactionMode', runtime.InteractionMode.FORM_CREATOR));
-        }
-      } catch (error) {
-        console.error('[Mobile Direct] Error setting interaction mode:', error);
-      }
-
-      // Create the field directly
-      if (formField) {
-        return instance
-          .create([widget, formField])
-          .then(() => {
-            console.log('[Mobile Direct] Successfully created field!');
-
-            // Add to our list
-            setFieldPlacements((prev) => [
-              ...prev,
-              {
-                type: fieldType,
-                position: `Page ${pageIndex + 1}`,
-                name: fieldName,
-              },
-            ]);
-
-            // Show toast
-            const toast = document.createElement('div');
-            toast.className = 'fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50 shadow-lg';
-            toast.innerText = `Added ${fieldType} field to page ${pageIndex + 1}`;
-            document.body.appendChild(toast);
-
-            // Vibrate for feedback if supported
-            if (navigator.vibrate) {
-              navigator.vibrate(50);
-            }
-
-            setTimeout(() => {
-              document.body.removeChild(toast);
-            }, 2000);
-
-            return true;
-          })
-          .catch((error) => {
-            console.error('[Mobile Direct] Field creation failed:', error);
-            return false;
-          });
-      }
-
-      return false;
-    } catch (error) {
-      console.error('[Mobile Direct] Top-level error in field creation:', error);
-      return false;
-    }
-  };
 
   // Function to add a log entry
   const addLogEntry = (message: string) => {
@@ -666,7 +724,9 @@ export default function FieldPlacement() {
 
   // Set up document viewer when component mounts
   useEffect(() => {
-    if (!state.document.url) {
+    // Create a safe document URL check with proper fallbacks
+    const documentUrl = documentState?.document?.url;
+    if (!documentUrl) {
       setError('No document selected. Please go back and select a document.');
       setIsLoading(false);
       return;
@@ -679,11 +739,11 @@ export default function FieldPlacement() {
       // Extract key from URL
       let docKey: string;
       try {
-        if (state.document.url.startsWith('http')) {
-          const urlObj = new URL(state.document.url);
+        if (documentUrl.startsWith('http')) {
+          const urlObj = new URL(documentUrl);
           docKey = urlObj.pathname.substring(1);
         } else {
-          docKey = state.document.url;
+          docKey = documentUrl;
         }
         console.log('Extracted document key:', docKey);
       } catch (error) {
@@ -715,7 +775,7 @@ export default function FieldPlacement() {
         setIsViewerLoaded(false);
       }
     };
-  }, [state.document.url, isViewerLoaded]);
+  }, [documentState?.document?.url, isViewerLoaded]);
 
   // Load the Nutrient Viewer SDK with the document
   useEffect(() => {
@@ -768,6 +828,9 @@ export default function FieldPlacement() {
           toolbarItems: toolBarItems,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
           styleSheets: ['/styles/viewer.css'],
+          customRenderers: {
+            Annotation: getAnnotationRenderers(getNutrientViewerRuntime(), currentRecipient, recipientColors),
+          },
         })
           .then((instance: NutrientViewerInstance) => {
             console.log('NutrientViewer instance loaded successfully');
@@ -820,56 +883,53 @@ export default function FieldPlacement() {
               const elementWidthStr = event.dataTransfer.getData('elementWidth') || '0';
               const elementHeightStr = event.dataTransfer.getData('elementHeight') || '0';
 
-              const offsetX = parseInt(offsetXStr, 10);
-              const offsetY = parseInt(offsetYStr, 10);
+              // Convert to numbers
+              const offsetX = parseFloat(offsetXStr);
+              const offsetY = parseFloat(offsetYStr);
               const offsetXPercent = parseFloat(offsetXPercentStr);
               const offsetYPercent = parseFloat(offsetYPercentStr);
-              const elementWidth = parseInt(elementWidthStr, 10);
-              const elementHeight = parseInt(elementHeightStr, 10);
+              const elementWidth = parseFloat(elementWidthStr);
+              const elementHeight = parseFloat(elementHeightStr);
 
-              console.log(`Using drag offsets: X=${offsetX}px (${(offsetXPercent * 100).toFixed(1)}%), Y=${offsetY}px (${(offsetYPercent * 100).toFixed(1)}%)`);
+              console.log('Drop offsets:', { offsetX, offsetY, offsetXPercent, offsetYPercent });
 
-              // Find the page element
+              // Find the page element under the drop
               const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
-              console.log('Page element at drop position:', pageElement);
-
               if (pageElement) {
-                const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
-                console.log('Drop on page:', pageIndex);
+                const pageIndex = parseInt(pageElement.dataset.pageIndex || '0', 10);
+                console.log('Dropped on page element:', pageElement, 'Page index:', pageIndex);
+
+                // Get runtime
+                const nutrientRuntime = getNutrientViewerRuntime();
+                if (!nutrientRuntime) {
+                  console.error('NutrientRuntime not available');
+                  return;
+                }
 
                 try {
-                  // Get the runtime SDK with all properties
-                  const nutrientRuntime = getNutrientViewerRuntime();
-
-                  if (!nutrientRuntime) {
-                    console.error('NutrientViewer runtime not available');
-                    return;
-                  }
-
-                  // Get the page element's bounding rectangle
-                  const pageBoundingRect = pageElement.getBoundingClientRect();
-
-                  console.log('Drop coordinates - clientX:', event.clientX, 'clientY:', event.clientY);
-                  console.log('Page coordinates - left:', pageBoundingRect.left, 'top:', pageBoundingRect.top);
-
-                  // Define field dimensions
+                  // Get dimensions for the field based on type
                   const fieldWidth = fieldType === 'initials' ? 100 : 200;
                   const fieldHeight = 50;
 
-                  // Calculate offset position for more accurate placement
-                  // Adjust coordinates to place field relative to where it was grabbed
+                  // Adjust drop position based on the offset where the user grabbed the element
+                  // This is where we use the more reliable percentage approach
+                  // Calculate the correct drop position by accounting for the grab offset
+                  const adjustedDropX = event.clientX - offsetXPercent * fieldWidth;
+                  const adjustedDropY = event.clientY - offsetYPercent * fieldHeight;
+
+                  console.log('Adjusted drop position:', { adjustedDropX, adjustedDropY });
+
+                  // Create a client rect for where we want to place the field
                   const clientRect = new nutrientRuntime.Geometry.Rect({
-                    left: event.clientX - offsetX,
-                    top: event.clientY - offsetY,
+                    left: adjustedDropX,
+                    top: adjustedDropY,
                     width: fieldWidth,
                     height: fieldHeight,
                   });
 
-                  console.log('Using drag offsets - X:', offsetX, 'Y:', offsetY);
-                  console.log('Adjusted client rect position - left:', event.clientX - offsetX, 'top:', event.clientY - offsetY);
                   console.log('Client rect:', clientRect);
 
-                  // Transform to page coordinates
+                  // Convert client coordinates to PDF coordinates
                   const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
                   console.log('Transformed page rect:', transformedPageRect);
 
@@ -912,7 +972,12 @@ export default function FieldPlacement() {
                   }
 
                   // Set form creator mode
-                  instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
+                  instance.setViewState((viewState: any) => {
+                    if (nutrientRuntime?.InteractionMode.FORM_CREATOR) {
+                      return viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR);
+                    }
+                    return viewState;
+                  });
 
                   // Create the annotations
                   if (formField) {
@@ -928,8 +993,14 @@ export default function FieldPlacement() {
                             type: fieldType,
                             position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
                             name: fieldName,
+                            recipient: currentRecipient?.email,
                           },
                         ]);
+
+                        // Update the recipient field count in context
+                        if (currentRecipient?.email) {
+                          updateFieldCount(currentRecipient.email, fieldType, true);
+                        }
                       })
                       .catch((error: any) => {
                         console.error('Error creating form field:', error);
@@ -947,7 +1018,7 @@ export default function FieldPlacement() {
             setIsLoading(false);
 
             // Add event listener for clicking on form field annotations
-            instance.contentDocument.addEventListener('click', (event: MouseEvent) => {
+            instance.contentDocument.addEventListener('click', (event: Event) => {
               const target = event.target as Element;
 
               // Check if clicked element is a form field annotation widget
@@ -989,26 +1060,27 @@ export default function FieldPlacement() {
               let touchStartY = 0;
 
               // Add touch handling to the document
-              instance.contentDocument.addEventListener('touchstart', (event) => {
+              instance.contentDocument.addEventListener('touchstart', (event: Event) => {
                 console.log('[Mobile] Touch start event in document viewer');
               });
 
               // Handle touch move in the document
-              instance.contentDocument.addEventListener('touchmove', (event) => {
-                if (mobileFieldDragActive && event.touches && event.touches[0]) {
+              instance.contentDocument.addEventListener('touchmove', (event: Event) => {
+                if (mobileFieldDragActive && (event as TouchEvent).touches && (event as TouchEvent).touches[0]) {
                   console.log('[Mobile] Touch move with active field:', activeTouchFieldType);
                   event.preventDefault(); // Prevent scrolling during field placement
                 }
               });
 
               // Handle touch end in the document
-              instance.contentDocument.addEventListener('touchend', (event) => {
+              instance.contentDocument.addEventListener('touchend', (event: Event) => {
                 if (mobileFieldDragActive) {
                   console.log('[Mobile] Touch end with active field:', activeTouchFieldType);
 
                   // Get touch end position
-                  const touchEndX = event.changedTouches[0].clientX;
-                  const touchEndY = event.changedTouches[0].clientY;
+                  const touchEvent = event as TouchEvent;
+                  const touchEndX = touchEvent.changedTouches[0].clientX;
+                  const touchEndY = touchEvent.changedTouches[0].clientY;
 
                   // Get element under the touch point
                   const elementAtPoint = document.elementFromPoint(touchEndX, touchEndY);
@@ -1023,7 +1095,7 @@ export default function FieldPlacement() {
                   }
 
                   try {
-                    const pageIndex = parseInt(pageElement.dataset.pageIndex, 10);
+                    const pageIndex = parseInt((pageElement as HTMLElement).dataset?.pageIndex || '0', 10);
                     const nutrientRuntime = getNutrientViewerRuntime();
 
                     if (!nutrientRuntime) {
@@ -1112,7 +1184,12 @@ export default function FieldPlacement() {
                     }
 
                     // Set form creator mode
-                    instance.setViewState((viewState: any) => viewState.set('interactionMode', nutrientRuntime?.InteractionMode.FORM_CREATOR));
+                    instance.setViewState((viewState: any) => {
+                      if (nutrientRuntime?.InteractionMode.FORM_CREATOR) {
+                        return viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR);
+                      }
+                      return viewState;
+                    });
 
                     // Create the annotations
                     if (formField) {
@@ -1148,19 +1225,20 @@ export default function FieldPlacement() {
               });
 
               // Add a global listener to track field type for mobile drag operations
-              window.addEventListener('nutrient:fieldDragStart', ((event: CustomEvent) => {
-                if (event.detail && event.detail.fieldType) {
-                  console.log('[Mobile] Custom field drag start event captured:', event.detail);
+              window.addEventListener('nutrient:fieldDragStart', ((event: Event) => {
+                const customEvent = event as CustomEvent;
+                if (customEvent.detail && customEvent.detail.fieldType) {
+                  console.log('[Mobile] Custom field drag start event captured:', customEvent.detail);
                   mobileFieldDragActive = true;
-                  activeTouchFieldType = event.detail.fieldType;
-                  touchStartX = event.detail.touchX || 0;
-                  touchStartY = event.detail.touchY || 0;
+                  activeTouchFieldType = customEvent.detail.fieldType;
+                  touchStartX = customEvent.detail.touchX || 0;
+                  touchStartY = customEvent.detail.touchY || 0;
 
                   // IMMEDIATE TEST: Try to create field right away based on event coordinates
                   try {
-                    console.log('[Mobile Debug] Testing immediate field creation with:', event.detail);
-                    const touchX = event.detail.touchX;
-                    const touchY = event.detail.touchY;
+                    console.log('[Mobile Debug] Testing immediate field creation with:', customEvent.detail);
+                    const touchX = customEvent.detail.touchX;
+                    const touchY = customEvent.detail.touchY;
 
                     // Make sure the runtime is available before proceeding
                     const mobileRuntime = getNutrientViewerRuntime();
@@ -1177,7 +1255,7 @@ export default function FieldPlacement() {
                       console.log('[Mobile Debug] Found document container:', docContainer.tagName, docContainer.className);
 
                       // Get the page index from the container
-                      const pageIndex = parseInt(docContainer.dataset.pageIndex, 10);
+                      const pageIndex = parseInt((docContainer as HTMLElement).dataset.pageIndex || '0', 10);
                       console.log('[Mobile Debug] Target page index:', pageIndex);
 
                       // Get the container's position
@@ -1195,7 +1273,7 @@ export default function FieldPlacement() {
                       // Using PDF coordinates directly instead of screen coordinates
                       try {
                         // Create a unique field name
-                        const fieldName = `${event.detail.fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                        const fieldName = `${customEvent.detail.fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
                         // For reliable placement, create a temporary widget to get proper transform values
                         const tempRect = new mobileRuntime.Geometry.Rect({
@@ -1210,7 +1288,7 @@ export default function FieldPlacement() {
                         console.log('[Mobile Debug] Test point transformed to:', tempTransformed);
 
                         // Now create a properly sized field at those PDF coordinates
-                        const pdfWidth = event.detail.fieldType === 'initials' ? 75 : 150;
+                        const pdfWidth = customEvent.detail.fieldType === 'initials' ? 75 : 150;
                         const pdfHeight = 50;
 
                         const pdfRect = new mobileRuntime.Geometry.Rect({
@@ -1235,20 +1313,20 @@ export default function FieldPlacement() {
                         // Create the form field based on type
                         let formField;
 
-                        if (event.detail.fieldType === 'signature') {
+                        if (customEvent.detail.fieldType === 'signature') {
                           console.log('[Mobile Debug] Creating signature field');
                           formField = new mobileRuntime.FormFields.SignatureFormField({
                             annotationIds: new mobileRuntime.Immutable.List([widget.id]),
                             name: fieldName,
                           });
-                        } else if (event.detail.fieldType === 'initials') {
+                        } else if (customEvent.detail.fieldType === 'initials') {
                           console.log('[Mobile Debug] Creating initials field');
                           formField = new mobileRuntime.FormFields.SignatureFormField({
                             annotationIds: new mobileRuntime.Immutable.List([widget.id]),
                             name: fieldName,
                             type: 'INITIALS',
                           });
-                        } else if (event.detail.fieldType === 'date') {
+                        } else if (customEvent.detail.fieldType === 'date') {
                           console.log('[Mobile Debug] Creating date field');
                           formField = new mobileRuntime.FormFields.TextFormField({
                             annotationIds: new mobileRuntime.Immutable.List([widget.id]),
@@ -1262,7 +1340,12 @@ export default function FieldPlacement() {
                         }
 
                         // Ensure form creator mode is active
-                        instance.setViewState((viewState: any) => viewState.set('interactionMode', mobileRuntime?.InteractionMode.FORM_CREATOR));
+                        instance.setViewState((viewState: any) => {
+                          if (mobileRuntime?.InteractionMode?.FORM_CREATOR) {
+                            return viewState.set('interactionMode', mobileRuntime.InteractionMode.FORM_CREATOR);
+                          }
+                          return viewState;
+                        });
 
                         // Create annotations
                         if (formField) {
@@ -1280,7 +1363,7 @@ export default function FieldPlacement() {
                               const successMessage = document.createElement('div');
                               successMessage.className =
                                 'fixed top-1/4 left-1/2 transform -translate-x-1/2 py-2 px-4 bg-green-500 text-white rounded-md z-50 shadow-lg';
-                              successMessage.textContent = `${event.detail.fieldType} field added`;
+                              successMessage.textContent = `${customEvent.detail.fieldType} field added`;
                               document.body.appendChild(successMessage);
 
                               // Remove the message after a short delay
@@ -1292,7 +1375,7 @@ export default function FieldPlacement() {
                               setFieldPlacements((prev) => [
                                 ...prev,
                                 {
-                                  type: event.detail.fieldType,
+                                  type: customEvent.detail.fieldType,
                                   position: `Center of page ${pageIndex + 1}`,
                                   name: fieldName,
                                 },
@@ -1319,7 +1402,7 @@ export default function FieldPlacement() {
                           const firstPage = pages[0] as HTMLElement;
                           console.log('[Mobile Debug] Using first page in viewport:', firstPage);
 
-                          const pageIndex = parseInt(firstPage.dataset.pageIndex, 10);
+                          const pageIndex = parseInt((firstPage as HTMLElement).dataset.pageIndex || '0', 10);
                           const rect = firstPage.getBoundingClientRect();
 
                           // Center position
@@ -1327,7 +1410,17 @@ export default function FieldPlacement() {
                           const centerY = rect.top + rect.height / 3;
 
                           setTimeout(() => {
-                            createFieldOnPage(event.detail.fieldType, centerX, centerY, firstPage, pageIndex, mobileRuntime);
+                            createFieldOnPage(
+                              customEvent.detail.fieldType,
+                              centerX,
+                              centerY,
+                              firstPage,
+                              pageIndex,
+                              instance,
+                              mobileRuntime,
+                              currentRecipient,
+                              setFieldPlacements,
+                            );
                           }, 100);
                         } else {
                           console.error('[Mobile Debug] No pages found in viewport');
@@ -1342,6 +1435,54 @@ export default function FieldPlacement() {
                 }
               }) as EventListener);
             }
+
+            // Set up additional event listeners once the viewer is loaded
+            // Add event listener for annotation deletion to update field counts
+            instance.addEventListener('annotations.delete', (event: any) => {
+              const deletedAnnotations = event.annotations || [];
+
+              console.log('Annotation deletion detected:', deletedAnnotations);
+
+              deletedAnnotations.forEach((annotation: any) => {
+                // Check if this is one of our field annotations
+                const fieldName = annotation.name;
+                if (!fieldName) return;
+
+                // Extract field type from the name
+                const fieldType = fieldName.split('_')[0];
+                if (!['signature', 'initials', 'date'].includes(fieldType)) return;
+
+                // Try to determine which recipient this field belonged to
+                let recipientEmail = null;
+
+                // First check our tracked field placements
+                const fieldPlacement = fieldPlacements.find((f) => f.name === fieldName);
+                if (fieldPlacement && fieldPlacement.recipient) {
+                  recipientEmail = fieldPlacement.recipient;
+                } else {
+                  // Try to extract from field name (if format includes recipient)
+                  const nameParts = fieldName.split('_');
+                  if (nameParts.length >= 2) {
+                    // Check if any recipient email contains this identifier
+                    const identifier = nameParts[1];
+                    const matchingRecipient = signerRecipients.find((r) => r.email.includes(identifier) || r.email.split('@')[0] === identifier);
+
+                    if (matchingRecipient) {
+                      recipientEmail = matchingRecipient.email;
+                    }
+                  }
+                }
+
+                // If we found a recipient, update their field count
+                if (recipientEmail) {
+                  console.log(`Decreasing ${fieldType} count for recipient: ${recipientEmail}`);
+                  updateFieldCount(recipientEmail, fieldType, false);
+
+                  // Also update our field placements list
+                  setFieldPlacements((prev) => prev.filter((field) => field.name !== fieldName));
+                }
+              });
+            });
 
             setIsViewerLoaded(true);
             setIsLoading(false);
@@ -1371,32 +1512,116 @@ export default function FieldPlacement() {
       const nutrientRuntime = getNutrientViewerRuntime();
 
       if (nutrientRuntime) {
-        console.log(`Setting form placement mode: ${formPlacementMode ? 'ON' : 'OFF'}`);
+        console.log(`Setting form placement mode: ${localMode ? 'ON' : 'OFF'}`);
 
-        if (formPlacementMode) {
-          // Enable form creator mode
-          viewerInstanceRef.current.setViewState((viewState) => viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR));
+        // Get viewer instance
+        const instance = viewerInstanceRef.current;
+
+        if (localMode) {
+          // Enable form creator mode - explicitly set the mode
+          instance.setViewState((viewState: any) => {
+            return viewState.set('interactionMode', nutrientRuntime.InteractionMode.FORM_CREATOR);
+          });
         } else {
-          // Disable form creator mode
-          viewerInstanceRef.current.setViewState((viewState) => viewState.set('formDesignMode', false));
+          // Disable form creator mode - reset to default interaction mode
+          // Since CONTENT_INTERACTION doesn't exist, use null to reset to default mode
+          instance.setViewState((viewState: any) => {
+            return viewState.set('interactionMode', null);
+          });
         }
+
+        // Add debug message to check if the toggle effect is being called
+        console.log(`FormPlacementMode toggled to: ${localMode ? 'ON' : 'OFF'}`);
       }
     }
-  }, [formPlacementMode, mounted]);
+  }, [localMode, mounted]);
+
+  // Create a complete context value to pass to children
+  const formPlacementContextValue = {
+    formPlacementMode,
+    setFormPlacementMode,
+    currentRecipient,
+    currentRecipientIndex,
+    signerRecipients,
+    goToNextRecipient,
+    goToPreviousRecipient,
+    recipientColors,
+    recipientFieldCounts: {}, // Add the missing property
+    updateFieldCount,
+    allSignersHaveSignatures,
+    signersWithoutSignatures,
+    recipientHasSignature,
+  };
+
+  // Add an effect to update custom renderers when the current recipient changes
+  useEffect(() => {
+    if (!isViewerLoaded || !viewerInstanceRef.current) return;
+
+    // Get the viewer instance and runtime
+    const instance = viewerInstanceRef.current;
+    const runtime = getNutrientViewerRuntime();
+
+    if (instance && runtime) {
+      // Update the custom renderers with the current recipient
+      const newRenderers = {
+        Annotation: getAnnotationRenderers(runtime, currentRecipient, recipientColors),
+      };
+
+      // Apply the new renderers
+      instance.setCustomRenderers(newRenderers);
+    }
+  }, [currentRecipientIndex, isViewerLoaded, recipientColors]);
+
+  // Update DocumentFlowContext validation state based on field validation status
+  useEffect(() => {
+    if (mounted && documentDispatch) {
+      // If we have a dispatch function available, use it to update validation state
+      documentDispatch({
+        type: 'VALIDATE_STEP',
+        payload: {
+          step: 'step3Valid',
+          isValid: allSignersHaveSignatures,
+        },
+      });
+    }
+  }, [allSignersHaveSignatures, mounted, documentDispatch]);
+
+  // Function to directly create a field at a fixed position for mobile
+  const createDirectMobileField = (fieldType: string) => {
+    console.log('[Mobile Direct] Creating field of type:', fieldType);
+    if (!viewerInstanceRef.current) {
+      console.error('[Mobile Direct] Viewer instance not available');
+      return;
+    }
+
+    const instance = viewerInstanceRef.current;
+    const runtime = getNutrientViewerRuntime();
+
+    if (!runtime) {
+      console.error('[Mobile Direct] NutrientRuntime not available');
+      return;
+    }
+
+    // Use the helper function to create the field
+    createMobileField(fieldType, instance, runtime);
+  };
 
   return (
-    <FormPlacementContext.Provider value={{ formPlacementMode }}>
+    <ViewerContext.Provider value={viewerInstanceRef}>
       <div className='space-y-6'>
         <div>
           <div className='flex items-center justify-between'>
             <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
             <Badge variant='outline' className='ml-2 flex items-center gap-1'>
               <Tag className='h-3 w-3' />
-              <span>v1.3.0</span>
+              <span>v1.3.1</span>
             </Badge>
           </div>
           <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
         </div>
+
+        {/* Show recipient navigation if there are any recipients */}
+        {signerRecipients.length > 0 && <RecipientNavigation />}
 
         {isMobile ? (
           // Mobile Layout - Vertical with fields at top
@@ -1408,13 +1633,11 @@ export default function FieldPlacement() {
                   <h3 className='font-medium mb-3'>Click to add fields</h3>
 
                   <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
-                    <div className='flex items-center gap-2'>
-                      <div className={`w-2 h-2 rounded-full ${formPlacementMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                      <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
-                        Edit Mode
-                      </Label>
-                    </div>
-                    <CustomSwitch id='form-placement-mode' checked={formPlacementMode} onCheckedChange={setFormPlacementMode} />
+                    <div className={`w-2 h-2 rounded-full ${localMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
+                      Edit Mode
+                    </Label>
+                    <CustomSwitch id='form-placement-mode' checked={localMode} onCheckedChange={setLocalMode} />
                   </div>
 
                   {/* Direct buttons for mobile - simplified approach */}
@@ -1426,6 +1649,7 @@ export default function FieldPlacement() {
                         console.log('[Mobile Direct] Add Signature button clicked');
                         createDirectMobileField('signature');
                       }}
+                      disabled={!localMode}
                     >
                       <Signature className='h-5 w-5 mb-1' />
                       <span>Add Signature</span>
@@ -1437,6 +1661,7 @@ export default function FieldPlacement() {
                         console.log('[Mobile Direct] Add Initials button clicked');
                         createDirectMobileField('initials');
                       }}
+                      disabled={!localMode}
                     >
                       <Edit className='h-4 w-4 mr-2' />
                       <span>Add Initials</span>
@@ -1448,6 +1673,7 @@ export default function FieldPlacement() {
                         console.log('[Mobile Direct] Add Date button clicked');
                         createDirectMobileField('date');
                       }}
+                      disabled={!localMode}
                     >
                       <CalendarDays className='h-4 w-4 mr-2' />
                       <span>Add Date</span>
@@ -1515,12 +1741,12 @@ export default function FieldPlacement() {
 
                   <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
                     <div className='flex items-center gap-2'>
-                      <div className={`w-2 h-2 rounded-full ${formPlacementMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                      <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
+                      <div className={`w-2 h-2 rounded-full ${localMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <Label htmlFor='form-placement-mode-desktop' className='text-sm font-medium'>
                         Edit Mode
                       </Label>
                     </div>
-                    <CustomSwitch id='form-placement-mode' checked={formPlacementMode} onCheckedChange={setFormPlacementMode} />
+                    <CustomSwitch id='form-placement-mode-desktop' checked={localMode} onCheckedChange={setLocalMode} />
                   </div>
 
                   <div className='space-y-2'>
@@ -1550,7 +1776,7 @@ export default function FieldPlacement() {
 
                                   if (annotationElement) {
                                     // Focus the element
-                                    annotationElement.focus();
+                                    (annotationElement as HTMLElement).focus();
                                     // Scroll to it
                                     annotationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                     console.log('Annotation element focused:', annotationElement);
@@ -1597,7 +1823,36 @@ export default function FieldPlacement() {
             </div>
           </div>
         )}
+
+        {/* Validation message for signature fields */}
+        {!allSignersHaveSignatures && signerRecipients.length > 0 && (
+          <div className='mt-4 p-4 border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30 rounded-md'>
+            <div className='flex gap-3'>
+              <AlertTriangle className='h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5' />
+              <div>
+                <h4 className='font-medium text-amber-800 dark:text-amber-300'>Required Signature Fields</h4>
+                <p className='text-sm text-amber-700 dark:text-amber-400 mt-1'>
+                  {signersWithoutSignatures.length === 1 ? (
+                    <>{signerRecipients.find((r) => r.email === signersWithoutSignatures[0])?.name || 'One recipient'} needs at least one signature field</>
+                  ) : (
+                    <>
+                      {signersWithoutSignatures.length} recipients still need signature fields. Switch between recipients using the controls above to add fields
+                      for each signer.
+                    </>
+                  )}
+                </p>
+                <div className='mt-2 text-xs text-amber-600 dark:text-amber-500'>
+                  <ul className='list-disc pl-4 space-y-1'>
+                    {signersWithoutSignatures.map((email) => (
+                      <li key={email}>{signerRecipients.find((r) => r.email === email)?.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </FormPlacementContext.Provider>
+    </ViewerContext.Provider>
   );
 }
