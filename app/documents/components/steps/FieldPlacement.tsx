@@ -12,6 +12,7 @@ import { CustomSwitch } from '@/components/ui/custom-switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FormPlacementContext, useFormPlacement, FormPlacementProvider } from '../../context/FormPlacementContext';
+import RecipientDropdown from './RecipientDropdown';
 
 // Import the custom CSS for field styling
 import '@/public/styles/custom-fields.css';
@@ -49,8 +50,76 @@ interface DocumentFlowState {
 }
 
 const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
-  const { formPlacementMode } = useContext(FormPlacementContext);
+  const { formPlacementMode, currentRecipient, recipientColors } = useContext(FormPlacementContext);
   const viewerInstanceRef = useContext(ViewerContext);
+
+  // Function to create icon background colors with good contrast in both modes
+  const getIconBackgroundColor = (color: string | undefined): string => {
+    // If no color is provided, use a default high-contrast color
+    if (!color) return 'cornflowerblue';
+
+    // For existing colors, we need to ensure they have enough saturation and brightness
+    // Extract RGB components if it's an rgba or rgb color
+    if (color.startsWith('rgb')) {
+      // For rgb/rgba colors, transform to solid versions
+      const matches = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+      if (matches) {
+        // Get the RGB values
+        const r = parseInt(matches[1], 10);
+        const g = parseInt(matches[2], 10);
+        const b = parseInt(matches[3], 10);
+
+        // Identify specific color types to handle them appropriately
+        const isLightGreen = g > Math.max(r, b) && g > 180;
+        const isLightPink = r > Math.max(g, b) && r > 180 && b > 100;
+        const isPastel = (r > 160 && g > 160 && b > 160) || Math.max(r, g, b) - Math.min(r, g, b) < 60;
+
+        // For the icon background, we want a slightly darker version of the color for better contrast
+        // Apply moderate saturation boost and brightness adjustment for better visibility
+        const saturationBoost = isPastel ? 1.2 : 1.0;
+        const brightnessAdjust = isPastel ? 0.85 : 1.0;
+
+        let rNew = r;
+        let gNew = g;
+        let bNew = b;
+
+        // Apply saturation boost if needed (for pastel colors)
+        if (isPastel) {
+          const avg = (r + g + b) / 3;
+          rNew = Math.min(255, Math.max(0, r > avg ? r + (r - avg) * saturationBoost : r));
+          gNew = Math.min(255, Math.max(0, g > avg ? g + (g - avg) * saturationBoost : g));
+          bNew = Math.min(255, Math.max(0, b > avg ? b + (b - avg) * saturationBoost : b));
+        }
+
+        // Apply brightness adjustment for pastel colors
+        if (isPastel) {
+          rNew *= brightnessAdjust;
+          gNew *= brightnessAdjust;
+          bNew *= brightnessAdjust;
+        }
+
+        // Special handling for problematic colors
+        if (isLightGreen) {
+          // Make light greens more visible
+          gNew = Math.min(255, g);
+          rNew = Math.max(0, r * 0.8);
+          bNew = Math.max(0, b * 0.8);
+        }
+
+        if (isLightPink) {
+          // Make light pinks more visible
+          rNew = Math.min(255, r);
+          gNew = Math.max(0, g * 0.8);
+        }
+
+        return `rgb(${Math.round(rNew)}, ${Math.round(gNew)}, ${Math.round(bNew)})`;
+      }
+    }
+
+    // Handle named colors or hex values - use as is but with fallback
+    // Remove any transparency if present
+    return color.split(',').length > 3 ? `${color.split(')')[0].replace(/rgba/i, 'rgb')})` : color || 'cornflowerblue';
+  };
   // Reference to track touch position
   const touchStartRef = useRef({ x: 0, y: 0 });
   // Ref to store the element for adding non-passive event listeners
@@ -182,7 +251,14 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className='text-blue-500 mb-1'>{icon}</div>
+        <div
+          className='mb-2 p-1.5 rounded-md flex items-center justify-center'
+          style={{
+            backgroundColor: getIconBackgroundColor(recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined),
+          }}
+        >
+          <div className='text-gray-950'>{icon}</div>
+        </div>
         <span className='text-xs font-medium'>{label}</span>
       </div>
     );
@@ -198,7 +274,14 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className='mr-3 text-blue-500'>{icon}</div>
+      <div
+        className='mr-3 p-1.5 rounded-md flex items-center justify-center'
+        style={{
+          backgroundColor: getIconBackgroundColor(recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined),
+        }}
+      >
+        <div className='text-gray-950'>{icon}</div>
+      </div>
       <span className='text-sm font-medium'>{label}</span>
     </div>
   );
@@ -443,7 +526,7 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
   }
 };
 
-// Create custom renderer for fields with recipient names
+// Create custom renderer for fields with recipient names and improved visual differentiation
 const getAnnotationRenderers =
   (runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }) =>
   ({ annotation }: any) => {
@@ -452,8 +535,17 @@ const getAnnotationRenderers =
       return null;
     }
 
-    const recipientName = currentRecipient?.name || 'Unknown';
-    const recipientEmail = currentRecipient?.email || '';
+    // Extract recipient from field name or use current recipient
+    let recipientName = currentRecipient?.name || 'Unknown';
+    let recipientEmail = currentRecipient?.email || '';
+
+    // Try to extract recipient from field name (for fields created by other recipients)
+    const nameParts = annotation.name.split('_');
+    if (nameParts.length >= 2) {
+      const fieldRecipient = nameParts[1];
+      // This is an optional enhancement to show the actual owner of a field
+      // even when viewing as a different recipient
+    }
 
     // Create a div to hold our custom field
     const div = document.createElement('div');
@@ -462,9 +554,18 @@ const getAnnotationRenderers =
     // Add background color based on recipient's color
     const fieldColor = recipientEmail && recipientColors[recipientEmail] ? recipientColors[recipientEmail] : 'hsl(210, 65%, 85%)'; // Default color if none assigned
 
-    // Apply the color as a subtle border and background
+    // Apply color with better visual differentiation
+    // Use solid colors for better visibility
     div.style.borderColor = fieldColor;
     div.style.backgroundColor = fieldColor;
+
+    // Determine if this is the current recipient's field
+    const isCurrentRecipientField = currentRecipient && recipientEmail === currentRecipient.email;
+
+    // Add a highlight effect for the current recipient's fields
+    if (isCurrentRecipientField) {
+      div.classList.add('current-recipient-field');
+    }
 
     // Field type icon and label
     let icon = '/signature.svg';
@@ -478,9 +579,12 @@ const getAnnotationRenderers =
       fieldTypeLabel = 'Date';
     }
 
-    // Add recipient label and icon
+    // Add recipient label and icon with optional badge
     div.innerHTML = `
-      <div class="custom-field-recipient">${recipientName}</div>
+      <div class="custom-field-recipient">
+        ${recipientName}
+      </div>
+      ${isCurrentRecipientField ? '<div class="current-badge">C</div>' : ''}
       <div class="custom-field-type">
         <img class="custom-field-icon" src="${icon}" alt="${fieldTypeLabel}" />
       </div>
@@ -493,10 +597,19 @@ const getAnnotationRenderers =
     };
   };
 
-// Create a new RecipientNavigation component for switching between recipients
+// Create an enhanced RecipientNavigation component with dropdown and navigation controls
 const RecipientNavigation = () => {
-  const { currentRecipientIndex, signerRecipients, goToPreviousRecipient, goToNextRecipient, recipientColors, recipientHasSignature } =
-    useContext(FormPlacementContext);
+  const {
+    currentRecipientIndex,
+    setCurrentRecipientIndex,
+    signerRecipients,
+    goToPreviousRecipient,
+    goToNextRecipient,
+    recipientColors,
+    recipientHasSignature,
+  } = useContext(FormPlacementContext);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   if (signerRecipients.length <= 1) {
     return null; // Don't show navigation if there's only one recipient
@@ -504,79 +617,118 @@ const RecipientNavigation = () => {
 
   const currentRecipient = signerRecipients[currentRecipientIndex];
 
+  // Function to handle direct recipient selection
+  const selectRecipient = (index: number) => {
+    // Close dropdown
+    setIsDropdownOpen(false);
+
+    // Set the recipient index directly
+    if (index !== currentRecipientIndex) {
+      setCurrentRecipientIndex(index);
+    }
+  };
+
   return (
-    <div className='space-y-3'>
-      <div className='flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
-        <div className='flex items-center space-x-2'>
-          <User className='h-4 w-4 text-blue-500' />
-          <span className='text-sm font-medium'>
-            {currentRecipient.name} ({currentRecipientIndex + 1}/{signerRecipients.length})
-          </span>
+    <div className='space-y-4'>
+      {/* Dropdown for selecting recipients */}
+      <div className='relative'>
+        {/* Dropdown header/trigger */}
+        <div
+          className='flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer'
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        >
+          <div className='flex items-center space-x-2 flex-1'>
+            <div className='h-4 w-4 rounded-full mr-2' style={{ backgroundColor: recipientColors[currentRecipient.email] }} />
+            <User className='h-4 w-4 text-blue-500 mr-1' />
+            <span className='text-sm font-medium'>
+              {currentRecipient.name} ({currentRecipientIndex + 1}/{signerRecipients.length})
+            </span>
+          </div>
+
+          {/* Status indicator */}
+          <div className='flex items-center space-x-2'>
+            {recipientHasSignature(currentRecipient.email) ? (
+              <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1'>
+                <CheckCircle className='h-3 w-3' /> Ready
+              </Badge>
+            ) : (
+              <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1'>
+                <AlertTriangle className='h-3 w-3' /> Needs signature
+              </Badge>
+            )}
+            <div className='text-gray-400'>
+              {isDropdownOpen ? <ChevronRight className='h-4 w-4 rotate-90' /> : <ChevronRight className='h-4 w-4 -rotate-90' />}
+            </div>
+          </div>
         </div>
 
-        {/* Status indicator */}
-        {recipientHasSignature(currentRecipient.email) ? (
-          <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1'>
-            <CheckCircle className='h-3 w-3' /> Ready
-          </Badge>
-        ) : (
-          <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1'>
-            <AlertTriangle className='h-3 w-3' /> Needs signature
-          </Badge>
+        {/* Dropdown content */}
+        {isDropdownOpen && (
+          <div className='absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg max-h-64 overflow-y-auto'>
+            {signerRecipients.map((recipient, index) => {
+              const hasSignature = recipientHasSignature(recipient.email);
+              return (
+                <div
+                  key={recipient.email}
+                  className={`flex items-center justify-between p-3 cursor-pointer
+                    ${
+                      index === currentRecipientIndex
+                        ? 'bg-blue-100 dark:bg-blue-900/30 border-l-4 border-l-blue-500'
+                        : 'hover:bg-gray-50 dark:hover:bg-zinc-700'
+                    }`}
+                  onClick={() => selectRecipient(index)}
+                >
+                  <div className='flex items-center space-x-2'>
+                    <div className='h-3 w-3 rounded-full' style={{ backgroundColor: recipientColors[recipient.email] }} />
+                    <span className='text-sm font-medium truncate'>{recipient.name}</span>
+                  </div>
+
+                  {/* Status indicator */}
+                  <div className='flex items-center space-x-2'>
+                    {hasSignature ? (
+                      <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1 text-xs'>
+                        <CheckCircle className='h-3 w-3' /> Ready
+                      </Badge>
+                    ) : (
+                      <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1 text-xs'>
+                        <AlertTriangle className='h-3 w-3' /> Needs signature
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      {/* Compact recipient list with status indicators */}
-      <div className='grid grid-cols-1 gap-2 mb-3 max-h-48 overflow-y-auto'>
-        {signerRecipients.map((recipient, index) => {
-          const hasSignature = recipientHasSignature(recipient.email);
-          return (
-            <div
-              key={recipient.email}
-              className={`flex items-center justify-between p-2 rounded cursor-pointer
-                        ${
-                          index === currentRecipientIndex
-                            ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
-                            : 'border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
-              onClick={() => {
-                // Use existing navigation functions rather than direct index setting
-                const currentIndex = currentRecipientIndex;
-                if (index < currentIndex) {
-                  // Need to navigate backward
-                  for (let i = 0; i < currentIndex - index; i++) {
-                    goToPreviousRecipient();
-                  }
-                } else if (index > currentIndex) {
-                  // Need to navigate forward
-                  for (let i = 0; i < index - currentIndex; i++) {
-                    goToNextRecipient();
-                  }
-                }
-              }}
-            >
-              <div className='flex items-center space-x-2'>
-                <div className='h-3 w-3 rounded-full' style={{ backgroundColor: recipientColors[recipient.email] }} />
-                <span className='text-sm truncate'>{recipient.name}</span>
-              </div>
-
-              {/* Status dot */}
-              <div className='flex items-center space-x-1'>
-                <span className='text-xs text-gray-500 dark:text-gray-400'>{hasSignature ? 'Ready' : 'Needs signature'}</span>
-                <div className={`h-2 w-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-amber-500'}`} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className='flex items-center space-x-2'>
-        <Button variant='outline' size='sm' onClick={goToPreviousRecipient} disabled={currentRecipientIndex === 0} className='h-8 px-2'>
+      {/* Navigation controls */}
+      <div className='flex items-center justify-between'>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => {
+            goToPreviousRecipient();
+            setIsDropdownOpen(false);
+          }}
+          disabled={currentRecipientIndex === 0}
+          className='h-8 px-2 flex-1'
+        >
           <ChevronLeft className='h-4 w-4 mr-1' />
-          Previous
+          Previous Signer
         </Button>
-        <Button variant='outline' size='sm' onClick={goToNextRecipient} disabled={currentRecipientIndex === signerRecipients.length - 1} className='h-8 px-2'>
-          Next
+        <div className='w-4'></div>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => {
+            goToNextRecipient();
+            setIsDropdownOpen(false);
+          }}
+          disabled={currentRecipientIndex === signerRecipients.length - 1}
+          className='h-8 px-2 flex-1'
+        >
+          Next Signer
           <ChevronRight className='h-4 w-4 ml-1' />
         </Button>
       </div>
@@ -646,17 +798,12 @@ function FieldPlacementContent({
     recipientHasSignature,
   } = useContext(FormPlacementContext);
 
-  // Synchronize local mode state with context
+  // Synchronize local mode state with context - always in edit mode
   useEffect(() => {
-    // When local mode changes, update context
-    setFormPlacementMode(localMode);
-  }, [localMode, setFormPlacementMode]);
-
-  // Synchronize context mode with local state
-  useEffect(() => {
-    // When context changes, update local state
-    setLocalMode(formPlacementMode);
-  }, [formPlacementMode, setLocalMode]);
+    // Always set edit mode to true
+    setFormPlacementMode(true);
+    setLocalMode(true);
+  }, [setFormPlacementMode, setLocalMode]);
 
   // Local state for UI-specific features
   const nutrientSDK = useRef<ReturnType<typeof getNutrientViewer>>(null);
@@ -1620,9 +1767,6 @@ function FieldPlacementContent({
           <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
         </div>
 
-        {/* Show recipient navigation if there are any recipients */}
-        {signerRecipients.length > 0 && <RecipientNavigation />}
-
         {isMobile ? (
           // Mobile Layout - Vertical with fields at top
           <div className='flex flex-col space-y-4'>
@@ -1631,14 +1775,6 @@ function FieldPlacementContent({
               <Card className='border border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-md'>
                 <CardContent className='py-4'>
                   <h3 className='font-medium mb-3'>Click to add fields</h3>
-
-                  <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
-                    <div className={`w-2 h-2 rounded-full ${localMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                    <Label htmlFor='form-placement-mode' className='text-sm font-medium'>
-                      Edit Mode
-                    </Label>
-                    <CustomSwitch id='form-placement-mode' checked={localMode} onCheckedChange={setLocalMode} />
-                  </div>
 
                   {/* Direct buttons for mobile - simplified approach */}
                   <div className='grid grid-cols-2 gap-2'>
@@ -1649,7 +1785,6 @@ function FieldPlacementContent({
                         console.log('[Mobile Direct] Add Signature button clicked');
                         createDirectMobileField('signature');
                       }}
-                      disabled={!localMode}
                     >
                       <Signature className='h-5 w-5 mb-1' />
                       <span>Add Signature</span>
@@ -1661,7 +1796,6 @@ function FieldPlacementContent({
                         console.log('[Mobile Direct] Add Initials button clicked');
                         createDirectMobileField('initials');
                       }}
-                      disabled={!localMode}
                     >
                       <Edit className='h-4 w-4 mr-2' />
                       <span>Add Initials</span>
@@ -1673,7 +1807,6 @@ function FieldPlacementContent({
                         console.log('[Mobile Direct] Add Date button clicked');
                         createDirectMobileField('date');
                       }}
-                      disabled={!localMode}
                     >
                       <CalendarDays className='h-4 w-4 mr-2' />
                       <span>Add Date</span>
@@ -1736,30 +1869,30 @@ function FieldPlacementContent({
             {/* Left sidebar with field options */}
             <div className='w-64 shrink-0'>
               <Card>
-                <CardContent className='pt-6'>
-                  <h3 className='font-medium mb-3'>Available Fields</h3>
-
-                  <div className='flex items-center justify-between mb-6 bg-gray-50 dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700'>
-                    <div className='flex items-center gap-2'>
-                      <div className={`w-2 h-2 rounded-full ${localMode ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                      <Label htmlFor='form-placement-mode-desktop' className='text-sm font-medium'>
-                        Edit Mode
-                      </Label>
+                <CardContent className='pt-6 space-y-6'>
+                  {/* Signer Dropdown */}
+                  {signerRecipients.length > 1 && (
+                    <div className='space-y-2'>
+                      <h3 className='font-medium mb-1'>Select Signer</h3>
+                      <RecipientDropdown />
                     </div>
-                    <CustomSwitch id='form-placement-mode-desktop' checked={localMode} onCheckedChange={setLocalMode} />
-                  </div>
+                  )}
 
+                  {/* Available Fields */}
                   <div className='space-y-2'>
-                    <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
-                    <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
-                    <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
+                    <h3 className='font-medium mb-1'>Available Fields</h3>
+                    <div className='space-y-2'>
+                      <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
+                      <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
+                      <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
+                    </div>
                   </div>
 
-                  {/* Debug info */}
+                  {/* Field Placements */}
                   {fieldPlacements.length > 0 && (
-                    <div className='mt-6 border-t pt-4'>
-                      <h4 className='text-sm font-medium mb-2'>Field Placements:</h4>
-                      <div className='text-xs space-y-1'>
+                    <div className='space-y-2'>
+                      <h3 className='font-medium mb-1'>Field Placements</h3>
+                      <div className='text-xs space-y-1 max-h-[250px] overflow-y-auto border border-gray-200 dark:border-zinc-700 rounded-md p-2'>
                         {fieldPlacements.map((field, i) => (
                           <div
                             id={`field-placement-${i}`}

@@ -27,6 +27,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0px 0px 1px rgba(255, 255, 255, 0.8);
+  box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.1);
 }
 
 .custom-field-type {
@@ -41,4 +43,30 @@
   height: 20px;
   margin-right: 4px;
   opacity: 0.7;
+}
+
+/* Current recipient field styling */
+.current-recipient-field {
+  box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
+  opacity: 1; /* Make current recipient fields more visible */
+  z-index: 5; /* Ensure they appear above other fields */
+}
+
+/* Current recipient badge styling */
+.current-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #0066cc;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
 }

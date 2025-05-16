@@ -9,6 +9,7 @@ interface FormPlacementContextType {
   setFormPlacementMode: React.Dispatch<React.SetStateAction<boolean>>;
   currentRecipient: Recipient | null;
   currentRecipientIndex: number;
+  setCurrentRecipientIndex: React.Dispatch<React.SetStateAction<number>>;
   signerRecipients: Recipient[];
   goToNextRecipient: () => void;
   goToPreviousRecipient: () => void;
@@ -36,6 +37,7 @@ export const FormPlacementContext = createContext<FormPlacementContextType>({
   setFormPlacementMode: () => {},
   currentRecipient: null,
   currentRecipientIndex: 0,
+  setCurrentRecipientIndex: () => {},
   signerRecipients: [],
   goToNextRecipient: () => {},
   goToPreviousRecipient: () => {},
@@ -73,7 +75,7 @@ export const FormPlacementProvider: React.FC<{
   const recipientColors = signerRecipients.reduce(
     (acc, recipient, index) => {
       const hue = (index * 137.5) % 360; // Generate evenly spaced hues
-      acc[recipient.email] = `hsla(${hue}, 70%, 85%, 0.3)`; // Light, semi-transparent colors
+      acc[recipient.email] = `hsl(${hue}, 70%, 85%)`; // Solid colors for better visibility
       return acc;
     },
     {} as { [email: string]: string },
@@ -134,6 +136,7 @@ export const FormPlacementProvider: React.FC<{
     setFormPlacementMode,
     currentRecipient,
     currentRecipientIndex,
+    setCurrentRecipientIndex,
     signerRecipients,
     goToNextRecipient,
     goToPreviousRecipient,
