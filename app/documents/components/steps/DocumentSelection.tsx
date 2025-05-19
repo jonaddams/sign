@@ -283,16 +283,16 @@ export default function DocumentSelection() {
       </div>
 
       <Tabs defaultValue='upload' className='w-full'>
-        <TabsList className={isMobile ? 'flex h-auto w-full flex-col space-y-2 py-2' : 'mb-4 grid grid-cols-2'}>
+        <TabsList className={`${isMobile ? 'flex h-auto w-full flex-col space-y-2 py-2' : 'mb-4 grid grid-cols-2'} bg-gray-300 dark:bg-gray-600`}>
           <TabsTrigger
             value='upload'
-            className={`${isMobile ? 'mb-2 w-full' : ''} cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400`}
+            className={`${isMobile ? 'mb-2 w-full' : ''} text-foreground cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500 dark:data-[state=active]:text-white`}
           >
             Upload New Document
           </TabsTrigger>
           <TabsTrigger
             value='template'
-            className={`${isMobile ? 'w-full' : ''} cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400`}
+            className={`${isMobile ? 'w-full' : ''} text-foreground cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500 dark:data-[state=active]:text-white`}
           >
             Use Template
           </TabsTrigger>
