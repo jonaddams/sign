@@ -217,7 +217,7 @@ export default function RecipientConfig() {
   };
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 sm:p-4'>
       <div>
         <h2 className='text-2xl font-semibold tracking-tight'>Add Recipients</h2>
         <p className='text-sm text-muted-foreground mt-2'>Add recipients to sign or review your document</p>
