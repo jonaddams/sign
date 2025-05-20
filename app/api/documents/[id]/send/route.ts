@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/server/auth/auth';
-import { db } from '@/database/drizzle';
-import { documents, documentParticipants } from '@/database/drizzle/schema';
+import { auth } from '@/lib/auth/auth-js';
+import { db } from '@/database/drizzle/drizzle';
+import { documents, documentParticipants } from '@/database/drizzle/document-signing-schema';
 import { eq, and } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Verify the user is authenticated
     const session = await auth();
-    if (!session || !session.user) {
+    if (!session || !session.user || !session.user.id) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const documentResults = await db
       .select()
       .from(documents)
-      .where(and(eq(documents.id, documentId), eq(documents.user_id, session.user.id)));
+      .where(and(eq(documents.id, documentId), eq(documents.ownerId, session.user.id)));
 
     if (documentResults.length === 0) {
       return new NextResponse(JSON.stringify({ error: 'Document not found' }), { status: 404 });
@@ -32,19 +31,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const document = documentResults[0];
 
     // Fetch the document participants
-    const participants = await db.select().from(documentParticipants).where(eq(documentParticipants.document_id, documentId));
+    const participants = await db.select().from(documentParticipants).where(eq(documentParticipants.documentId, documentId));
 
     if (participants.length === 0) {
       return new NextResponse(JSON.stringify({ error: 'No recipients found for this document' }), { status: 400 });
     }
 
-    // Update the document status to "sent"
+    // Update the document's updated_at timestamp
     await db
       .update(documents)
       .set({
-        status: 'sent',
-        sent_at: new Date(),
-        updated_at: new Date(),
+        updatedAt: new Date(), // This maps to updated_at in the database
       })
       .where(eq(documents.id, documentId));
 

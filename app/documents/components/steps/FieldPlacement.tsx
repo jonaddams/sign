@@ -329,8 +329,8 @@ const createFieldOnPage = (
     const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
     console.log('[Mobile Debug] Transformed page rect:', transformedPageRect);
 
-    // Create unique field name
-    const fieldName = `${fieldType}_${currentRecipient ? currentRecipient.email.split('@')[0] : 'unknown'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    // Create unique field name using helper function
+    const fieldName = createFieldName(fieldType, currentRecipient);
 
     // Create widget annotation
     const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
@@ -393,6 +393,12 @@ const createFieldOnPage = (
               position: `Page ${pageIndex + 1} at y=${transformedPageRect.top}`,
               name: fieldName,
               recipient: currentRecipient?.email,
+              pageIndex: pageIndex,
+              coordinates: {
+                x: Math.round(transformedPageRect.left),
+                y: Math.round(transformedPageRect.top),
+              },
+              id: widget.id,
             } as FieldPlacement,
           ]);
 
@@ -413,7 +419,7 @@ const createFieldOnPage = (
 
 // Helper function to create a field with fixed and reliable positioning
 // Uses hardware-independent positioning to work on all mobile devices
-const createMobileField = (fieldType: string, instance: NutrientViewerInstance, runtime: any) => {
+const createMobileField = (fieldType: string, instance: NutrientViewerInstance, runtime: any, currentRecipient?: any) => {
   try {
     console.log('[Mobile] Creating field using fixed positioning approach');
 
@@ -427,8 +433,8 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
     const firstPage = pages[0] as HTMLElement;
     const pageIndex = parseInt((firstPage as HTMLElement).dataset.pageIndex || '0', 10);
 
-    // Create a unique field name
-    const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    // Create a unique field name using helper function
+    const fieldName = createFieldName(fieldType, currentRecipient);
 
     // Directly use PDF coordinates for reliable placement
     // These values are in PDF coordinate space which is more reliable than screen coordinates
@@ -526,14 +532,31 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
   }
 };
 
+// Helper function to create consistent field names across all field creation methods
+const createFieldName = (fieldType: string, currentRecipient?: any) => {
+  // Always include the recipient identifier in the field name to ensure correct assignment
+  const recipientId = currentRecipient?.email.split('@')[0] || 'unknown';
+  return `${fieldType}_${recipientId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+};
+
 // Create custom renderer for fields with recipient names and improved visual differentiation
 const getAnnotationRenderers =
-  (runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }) =>
+  (runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }, signerRecipients: any[] = []) =>
   ({ annotation }: any) => {
     // Skip if no annotation name or it's not one of our fields
     if (!annotation.name || !['signature', 'initials', 'date'].some((type) => annotation.name.startsWith(type))) {
       return null;
     }
+
+    console.log(`[FIELD-DEBUG] Processing annotation: ${annotation.name}`, {
+      currentRecipient: currentRecipient?.email || 'none',
+      allRecipients: signerRecipients.map((r) => r.email),
+      annotationInfo: {
+        id: annotation.id,
+        pageIndex: annotation.pageIndex,
+        name: annotation.name,
+      },
+    });
 
     // Extract recipient from field name or use current recipient
     let recipientName = currentRecipient?.name || 'Unknown';
@@ -541,10 +564,43 @@ const getAnnotationRenderers =
 
     // Try to extract recipient from field name (for fields created by other recipients)
     const nameParts = annotation.name.split('_');
+    console.log(`[FIELD-DEBUG] Field name parts for ${annotation.name}:`, nameParts);
+
+    // The recipient identifier might be in the second part of the field name
+    // Let's check if we have enough parts and try to extract the recipient info
     if (nameParts.length >= 2) {
       const fieldRecipient = nameParts[1];
-      // This is an optional enhancement to show the actual owner of a field
-      // even when viewing as a different recipient
+      // First try to find an exact match for the email username
+      let matchingRecipient = signerRecipients.find((r) => r.email.split('@')[0] === fieldRecipient);
+
+      // If no exact match, try other matching methods
+      if (!matchingRecipient) {
+        matchingRecipient = signerRecipients.find(
+          (r) =>
+            r.email.includes(fieldRecipient) || // Email contains the identifier
+            r.name.toLowerCase().includes(fieldRecipient.toLowerCase()) || // Name contains the identifier
+            fieldRecipient.includes(r.email.split('@')[0]), // Identifier contains email username
+        );
+      }
+
+      console.log(`[FIELD-DEBUG] Trying to match '${fieldRecipient}' from field name:`, {
+        matchFound: !!matchingRecipient,
+        matchingRecipient: matchingRecipient?.email || 'none',
+        allRecipientEmails: signerRecipients.map((r) => r.email),
+        isEmailUsername: signerRecipients.some((r) => r.email.split('@')[0] === fieldRecipient),
+        isContainedInEmail: signerRecipients.some((r) => r.email.includes(fieldRecipient)),
+      });
+
+      // If we found a matching recipient, use their information instead of current recipient
+      if (matchingRecipient) {
+        recipientName = matchingRecipient.name;
+        recipientEmail = matchingRecipient.email;
+        console.log(`[FIELD-DEBUG] Matched recipient: ${recipientEmail} for field: ${annotation.name}`);
+      } else {
+        console.log(`[FIELD-DEBUG] No recipient match found for identifier: ${fieldRecipient}`);
+      }
+    } else {
+      console.log(`[FIELD-DEBUG] Field name has insufficient parts for recipient extraction: ${annotation.name}`);
     }
 
     // Create a div to hold our custom field
@@ -807,7 +863,17 @@ function FieldPlacementContent({
 
   // Local state for UI-specific features
   const nutrientSDK = useRef<ReturnType<typeof getNutrientViewer>>(null);
-  const [fieldPlacements, setFieldPlacements] = useState<{ type: string; position: string; name: string; recipient?: string }[]>([]);
+  const [fieldPlacements, setFieldPlacements] = useState<
+    {
+      type: string;
+      position: string;
+      name: string;
+      recipient?: string;
+      pageIndex?: number;
+      coordinates?: { x: number; y: number };
+      id?: string; // Annotation ID
+    }[]
+  >([]);
   const [fieldPositions, setFieldPositions] = useState<{ [pageIndex: number]: number }>({});
   const [debugLogs, setDebugLogs] = useState<{ time: string; message: string }[]>([]);
 
@@ -828,46 +894,94 @@ function FieldPlacementContent({
     return () => setMounted(false);
   }, []);
 
-  // Override console logging methods to add to our debug logs for mobile view
-  useEffect(() => {
-    if (isMobile && mounted) {
-      // Store original console methods
-      const originalConsoleLog = console.log;
-      const originalConsoleError = console.error;
+  // Function to scan and refresh all form fields
+  const refreshFieldPlacements = useCallback(async () => {
+    if (!viewerInstanceRef.current || !isViewerLoaded) return;
 
-      // Override console.log
-      console.log = (...args) => {
-        // Call original method
-        originalConsoleLog(...args);
+    try {
+      const instance = viewerInstanceRef.current;
+      console.log('Refreshing field placements...');
 
-        // Add to our log if it's a mobile-related log
-        const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+      // Get all form fields from the viewer
+      const formFields = await instance.getFormFields();
+      const newFields: typeof fieldPlacements = [];
 
-        if (message.includes('[Mobile]') || message.includes('[Mobile Debug]')) {
-          addLogEntry(message);
+      // Process each form field
+      for (const field of formFields) {
+        if (!field.name) continue;
+
+        const fieldName = field.name;
+        const fieldType = fieldName.startsWith('signature')
+          ? 'signature'
+          : fieldName.startsWith('initials')
+            ? 'initials'
+            : fieldName.startsWith('date')
+              ? 'date'
+              : 'unknown';
+
+        if (fieldType === 'unknown') continue;
+
+        // Extract the recipient from the field name
+        const nameParts = fieldName.split('_');
+        let recipientEmail = '';
+
+        if (nameParts.length >= 2) {
+          const fieldRecipient = nameParts[1];
+          // Try to match this identifier with a recipient
+          const matchingRecipient = signerRecipients.find((r) => r.email.includes(fieldRecipient) || r.email.split('@')[0] === fieldRecipient);
+
+          if (matchingRecipient) {
+            recipientEmail = matchingRecipient.email;
+          } else if (currentRecipient) {
+            recipientEmail = currentRecipient.email;
+          }
+        } else if (currentRecipient) {
+          recipientEmail = currentRecipient.email;
         }
-      };
 
-      // Override console.error for mobile debugging
-      console.error = (...args) => {
-        // Call original method
-        originalConsoleError(...args);
+        // Get annotation IDs to find positions
+        const annotationIds = field.annotationIds?.toArray() || [];
+        if (annotationIds.length > 0) {
+          try {
+            // Get annotations for this form field - pass ID as a number to match expected type
+            const firstAnnotationId = annotationIds[0];
+            const idAsNumber = parseInt(firstAnnotationId, 10); // Convert string ID to number if needed
+            const annotations = await instance.getAnnotations(idAsNumber);
+            if (!annotations || annotations.size === 0) continue;
 
-        // Add to our log if it's a mobile-related error
-        const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+            // Get the first annotation
+            const annotation = annotations.get(0);
+            // Skip if we couldn't get the annotation
+            if (!annotation) continue;
 
-        if (message.includes('[Mobile]') || message.includes('[Mobile Debug]')) {
-          addLogEntry(`ERROR: ${message}`);
+            const pageIndex = annotation.pageIndex;
+            const boundingBox = annotation.boundingBox;
+
+            newFields.push({
+              type: fieldType,
+              position: `(${Math.round(boundingBox.left)}, ${Math.round(boundingBox.top)})`,
+              name: fieldName,
+              recipient: recipientEmail,
+              pageIndex: pageIndex,
+              coordinates: {
+                x: Math.round(boundingBox.left),
+                y: Math.round(boundingBox.top),
+              },
+              id: annotationIds[0],
+            });
+          } catch (error) {
+            console.error('Error getting annotation details:', error);
+          }
         }
-      };
+      }
 
-      // Restore original methods on cleanup
-      return () => {
-        console.log = originalConsoleLog;
-        console.error = originalConsoleError;
-      };
+      // Update field placements state
+      setFieldPlacements(newFields);
+      console.log('Field placements refreshed:', newFields);
+    } catch (error) {
+      console.error('Error refreshing field placements:', error);
     }
-  }, [isMobile, mounted, addLogEntry]);
+  }, [viewerInstanceRef, isViewerLoaded, currentRecipient, signerRecipients]);
 
   // Set up document viewer when component mounts
   useEffect(() => {
@@ -976,7 +1090,7 @@ function FieldPlacementContent({
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
           styleSheets: ['/styles/viewer.css'],
           customRenderers: {
-            Annotation: getAnnotationRenderers(getNutrientViewerRuntime(), currentRecipient, recipientColors),
+            Annotation: getAnnotationRenderers(getNutrientViewerRuntime(), currentRecipient, recipientColors, signerRecipients),
           },
         })
           .then((instance: NutrientViewerInstance) => {
@@ -1080,8 +1194,8 @@ function FieldPlacementContent({
                   const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
                   console.log('Transformed page rect:', transformedPageRect);
 
-                  // Create a unique field name
-                  const fieldName = `${fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                  // Create a unique field name that includes the recipient identifier
+                  const fieldName = createFieldName(fieldType, currentRecipient);
 
                   // Create widget annotation with typed SDK
                   const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
@@ -1141,6 +1255,12 @@ function FieldPlacementContent({
                             position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
                             name: fieldName,
                             recipient: currentRecipient?.email,
+                            pageIndex: pageIndex,
+                            coordinates: {
+                              x: Math.round(transformedPageRect.left),
+                              y: Math.round(transformedPageRect.top),
+                            },
+                            id: widget.id,
                           },
                         ]);
 
@@ -1289,8 +1409,8 @@ function FieldPlacementContent({
                     // Transform to page coordinates
                     const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
 
-                    // Create a unique field name
-                    const fieldName = `${activeTouchFieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                    // Create a unique field name with recipient info
+                    const fieldName = createFieldName(activeTouchFieldType, currentRecipient);
 
                     // Create widget annotation
                     const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
@@ -1419,8 +1539,8 @@ function FieldPlacementContent({
                       // Create the field with a completely different approach for mobile:
                       // Using PDF coordinates directly instead of screen coordinates
                       try {
-                        // Create a unique field name
-                        const fieldName = `${customEvent.detail.fieldType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                        // Create a unique field name with recipient identifier
+                        const fieldName = createFieldName(customEvent.detail.fieldType, currentRecipient);
 
                         // For reliable placement, create a temporary widget to get proper transform values
                         const tempRect = new mobileRuntime.Geometry.Rect({
@@ -1709,15 +1829,15 @@ function FieldPlacementContent({
     const runtime = getNutrientViewerRuntime();
 
     if (instance && runtime) {
-      // Update the custom renderers with the current recipient
+      // Update the custom renderers with the current recipient and all signerRecipients
       const newRenderers = {
-        Annotation: getAnnotationRenderers(runtime, currentRecipient, recipientColors),
+        Annotation: getAnnotationRenderers(runtime, currentRecipient, recipientColors, signerRecipients),
       };
 
       // Apply the new renderers
       instance.setCustomRenderers(newRenderers);
     }
-  }, [currentRecipientIndex, isViewerLoaded, recipientColors]);
+  }, [currentRecipientIndex, isViewerLoaded, recipientColors, signerRecipients, fieldPlacements]);
 
   // Update DocumentFlowContext validation state based on field validation status
   useEffect(() => {
@@ -1749,8 +1869,8 @@ function FieldPlacementContent({
       return;
     }
 
-    // Use the helper function to create the field
-    createMobileField(fieldType, instance, runtime);
+    // Use the helper function to create the field, passing the current recipient
+    createMobileField(fieldType, instance, runtime, currentRecipient);
   };
 
   return (
@@ -1897,7 +2017,7 @@ function FieldPlacementContent({
                           <div
                             id={`field-placement-${i}`}
                             key={i}
-                            className='p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center'
+                            className='p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center gap-2'
                             onClick={() => {
                               if (viewerInstanceRef.current) {
                                 console.log(`Focusing field: ${field.name}`);
@@ -1922,9 +2042,82 @@ function FieldPlacementContent({
                               }
                             }}
                           >
-                            <div className='flex-1'>
-                              <span className='font-medium'>{field.type}</span>: {field.position}
+                            {/* Field type icon with signer color */}
+                            <div
+                              className='w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0'
+                              style={{
+                                backgroundColor: field.recipient ? recipientColors[field.recipient] : 'cornflowerblue',
+                              }}
+                            >
+                              {field.type === 'signature' && <Signature className='h-3 w-3 text-white' />}
+                              {field.type === 'initials' && <Edit className='h-3 w-3 text-white' />}
+                              {field.type === 'date' && <CalendarDays className='h-3 w-3 text-white' />}
                             </div>
+
+                            {/* Field info */}
+                            <div className='flex-1'>
+                              <div className='flex items-center gap-1'>
+                                <span className='font-medium'>{field.type}</span>
+                                {field.recipient && (
+                                  <span className='bg-gray-100 dark:bg-zinc-700 text-xs px-1 rounded'>
+                                    {signerRecipients
+                                      .find((r) => r.email === field.recipient)
+                                      ?.name.split(' ')[0]
+                                      .substring(0, 3)
+                                      .toUpperCase()}
+                                  </span>
+                                )}
+                                {field.id && <span className='text-xs text-gray-500'>ID: {field.id.substring(0, 6)}</span>}
+                              </div>
+                              <div className='text-xs text-gray-500'>
+                                {field.coordinates ? `Page ${field.pageIndex! + 1} (${field.coordinates.x}, ${field.coordinates.y})` : field.position}
+                              </div>
+                            </div>
+
+                            {/* Delete button */}
+                            <button
+                              className='text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1'
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent triggering parent onClick
+                                if (viewerInstanceRef.current && field.name) {
+                                  // Get runtime
+                                  const runtime = getNutrientViewerRuntime();
+                                  const instance = viewerInstanceRef.current;
+
+                                  if (runtime && instance) {
+                                    console.log(`Deleting field: ${field.name}`);
+
+                                    // Find the annotation by name
+                                    instance.getFormFields().then((formFields) => {
+                                      const formField = formFields.find((f: any) => f.name === field.name);
+
+                                      if (formField) {
+                                        // Get the annotation IDs
+                                        const annotationIds = formField.annotationIds?.toArray() || [];
+                                        console.log(`Found annotations to delete: ${annotationIds.join(', ')}`);
+
+                                        // Delete the annotations
+                                        instance.delete(annotationIds).then(() => {
+                                          console.log(`Successfully deleted field: ${field.name}`);
+
+                                          // Remove from field placements
+                                          setFieldPlacements((prev) => prev.filter((f) => f.name !== field.name));
+
+                                          // Update field count for the recipient
+                                          if (field.recipient) {
+                                            updateFieldCount(field.recipient, field.type, false);
+                                          }
+                                        });
+                                      } else {
+                                        console.error(`Form field not found: ${field.name}`);
+                                      }
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <Trash className='h-4 w-4' />
+                            </button>
                           </div>
                         ))}
                       </div>

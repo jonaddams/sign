@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ export default function RecipientConfig() {
   const [validateAttempt, setValidateAttempt] = useState(false);
   const [isOnlySigner, setIsOnlySigner] = useState(false);
   const isMobile = useIsMobile();
+  const nameInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const emailInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   // Validate the recipients
   useEffect(() => {
@@ -89,18 +91,27 @@ export default function RecipientConfig() {
 
   // Add a new recipient
   const addRecipient = () => {
+    const newId = uuidv4();
     const newRecipientOrder = state.recipients.length > 0 ? Math.max(...state.recipients.map((r) => r.signingOrder)) + 1 : 1;
 
     dispatch({
       type: 'ADD_RECIPIENT',
       payload: {
-        id: uuidv4(),
+        id: newId,
         name: '',
         email: '',
         role: 'signer',
         signingOrder: newRecipientOrder,
       },
     });
+
+    // Focus the name input after a short delay to allow rendering
+    setTimeout(() => {
+      const nameInput = nameInputRefs.current[newId];
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }, 0);
   };
 
   // Remove a recipient
@@ -332,6 +343,13 @@ export default function RecipientConfig() {
                         value={recipient.name}
                         onChange={(e) => updateRecipient(recipient.id, 'name', e.target.value)}
                         className={validateAttempt && recipient.name.trim() === '' ? 'border-red-500' : ''}
+                        ref={(el) => {
+                          if (el) {
+                            nameInputRefs.current[recipient.id] = el;
+                          } else {
+                            delete nameInputRefs.current[recipient.id];
+                          }
+                        }}
                       />
                       {validateAttempt && recipient.name.trim() === '' && <p className='text-xs text-red-500 mt-1'>Name is required</p>}
                     </div>
@@ -347,6 +365,13 @@ export default function RecipientConfig() {
                         value={recipient.email}
                         onChange={(e) => updateRecipient(recipient.id, 'email', e.target.value)}
                         className={validateAttempt && (recipient.email.trim() === '' || !isValidEmail(recipient.email)) ? 'border-red-500' : ''}
+                        ref={(el) => {
+                          if (el) {
+                            emailInputRefs.current[recipient.id] = el;
+                          } else {
+                            delete emailInputRefs.current[recipient.id];
+                          }
+                        }}
                       />
                       {validateAttempt && recipient.email.trim() === '' && <p className='text-xs text-red-500 mt-1'>Email is required</p>}
                       {validateAttempt && recipient.email.trim() !== '' && !isValidEmail(recipient.email) && (
