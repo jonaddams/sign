@@ -17,12 +17,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const nutrientSdkVersion = process.env.NEXT_PUBLIC_NUTRIENT_SDK_VERSION || '1.10.0';
+  const nutrientSdkUrl = `https://cdn.cloud.pspdfkit.com/pspdfkit-web@${nutrientSdkVersion}/nutrient-viewer.js`;
+
   return (
     <html lang="en" suppressHydrationWarning className={caveat.variable}>
       <head>
         <Script
           id="nutrient-viewer-sdk"
-          src="https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.2.0/nutrient-viewer.js"
+          src={nutrientSdkUrl}
           strategy="beforeInteractive"
         />
       </head>
