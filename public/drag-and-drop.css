@@ -1,13 +1,13 @@
 /* PSPDFKit Overrides */
 .PSPDFKit-Form-Creator-Toolbar,
 .PSPDFKit-Form-Creator-Popover {
-  display: none !important;
+  display: none;
 }
 
 /* Custom Renderers */
 .custom-signature-label {
   background: #f0f3f9;
-  border: 1px solid #000 !important;
+  border: 1px solid #000;
   /* border: 1px solid #5e5ceb !important; */
   color: #000;
   display: flex;

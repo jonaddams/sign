@@ -1,70 +1,55 @@
-import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MetricCardProps {
   title: string;
   value: string;
   change: string;
-  trend: "up" | "down" | "neutral";
+  trend: 'up' | 'down' | 'neutral';
   icon: ReactNode;
   description: string;
 }
 
-export function MetricCard({
-  title,
-  value,
-  change,
-  trend,
-  icon,
-  description,
-}: MetricCardProps) {
+export function MetricCard({ title, value, change, trend, icon, description }: MetricCardProps) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:shadow-md sm:p-6 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-          {title}
-        </h3>
-        <div className="rounded-full bg-zinc-100 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          {icon}
-        </div>
+        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{title}</h3>
+        <div className="rounded-full bg-zinc-100 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{icon}</div>
       </div>
 
       <div className="mt-4">
-        <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-          {value}
-        </p>
+        <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{value}</p>
 
         <div className="mt-2 flex items-center">
           <span
             className={cn(
-              "mr-2 inline-flex items-center text-xs font-medium",
-              trend === "up"
-                ? "text-green-600 dark:text-green-400"
-                : trend === "down"
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-zinc-600 dark:text-zinc-400",
+              'mr-2 inline-flex items-center text-xs font-medium',
+              trend === 'up'
+                ? 'text-green-600 dark:text-green-400'
+                : trend === 'down'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-zinc-600 dark:text-zinc-400',
             )}
           >
-            {trend === "up" && <ArrowUp className="mr-1 h-3 w-3" />}
-            {trend === "down" && <ArrowDown className="mr-1 h-3 w-3" />}
+            {trend === 'up' && <ArrowUp className="mr-1 h-3 w-3" />}
+            {trend === 'down' && <ArrowDown className="mr-1 h-3 w-3" />}
             {change}
           </span>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            {description}
-          </span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">{description}</span>
         </div>
       </div>
 
       {/* Decorative gradient background */}
       <div
         className={cn(
-          "absolute bottom-0 left-0 right-0 h-1",
-          trend === "up"
-            ? "bg-gradient-to-r from-green-200 to-green-500"
-            : trend === "down"
-              ? "bg-gradient-to-r from-red-200 to-red-500"
-              : "bg-gradient-to-r from-blue-200 to-blue-500",
+          'absolute bottom-0 left-0 right-0 h-1',
+          trend === 'up'
+            ? 'bg-gradient-to-r from-green-200 to-green-500'
+            : trend === 'down'
+              ? 'bg-gradient-to-r from-red-200 to-red-500'
+              : 'bg-gradient-to-r from-blue-200 to-blue-500',
         )}
       />
     </div>

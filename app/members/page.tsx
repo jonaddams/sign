@@ -1,10 +1,10 @@
-import PageLayout from '@/components/layout/page-layout';
+import { MoreHorizontal, Plus } from 'lucide-react';
+import Image from 'next/image';
 import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, Plus } from 'lucide-react';
-import Image from 'next/image';
 
 // Mock team members data
 const members = [
@@ -37,16 +37,16 @@ const members = [
 export default function MembersPage() {
   return (
     <PageLayout>
-      <PageContent title='Team Members' description='Manage your team members and their access'>
-        <div className='mb-4 flex items-center justify-between'>
-          <Button className='flex items-center gap-2'>
-            <Plus className='h-4 w-4' />
+      <PageContent title="Team Members" description="Manage your team members and their access">
+        <div className="mb-4 flex items-center justify-between">
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
             <span>Invite Member</span>
           </Button>
         </div>
 
-        <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
-          <CardContent className='p-0'>
+        <Card className="border border-zinc-200 shadow-sm dark:border-zinc-700">
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -54,16 +54,22 @@ export default function MembersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {members.map((member) => (
-                  <TableRow key={member.id} className='cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'>
+                  <TableRow key={member.id} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                     <TableCell>
-                      <div className='flex items-center gap-3'>
-                        <Image src={member.avatar || '/placeholder.svg'} alt={member.name} width={32} height={32} className='rounded-full' />
-                        <span className='font-medium'>{member.name}</span>
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={member.avatar || '/placeholder.svg'}
+                          alt={member.name}
+                          width={32}
+                          height={32}
+                          className="rounded-full"
+                        />
+                        <span className="font-medium">{member.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>{member.email}</TableCell>
@@ -79,10 +85,10 @@ export default function MembersPage() {
                         {member.status}
                       </span>
                     </TableCell>
-                    <TableCell className='text-right'>
-                      <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                        <MoreHorizontal className='h-4 w-4' />
-                        <span className='sr-only'>More</span>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More</span>
                       </Button>
                     </TableCell>
                   </TableRow>

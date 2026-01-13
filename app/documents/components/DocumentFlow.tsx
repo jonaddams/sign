@@ -1,7 +1,7 @@
 'use client';
 
-import { toast } from '@/components/ui/use-toast';
 import { useState } from 'react';
+import { toast } from '@/components/ui/use-toast';
 import { DocumentFlowProvider, useDocumentFlow } from '../context/DocumentFlowContext';
 import NavigationControls from './NavigationControls';
 import StepIndicator from './StepIndicator';
@@ -18,7 +18,7 @@ export default function DocumentFlow({ children }: { children: (state: any) => R
 // Separate component to use the context inside the provider
 function DocumentFlowContent({ children }: { children: (state: any) => React.ReactNode }) {
   const { state, dispatch } = useDocumentFlow();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, _setIsSubmitting] = useState(false);
 
   // Function to check if we can proceed to the next step
   const canMoveForward = () => {
@@ -112,10 +112,10 @@ function DocumentFlowContent({ children }: { children: (state: any) => React.Rea
   };
 
   return (
-    <div className='mx-auto w-full px-0 py-8 sm:px-4'>
+    <div className="mx-auto w-full px-0 py-8 sm:px-4">
       <StepIndicator currentStep={state.currentStep} totalSteps={state.totalSteps} />
 
-      <div className='mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-zinc-900'>
+      <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-zinc-900">
         {typeof children === 'function' ? children(state) : children}
       </div>
 

@@ -1,19 +1,24 @@
 'use client';
 
-import { toast } from 'sonner';
-import { FileUpload } from '@/components/ui/file-upload';
-import PageLayout from '@/components/layout/page-layout';
-import PageContent from '@/components/layout/page-content';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import DocumentViewer from '@/components/ui/document-viewer';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { extractFileExtension, getFileTypeDisplay, getFileTypeIcon } from '@/lib/file-utils';
 import { Download, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import DocumentViewer from '@/components/ui/document-viewer';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileUpload } from '@/components/ui/file-upload';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { extractFileExtension, getFileTypeDisplay, getFileTypeIcon } from '@/lib/file-utils';
 
 interface Template {
   id: string;
@@ -58,11 +63,6 @@ export default function TemplatesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<{ url: string; id: string; isOpen: boolean } | null>(null);
   const isMobile = useIsMobile();
-
-  // Fetch templates on page load
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
 
   const fetchTemplates = async () => {
     try {
@@ -119,6 +119,11 @@ export default function TemplatesPage() {
     }
   };
 
+  // Fetch templates on page load
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
   // Handle template upload
   const handleUploadComplete = async (fileData: FileData) => {
     try {
@@ -127,7 +132,9 @@ export default function TemplatesPage() {
       const fileExt = extractFileExtension(fileData.name);
 
       if (!isValidFileType(mimeType) && !isValidFileType(fileExt)) {
-        throw new Error('Unsupported file type. Please upload Word, Excel, PowerPoint, PDF, TIFF, JPG, or PNG files only.');
+        throw new Error(
+          'Unsupported file type. Please upload Word, Excel, PowerPoint, PDF, TIFF, JPG, or PNG files only.',
+        );
       }
 
       const response = await fetch('/api/templates', {
@@ -157,7 +164,7 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleError = (message: string) => {
+  const _handleError = (message: string) => {
     setErrorMessage(message);
     setTimeout(() => setErrorMessage(null), 5000);
   };
@@ -273,47 +280,59 @@ export default function TemplatesPage() {
 
   return (
     <PageLayout>
-      <PageContent title='Templates' description='Manage your document templates'>
+      <PageContent title="Templates" description="Manage your document templates">
         {previewDoc && (
-          <DocumentViewer documentUrl={previewDoc.url} documentId={previewDoc.id} isOpen={previewDoc.isOpen} onClose={handleClosePreview} preview={true} />
+          <DocumentViewer
+            documentUrl={previewDoc.url}
+            documentId={previewDoc.id}
+            isOpen={previewDoc.isOpen}
+            onClose={handleClosePreview}
+            preview={true}
+          />
         )}
 
-        <div className='mb-4 flex items-center justify-between'>
+        <div className="mb-4 flex items-center justify-between">
           <FileUpload onUploadComplete={handleUploadComplete} onError={setErrorMessage} />
         </div>
 
         {errorMessage && (
-          <div className='mb-4 rounded-md bg-red-50 py-4 dark:bg-red-900/30'>
-            <div className='flex'>
-              <div className='text-sm text-red-700 dark:text-red-200'>{errorMessage}</div>
+          <div className="mb-4 rounded-md bg-red-50 py-4 dark:bg-red-900/30">
+            <div className="flex">
+              <div className="text-sm text-red-700 dark:text-red-200">{errorMessage}</div>
             </div>
           </div>
         )}
 
-        <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
+        <Card className="border border-zinc-200 shadow-sm dark:border-zinc-700">
           <CardContent className={isMobile ? 'p-0 sm:p-0' : 'p-0'}>
             {isLoading ? (
-              <div className='flex justify-center items-center p-8'>
-                <p className='text-zinc-500'>Loading templates...</p>
+              <div className="flex justify-center items-center p-8">
+                <p className="text-zinc-500">Loading templates...</p>
               </div>
             ) : templates.length === 0 ? (
-              <div className='flex justify-center items-center p-8'>
-                <p className='text-zinc-500'>No templates found. Upload a template to get started.</p>
+              <div className="flex justify-center items-center p-8">
+                <p className="text-zinc-500">No templates found. Upload a template to get started.</p>
               </div>
             ) : isMobile ? (
               // Mobile card view layout
-              <div className='p-4 space-y-3'>
+              <div className="p-4 space-y-3">
                 {templates.map((template) => (
-                  <Card key={template.id} className='border border-zinc-200 dark:border-zinc-700'>
-                    <CardContent className='p-3'>
-                      <div className='flex'>
+                  <Card key={template.id} className="border border-zinc-200 dark:border-zinc-700">
+                    <CardContent className="p-3">
+                      <div className="flex">
                         {/* Left column: File type icon aligned at top */}
-                        <div className='mr-3 self-start'>
-                          <div className='rounded-md bg-blue-100 p-2 dark:bg-blue-900 flex-shrink-0'>
+                        <div className="mr-3 self-start">
+                          <div className="rounded-md bg-blue-100 p-2 dark:bg-blue-900 flex-shrink-0">
                             {(() => {
                               const iconData = getFileTypeIcon(template.type);
                               return iconData.image ? (
-                                <Image src={iconData.image} alt={template.type} width={16} height={16} className={iconData.className} />
+                                <Image
+                                  src={iconData.image}
+                                  alt={template.type}
+                                  width={16}
+                                  height={16}
+                                  className={iconData.className}
+                                />
                               ) : iconData.icon ? (
                                 <iconData.icon className={`h-4 w-4 text-blue-600 dark:text-blue-400`} />
                               ) : null;
@@ -322,37 +341,37 @@ export default function TemplatesPage() {
                         </div>
 
                         {/* Right column: Two rows */}
-                        <div className='flex-1 flex flex-col'>
+                        <div className="flex-1 flex flex-col">
                           {/* 1st row: File name */}
-                          <div className='font-medium text-sm mb-2'>{template.name}</div>
+                          <div className="font-medium text-sm mb-2">{template.name}</div>
 
                           {/* 2nd row: File size and action buttons */}
-                          <div className='flex justify-between items-center'>
-                            <div className='text-xs text-muted-foreground'>{template.size}</div>
-                            <div className='flex gap-2'>
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs text-muted-foreground">{template.size}</div>
+                            <div className="flex gap-2">
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
                                 onClick={() => handlePreview(template)}
                               >
-                                <Eye className='h-3.5 w-3.5' />
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
                                 onClick={() => handleDownload(template)}
                               >
-                                <Download className='h-3.5 w-3.5' />
+                                <Download className="h-3.5 w-3.5" />
                               </Button>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 text-red-500 dark:text-red-400'
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 text-red-500 dark:text-red-400"
                                 onClick={() => handleDelete(template)}
                               >
-                                <Trash2 className='h-3.5 w-3.5' />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
@@ -371,19 +390,25 @@ export default function TemplatesPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Size</TableHead>
                     <TableHead>Modified</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {templates.map((template) => (
-                    <TableRow key={template.id} className='hover:bg-zinc-50 dark:hover:bg-zinc-800/50'>
-                      <TableCell className='font-medium'>{template.name}</TableCell>
+                    <TableRow key={template.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                      <TableCell className="font-medium">{template.name}</TableCell>
                       <TableCell>
-                        <div className='flex items-center gap-2'>
+                        <div className="flex items-center gap-2">
                           {(() => {
                             const iconData = getFileTypeIcon(template.type);
                             return iconData.image ? (
-                              <Image src={iconData.image} alt={template.type} width={16} height={16} className={iconData.className} />
+                              <Image
+                                src={iconData.image}
+                                alt={template.type}
+                                width={16}
+                                height={16}
+                                className={iconData.className}
+                              />
                             ) : iconData.icon ? (
                               <iconData.icon className={iconData.className} />
                             ) : null;
@@ -393,39 +418,46 @@ export default function TemplatesPage() {
                       </TableCell>
                       <TableCell>{template.size}</TableCell>
                       <TableCell>{template.modified}</TableCell>
-                      <TableCell className='text-right'>
-                        <div className='flex justify-end gap-2'>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
                           <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
                             onClick={() => handlePreview(template)}
                           >
-                            <Eye className='h-4 w-4' />
-                            <span className='sr-only'>View</span>
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View</span>
                           </Button>
                           <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
                             onClick={() => handleDownload(template)}
                           >
-                            <Download className='h-4 w-4' />
-                            <span className='sr-only'>Download</span>
+                            <Download className="h-4 w-4" />
+                            <span className="sr-only">Download</span>
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant='ghost' size='sm' className='h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'>
-                                <MoreHorizontal className='h-4 w-4' />
-                                <span className='sr-only'>More options</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">More options</span>
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end' className='z-50 bg-white border border-zinc-200 shadow-lg dark:bg-zinc-800 dark:border-zinc-700'>
+                            <DropdownMenuContent
+                              align="end"
+                              className="z-50 bg-white border border-zinc-200 shadow-lg dark:bg-zinc-800 dark:border-zinc-700"
+                            >
                               <DropdownMenuItem
                                 onClick={() => handleDelete(template)}
-                                className='text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex justify-end'
+                                className="text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex justify-end"
                               >
-                                <Trash2 className='h-4 w-4 mr-2' />
+                                <Trash2 className="h-4 w-4 mr-2" />
                                 <span>Delete</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>

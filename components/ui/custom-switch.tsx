@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface CustomSwitchProps {
   id: string;
   checked: boolean;
@@ -10,7 +8,13 @@ interface CustomSwitchProps {
 export function CustomSwitch({ id, checked, onCheckedChange, className = '' }: CustomSwitchProps) {
   return (
     <label className={`switch relative inline-block w-[60px] h-[34px] ${className}`} htmlFor={id}>
-      <input type='checkbox' id={id} checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} className='opacity-0 w-0 h-0' />
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onCheckedChange(e.target.checked)}
+        className="opacity-0 w-0 h-0"
+      />
       <span
         className={`
         slider round absolute cursor-pointer top-0 left-0 right-0 bottom-0 

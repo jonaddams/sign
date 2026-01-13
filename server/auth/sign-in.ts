@@ -1,9 +1,9 @@
-"use server";
-import { signIn } from "@/lib/auth/auth-js";
+'use server';
+import { signIn } from '@/lib/auth/auth-js';
 
 export const handleSignin = async ({ provider }: { provider: string }) => {
   try {
-    await signIn(provider, { redirectTo: "/dashboard" });
+    await signIn(provider, { redirectTo: '/dashboard' });
   } catch (error) {
     throw error;
     console.error(error);
@@ -22,14 +22,14 @@ export async function signInWithEmail(email: string, callbackUrl: string) {
     return { success: true };
   } catch (error: any) {
     // Check if it's a redirect (normal part of email auth flow)
-    if (error?.message === "NEXT_REDIRECT") {
+    if (error?.message === 'NEXT_REDIRECT') {
       // This is the expected behavior for email sign-in
       // The redirect will be handled by Next.js
       return { success: true };
     }
-    
+
     // Log and throw only for actual errors
-    console.error("Authentication error:", error);
-    throw new Error("Authentication failed");
+    console.error('Authentication error:', error);
+    throw new Error('Authentication failed');
   }
 }

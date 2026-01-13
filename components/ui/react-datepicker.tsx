@@ -1,12 +1,11 @@
 'use client';
 
-import * as React from 'react';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
-import { CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { format } from 'date-fns';
 
 // Import react-datepicker styles
 import 'react-datepicker/dist/react-datepicker.css';
@@ -20,29 +19,42 @@ export interface ReactDatePickerProps {
   placeholder?: string;
 }
 
-export function ReactDatePickerCustom({ date, setDate, id, className, disabled = false, placeholder = 'Pick a date' }: ReactDatePickerProps) {
+export function ReactDatePickerCustom({
+  date,
+  setDate,
+  id,
+  className,
+  disabled = false,
+  placeholder = 'Pick a date',
+}: ReactDatePickerProps) {
   // Custom header for the calendar
-  const CustomHeader = ({ date, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }: any) => (
-    <div className='flex items-center justify-between px-2 py-1'>
+  const CustomHeader = ({
+    date,
+    decreaseMonth,
+    increaseMonth,
+    prevMonthButtonDisabled,
+    nextMonthButtonDisabled,
+  }: any) => (
+    <div className="flex items-center justify-between px-2 py-1">
       <button
         onClick={decreaseMonth}
         disabled={prevMonthButtonDisabled}
-        type='button'
-        className='p-1 rounded-md border border-input hover:bg-accent hover:text-accent-foreground disabled:opacity-50'
+        type="button"
+        className="p-1 rounded-md border border-input hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
       >
-        <svg xmlns='http://www.w3.org/2000/svg' height='16' width='16' viewBox='0 0 24 24'>
-          <path fill='currentColor' d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z' />
+        <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
         </svg>
       </button>
-      <h2 className='text-sm font-medium'>{format(date, 'MMMM yyyy')}</h2>
+      <h2 className="text-sm font-medium">{format(date, 'MMMM yyyy')}</h2>
       <button
         onClick={increaseMonth}
         disabled={nextMonthButtonDisabled}
-        type='button'
-        className='p-1 rounded-md border border-input hover:bg-accent hover:text-accent-foreground disabled:opacity-50'
+        type="button"
+        className="p-1 rounded-md border border-input hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
       >
-        <svg xmlns='http://www.w3.org/2000/svg' height='16' width='16' viewBox='0 0 24 24'>
-          <path fill='currentColor' d='M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z' />
+        <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
         </svg>
       </button>
     </div>
@@ -58,19 +70,24 @@ export function ReactDatePickerCustom({ date, setDate, id, className, disabled =
             variant={'outline'}
             className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}
           >
-            <CalendarIcon className='mr-2 h-4 w-4' />
+            <CalendarIcon className="mr-2 h-4 w-4" />
             {date ? format(date, 'PPP') : placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='w-auto p-0'>
+        <PopoverContent className="w-auto p-0">
           <DatePicker
             selected={date}
             onChange={(date) => setDate(date || undefined)}
             inline
             renderCustomHeader={CustomHeader}
-            calendarClassName='bg-background border-none shadow-none'
-            dayClassName={(date) => cn('rounded-md hover:bg-accent hover:text-accent-foreground', 'h-8 w-8 inline-flex items-center justify-center text-sm')}
-            wrapperClassName='w-full'
+            calendarClassName="bg-background border-none shadow-none"
+            dayClassName={(_date) =>
+              cn(
+                'rounded-md hover:bg-accent hover:text-accent-foreground',
+                'h-8 w-8 inline-flex items-center justify-center text-sm',
+              )
+            }
+            wrapperClassName="w-full"
           />
         </PopoverContent>
       </Popover>
@@ -93,7 +110,7 @@ export function ReactDatePicker({ date, setDate, id, className }: ReactDatePicke
         className,
       )}
       id={id}
-      dateFormat='MMMM d, yyyy'
+      dateFormat="MMMM d, yyyy"
     />
   );
 }

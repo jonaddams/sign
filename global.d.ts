@@ -24,7 +24,13 @@ declare interface Window {
     };
 
     Annotations: {
-      WidgetAnnotation: new (options: { boundingBox: any; formFieldName: string; id: string; pageIndex: number; name: string }) => any;
+      WidgetAnnotation: new (options: {
+        boundingBox: any;
+        formFieldName: string;
+        id: string;
+        pageIndex: number;
+        name: string;
+      }) => any;
       toSerializableObject: (annotation: any) => any;
       fromSerializableObject: (serialized: any) => any;
     };

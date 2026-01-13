@@ -1,5 +1,5 @@
-import PageLayout from '@/components/layout/page-layout';
 import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -31,9 +31,9 @@ const inboxItems = [
 export default function InboxPage() {
   return (
     <PageLayout>
-      <PageContent title='Inbox' description='Manage your incoming documents and requests'>
-        <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
-          <CardContent className='p-0'>
+      <PageContent title="Inbox" description="Manage your incoming documents and requests">
+        <Card className="border border-zinc-200 shadow-sm dark:border-zinc-700">
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -45,8 +45,8 @@ export default function InboxPage() {
               </TableHeader>
               <TableBody>
                 {inboxItems.map((item) => (
-                  <TableRow key={item.id} className='cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'>
-                    <TableCell className='font-medium'>{item.sender}</TableCell>
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <TableCell className="font-medium">{item.sender}</TableCell>
                     <TableCell>{item.subject}</TableCell>
                     <TableCell>{item.date}</TableCell>
                     <TableCell>

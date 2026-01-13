@@ -81,12 +81,8 @@
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -156,12 +152,8 @@
           "name": "authenticator_userId_user_id_fk",
           "tableFrom": "authenticator",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -171,9 +163,7 @@
         "authenticator_credentialID_unique": {
           "name": "authenticator_credentialID_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "credentialID"
-          ]
+          "columns": ["credentialID"]
         }
       },
       "policies": {},
@@ -209,12 +199,8 @@
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -267,9 +253,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -356,12 +340,8 @@
           "name": "document_annotations_document_id_documents_id_fk",
           "tableFrom": "document_annotations",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -369,12 +349,8 @@
           "name": "document_annotations_creator_id_user_id_fk",
           "tableFrom": "document_annotations",
           "tableTo": "user",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -445,12 +421,8 @@
           "name": "document_audit_log_document_id_documents_id_fk",
           "tableFrom": "document_audit_log",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -458,12 +430,8 @@
           "name": "document_audit_log_user_id_user_id_fk",
           "tableFrom": "document_audit_log",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -529,12 +497,8 @@
           "name": "document_notifications_document_id_documents_id_fk",
           "tableFrom": "document_notifications",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -595,12 +559,8 @@
           "name": "document_participants_document_id_documents_id_fk",
           "tableFrom": "document_participants",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -608,12 +568,8 @@
           "name": "document_participants_user_id_user_id_fk",
           "tableFrom": "document_participants",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -623,10 +579,7 @@
         "document_participants_document_id_user_id_unique": {
           "name": "document_participants_document_id_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "document_id",
-            "user_id"
-          ]
+          "columns": ["document_id", "user_id"]
         }
       },
       "policies": {},
@@ -687,12 +640,8 @@
           "name": "document_templates_creator_id_user_id_fk",
           "tableFrom": "document_templates",
           "tableTo": "user",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -783,12 +732,8 @@
           "name": "documents_template_id_document_templates_id_fk",
           "tableFrom": "documents",
           "tableTo": "document_templates",
-          "columnsFrom": [
-            "template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["template_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -796,12 +741,8 @@
           "name": "documents_owner_id_user_id_fk",
           "tableFrom": "documents",
           "tableTo": "user",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -882,12 +823,8 @@
           "name": "signature_requests_document_id_documents_id_fk",
           "tableFrom": "signature_requests",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -895,12 +832,8 @@
           "name": "signature_requests_participant_id_document_participants_id_fk",
           "tableFrom": "signature_requests",
           "tableTo": "document_participants",
-          "columnsFrom": [
-            "participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -916,39 +849,22 @@
     "public.document_access_level": {
       "name": "document_access_level",
       "schema": "public",
-      "values": [
-        "VIEWER",
-        "EDITOR",
-        "SIGNER"
-      ]
+      "values": ["VIEWER", "EDITOR", "SIGNER"]
     },
     "public.document_status": {
       "name": "document_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "PENDING",
-        "IN_PROGRESS",
-        "COMPLETED",
-        "DECLINED"
-      ]
+      "values": ["DRAFT", "PENDING", "IN_PROGRESS", "COMPLETED", "DECLINED"]
     },
     "public.signature_status": {
       "name": "signature_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "SIGNED",
-        "DECLINED"
-      ]
+      "values": ["PENDING", "SIGNED", "DECLINED"]
     },
     "public.signature_type": {
       "name": "signature_type",
       "schema": "public",
-      "values": [
-        "ELECTRONIC",
-        "DIGITAL"
-      ]
+      "values": ["ELECTRONIC", "DIGITAL"]
     }
   },
   "schemas": {},

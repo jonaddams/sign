@@ -1,20 +1,20 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { useDocumentFlow } from '../../context/DocumentFlowContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { HelpCircle, Plus, Trash2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { HelpCircle, Plus, Trash2, User } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-// Replace the DatePicker import with ReactDatePickerCustom
-import { ReactDatePickerCustom } from '@/components/ui/react-datepicker';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDocumentFlow } from '../../context/DocumentFlowContext';
 
 export default function RecipientConfig() {
   const { state, dispatch } = useDocumentFlow();
@@ -23,6 +23,17 @@ export default function RecipientConfig() {
   const isMobile = useIsMobile();
   const nameInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const emailInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const { data: session } = useSession();
+
+  // Initialize user display name with session name on mount
+  useEffect(() => {
+    if (session?.user?.name && !state.userDisplayName) {
+      dispatch({
+        type: 'SET_USER_DISPLAY_NAME',
+        payload: session.user.name,
+      });
+    }
+  }, [session?.user?.name, state.userDisplayName, dispatch]);
 
   // Validate the recipients
   useEffect(() => {
@@ -32,10 +43,9 @@ export default function RecipientConfig() {
       type: 'VALIDATE_STEP',
       payload: { step: 'step2Valid', isValid },
     });
-  }, [state.recipients, state.userWillSign, isOnlySigner, validateAttempt]);
+  }, [dispatch, validateRecipients]);
 
   // Check if the DocumentFlow component is attempting to navigate to the next step
-  // This will set validateAttempt to true when the Next button is clicked
   useEffect(() => {
     // Create an event handler for the Navigation Controls' Next button
     const handleBeforeNextStep = () => {
@@ -50,10 +60,15 @@ export default function RecipientConfig() {
     return () => {
       window.removeEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
     };
-  }, [state.currentStep, state.recipients, state.userWillSign, isOnlySigner]);
+  }, [state.currentStep, validateRecipients]);
 
   // Validate required recipient fields
   const validateRecipients = () => {
+    // If user will sign, make sure they have provided their name
+    if (state.userWillSign && (!state.userDisplayName || !state.userDisplayName.trim())) {
+      return false;
+    }
+
     // If user is the only signer, step is valid
     if (state.userWillSign && state.recipients.length === 0 && isOnlySigner) {
       return true;
@@ -92,7 +107,8 @@ export default function RecipientConfig() {
   // Add a new recipient
   const addRecipient = () => {
     const newId = uuidv4();
-    const newRecipientOrder = state.recipients.length > 0 ? Math.max(...state.recipients.map((r) => r.signingOrder)) + 1 : 1;
+    const newRecipientOrder =
+      state.recipients.length > 0 ? Math.max(...state.recipients.map((r) => r.signingOrder)) + 1 : 1;
 
     dispatch({
       type: 'ADD_RECIPIENT',
@@ -169,10 +185,10 @@ export default function RecipientConfig() {
         removeRecipient(recipient.id);
       });
 
-      // Validate the step as true since user will be the only signer
+      // Validate the step as true since user will be the only signer and has a name
       dispatch({
         type: 'VALIDATE_STEP',
-        payload: { step: 'step2Valid', isValid: true },
+        payload: { step: 'step2Valid', isValid: !!state.userDisplayName?.trim() },
       });
     } else {
       // When unchecking "I am the only signer", the step should be invalid until a recipient is added
@@ -216,71 +232,104 @@ export default function RecipientConfig() {
     });
   };
 
+  // Update user's display name
+  const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({
+      type: 'SET_USER_DISPLAY_NAME',
+      payload: e.target.value,
+    });
+  };
+
   return (
-    <div className='space-y-6 sm:p-4'>
+    <div className="space-y-6 sm:p-4">
       <div>
-        <h2 className='text-2xl font-semibold tracking-tight'>Add Recipients</h2>
-        <p className='text-sm text-muted-foreground mt-2'>Add recipients to sign or review your document</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Add Recipients</h2>
+        <p className="text-sm text-muted-foreground mt-2">Add recipients to sign or review your document</p>
       </div>
 
       <Card>
-        <CardContent className='pt-6 p-0'>
-          <div className='space-y-4'>
+        <CardContent className="pt-6 p-0">
+          <div className="space-y-4">
             {/* User options */}
-            <div className='space-y-3'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox id='user-will-sign' checked={state.userWillSign} onCheckedChange={toggleUserWillSign} />
-                <Label htmlFor='user-will-sign' className='font-medium'>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="user-will-sign" checked={state.userWillSign} onCheckedChange={toggleUserWillSign} />
+                <Label htmlFor="user-will-sign" className="font-medium">
                   I will also sign this document
                 </Label>
               </div>
 
               {state.userWillSign && (
-                <div className='flex items-center space-x-2 pl-6'>
-                  <Checkbox id='only-signer' checked={state.recipients.length === 0 && state.userWillSign && isOnlySigner} onCheckedChange={toggleOnlySigner} />
-                  <Label htmlFor='only-signer'>I am the only signer</Label>
+                <div className="pl-6 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="only-signer"
+                      checked={state.recipients.length === 0 && state.userWillSign && isOnlySigner}
+                      onCheckedChange={toggleOnlySigner}
+                    />
+                    <Label htmlFor="only-signer">I am the only signer</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="user-display-name">Your name (as it will appear on the document)</Label>
+                    <Input
+                      id="user-display-name"
+                      type="text"
+                      defaultValue={state.userDisplayName || undefined}
+                      onChange={handleDisplayNameChange}
+                      placeholder="Enter your name"
+                      className={
+                        validateAttempt && (!state.userDisplayName || !state.userDisplayName.trim())
+                          ? 'border-red-500'
+                          : ''
+                      }
+                    />
+                    {validateAttempt && (!state.userDisplayName || !state.userDisplayName.trim()) && (
+                      <p className="text-xs text-red-500 mt-1">Please enter your name</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Signing order selection - shown whenever there are multiple recipients or
+                  when there's a single recipient and the user will also sign */}
+              {state.recipients.length > 1 && (
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="signing-order" className="text-base font-medium">
+                    Signing Order
+                  </Label>
+                  <RadioGroup
+                    id="signing-order"
+                    value={state.signingOrder}
+                    onValueChange={(value) => setSigningOrder(value as 'sequential' | 'parallel')}
+                    className="flex flex-col space-y-2 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="sequential" id="sequential" />
+                      <Label htmlFor="sequential">Sequential (one after another)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="parallel" id="parallel" />
+                      <Label htmlFor="parallel">Parallel (all at once)</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               )}
             </div>
 
-            {/* Signing order selection - shown whenever there are multiple recipients or
-                when there's a single recipient and the user will also sign */}
-            {state.recipients.length > 1 && (
-              <div className='space-y-2 border-t pt-4'>
-                <Label htmlFor='signing-order' className='text-base font-medium'>
-                  Signing Order
-                </Label>
-                <RadioGroup
-                  id='signing-order'
-                  value={state.signingOrder}
-                  onValueChange={(value) => setSigningOrder(value as 'sequential' | 'parallel')}
-                  className='flex flex-col space-y-2 mt-2'
-                >
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem value='sequential' id='sequential' />
-                    <Label htmlFor='sequential'>Sequential (one after another)</Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem value='parallel' id='parallel' />
-                    <Label htmlFor='parallel'>Parallel (all at once)</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
             {/* Recipients list */}
-            <div className='space-y-4 border-t pt-4'>
-              <div className='flex items-center justify-between'>
-                <Label className='text-base font-medium'>Recipients</Label>
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Recipients</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant='ghost' size='sm'>
-                        <HelpCircle className='h-4 w-4' />
+                      <Button variant="ghost" size="sm">
+                        <HelpCircle className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className='max-w-xs'>
+                      <p className="max-w-xs">
                         Add people who need to sign or receive this document.
                         <br />
                         <strong>Signer:</strong> Will sign the document
@@ -298,20 +347,24 @@ export default function RecipientConfig() {
                 <div key={recipient.id} className={`space-y-4 ${index > 0 ? 'border-t pt-4' : ''}`}>
                   <div className={`${isMobile ? 'grid grid-cols-1 gap-4' : 'flex items-center gap-3'}`}>
                     {state.signingOrder === 'sequential' && (
-                      <div className={`${isMobile ? 'flex justify-start items-center mb-2' : 'flex items-center justify-center flex-shrink-0'}`}>
-                        <div className='flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900'>
-                          <span className='text-sm font-medium text-blue-700 dark:text-blue-300'>{recipient.signingOrder}</span>
+                      <div
+                        className={`${isMobile ? 'flex justify-start items-center mb-2' : 'flex items-center justify-center flex-shrink-0'}`}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            {recipient.signingOrder}
+                          </span>
                         </div>
 
                         {isMobile && (
                           <Button
-                            variant='ghost'
-                            size='icon'
+                            variant="ghost"
+                            size="icon"
                             onClick={() => removeRecipient(recipient.id)}
-                            className='h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30'
+                            className="h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
                           >
-                            <Trash2 className='h-5 w-5 text-red-500' />
-                            <span className='sr-only'>Remove recipient</span>
+                            <Trash2 className="h-5 w-5 text-red-500" />
+                            <span className="sr-only">Remove recipient</span>
                           </Button>
                         )}
                       </div>
@@ -319,27 +372,27 @@ export default function RecipientConfig() {
 
                     {/* For parallel signing order on mobile, show the trash icon at the top */}
                     {isMobile && state.signingOrder !== 'sequential' && (
-                      <div className='flex justify-between items-center mb-2'>
-                        <div className='text-sm font-medium text-muted-foreground'>Recipient {index + 1}</div>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="text-sm font-medium text-muted-foreground">Recipient {index + 1}</div>
                         <Button
-                          variant='ghost'
-                          size='icon'
+                          variant="ghost"
+                          size="icon"
                           onClick={() => removeRecipient(recipient.id)}
-                          className='h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30'
+                          className="h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
                         >
-                          <Trash2 className='h-5 w-5 text-red-500' />
-                          <span className='sr-only'>Remove recipient</span>
+                          <Trash2 className="h-5 w-5 text-red-500" />
+                          <span className="sr-only">Remove recipient</span>
                         </Button>
                       </div>
                     )}
 
                     <div className={`${isMobile ? '' : 'flex-1'}`}>
-                      <Label htmlFor={`name-${recipient.id}`} className='sr-only'>
+                      <Label htmlFor={`name-${recipient.id}`} className="sr-only">
                         Name
                       </Label>
                       <Input
                         id={`name-${recipient.id}`}
-                        placeholder='Recipient name'
+                        placeholder="Recipient name"
                         value={recipient.name}
                         onChange={(e) => updateRecipient(recipient.id, 'name', e.target.value)}
                         className={validateAttempt && recipient.name.trim() === '' ? 'border-red-500' : ''}
@@ -351,20 +404,26 @@ export default function RecipientConfig() {
                           }
                         }}
                       />
-                      {validateAttempt && recipient.name.trim() === '' && <p className='text-xs text-red-500 mt-1'>Name is required</p>}
+                      {validateAttempt && recipient.name.trim() === '' && (
+                        <p className="text-xs text-red-500 mt-1">Name is required</p>
+                      )}
                     </div>
 
                     <div className={`${isMobile ? 'mt-2' : 'flex-1'}`}>
-                      <Label htmlFor={`email-${recipient.id}`} className='sr-only'>
+                      <Label htmlFor={`email-${recipient.id}`} className="sr-only">
                         Email
                       </Label>
                       <Input
                         id={`email-${recipient.id}`}
-                        placeholder='Email address'
-                        type='email'
+                        placeholder="Email address"
+                        type="email"
                         value={recipient.email}
                         onChange={(e) => updateRecipient(recipient.id, 'email', e.target.value)}
-                        className={validateAttempt && (recipient.email.trim() === '' || !isValidEmail(recipient.email)) ? 'border-red-500' : ''}
+                        className={
+                          validateAttempt && (recipient.email.trim() === '' || !isValidEmail(recipient.email))
+                            ? 'border-red-500'
+                            : ''
+                        }
                         ref={(el) => {
                           if (el) {
                             emailInputRefs.current[recipient.id] = el;
@@ -373,38 +432,43 @@ export default function RecipientConfig() {
                           }
                         }}
                       />
-                      {validateAttempt && recipient.email.trim() === '' && <p className='text-xs text-red-500 mt-1'>Email is required</p>}
+                      {validateAttempt && recipient.email.trim() === '' && (
+                        <p className="text-xs text-red-500 mt-1">Email is required</p>
+                      )}
                       {validateAttempt && recipient.email.trim() !== '' && !isValidEmail(recipient.email) && (
-                        <p className='text-xs text-red-500 mt-1'>Invalid email format</p>
+                        <p className="text-xs text-red-500 mt-1">Invalid email format</p>
                       )}
                     </div>
 
                     <div className={`${isMobile ? 'mt-2' : 'w-[150px]'}`}>
-                      <Label htmlFor={`role-${recipient.id}`} className='sr-only'>
+                      <Label htmlFor={`role-${recipient.id}`} className="sr-only">
                         Role
                       </Label>
-                      <Select value={recipient.role} onValueChange={(value) => updateRecipient(recipient.id, 'role', value)}>
+                      <Select
+                        value={recipient.role}
+                        onValueChange={(value) => updateRecipient(recipient.id, 'role', value)}
+                      >
                         <SelectTrigger id={`role-${recipient.id}`}>
-                          <SelectValue placeholder='Select role' />
+                          <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value='signer'>Signer</SelectItem>
-                          <SelectItem value='viewer'>Viewer</SelectItem>
-                          <SelectItem value='cc'>CC</SelectItem>
+                          <SelectItem value="signer">Signer</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                          <SelectItem value="cc">CC</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     {!isMobile && (
-                      <div className='flex items-center justify-center flex-shrink-0'>
+                      <div className="flex items-center justify-center flex-shrink-0">
                         <Button
-                          variant='ghost'
-                          size='icon'
+                          variant="ghost"
+                          size="icon"
                           onClick={() => removeRecipient(recipient.id)}
-                          className='h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30'
+                          className="h-9 w-9 rounded-full hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
                         >
-                          <Trash2 className='h-5 w-5 text-red-500' />
-                          <span className='sr-only'>Remove recipient</span>
+                          <Trash2 className="h-5 w-5 text-red-500" />
+                          <span className="sr-only">Remove recipient</span>
                         </Button>
                       </div>
                     )}
@@ -412,27 +476,54 @@ export default function RecipientConfig() {
                 </div>
               ))}
 
-              {isMobile && state.recipients.length > 0 && <div className='mt-6 mb-4 border-t border-gray-200 dark:border-gray-700'></div>}
+              {isMobile && state.recipients.length > 0 && (
+                <div className="mt-6 mb-4 border-t border-gray-200 dark:border-gray-700"></div>
+              )}
 
               <Button
-                variant='outline'
-                size='sm'
-                className='mt-4'
+                variant="outline"
+                size="sm"
+                className="mt-4"
                 onClick={addRecipient}
                 disabled={state.userWillSign && state.recipients.length === 0 && isOnlySigner}
               >
-                <Plus className='h-4 w-4 mr-2' />
+                <Plus className="h-4 w-4 mr-2" />
                 Add Recipient
               </Button>
             </div>
+
+            {/* User display name input - shown only when user will sign */}
+            {state.userWillSign && (
+              <div className="border-t pt-4">
+                <Label htmlFor="user-display-name" className="text-base font-medium">
+                  Your Name
+                </Label>
+                <Input
+                  id="user-display-name"
+                  placeholder="Enter your name"
+                  value={state.userDisplayName}
+                  onChange={(e) => dispatch({ type: 'SET_USER_DISPLAY_NAME', payload: e.target.value })}
+                  className={
+                    validateAttempt && (!state.userDisplayName || state.userDisplayName.trim() === '')
+                      ? 'border-red-500'
+                      : ''
+                  }
+                />
+                {validateAttempt && (!state.userDisplayName || state.userDisplayName.trim() === '') && (
+                  <p className="text-xs text-red-500 mt-1">Name is required</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {validateAttempt && !validateRecipients() && (
-        <div className='rounded-md bg-red-50 p-4 dark:bg-red-900/30'>
-          <div className='flex'>
-            <div className='text-sm text-red-700 dark:text-red-200'>Please ensure all recipient information is filled correctly.</div>
+        <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/30">
+          <div className="flex">
+            <div className="text-sm text-red-700 dark:text-red-200">
+              Please ensure all recipient information is filled correctly.
+            </div>
           </div>
         </div>
       )}

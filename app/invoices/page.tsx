@@ -1,9 +1,9 @@
-import PageLayout from '@/components/layout/page-layout';
+import { Download, Eye, MoreHorizontal, Plus } from 'lucide-react';
 import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Eye, MoreHorizontal, Plus } from 'lucide-react';
 
 // Mock invoices data
 const invoices = [
@@ -44,20 +44,20 @@ export default function InvoicesPage() {
 
   return (
     <PageLayout>
-      <PageContent title='Invoices' description='Manage your invoices and billing'>
-        <div className='mb-4 flex items-center justify-between'>
-          <Button className='flex items-center gap-2'>
-            <Plus className='h-4 w-4' />
+      <PageContent title="Invoices" description="Manage your invoices and billing">
+        <div className="mb-4 flex items-center justify-between">
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
             <span>New Invoice</span>
           </Button>
-          <Button variant='outline' className='flex items-center gap-2'>
-            <Download className='h-4 w-4' />
+          <Button variant="outline" className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
             <span>Export</span>
           </Button>
         </div>
 
-        <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
-          <CardContent className='p-0'>
+        <Card className="border border-zinc-200 shadow-sm dark:border-zinc-700">
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -67,13 +67,13 @@ export default function InvoicesPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoices.map((invoice) => (
-                  <TableRow key={invoice.id} className='cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'>
-                    <TableCell className='font-medium'>{invoice.id}</TableCell>
+                  <TableRow key={invoice.id} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <TableCell className="font-medium">{invoice.id}</TableCell>
                     <TableCell>{invoice.client}</TableCell>
                     <TableCell>{formatCurrency(invoice.amount)}</TableCell>
                     <TableCell>{invoice.date}</TableCell>
@@ -91,19 +91,19 @@ export default function InvoicesPage() {
                         {invoice.status}
                       </span>
                     </TableCell>
-                    <TableCell className='text-right'>
-                      <div className='flex justify-end gap-2'>
-                        <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                          <Eye className='h-4 w-4' />
-                          <span className='sr-only'>View</span>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View</span>
                         </Button>
-                        <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                          <Download className='h-4 w-4' />
-                          <span className='sr-only'>Download</span>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Download className="h-4 w-4" />
+                          <span className="sr-only">Download</span>
                         </Button>
-                        <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                          <MoreHorizontal className='h-4 w-4' />
-                          <span className='sr-only'>More</span>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">More</span>
                         </Button>
                       </div>
                     </TableCell>

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { GoogleIcon, MicrosoftIcon } from "@/components/icons";
-import { Button } from "@/components/ui/button";
-import { handleSignin } from "@/server/auth/sign-in";
-import { Github } from "lucide-react";
-import { useState } from "react";
+import { Github } from 'lucide-react';
+import { useState } from 'react';
+import { GoogleIcon, MicrosoftIcon } from '@/components/icons';
+import { Button } from '@/components/ui/button';
+import { handleSignin } from '@/server/auth/sign-in';
 
 interface OAuthButtonsProps {
   callbackUrl?: string;
@@ -15,18 +15,18 @@ export function OAuthButtons({ callbackUrl }: OAuthButtonsProps) {
 
   // These functions would normally trigger the AuthJS OAuth flow
   const handleGoogleSignIn = async () => {
-    setLoadingProvider("google");
-    handleSignin({ provider: "google" });
+    setLoadingProvider('google');
+    handleSignin({ provider: 'google' });
   };
 
   const handleMicrosoftSignIn = async () => {
-    setLoadingProvider("microsoft");
-    handleSignin({ provider: "microsoft-entra-id" });
+    setLoadingProvider('microsoft');
+    handleSignin({ provider: 'microsoft-entra-id' });
   };
 
   const handleGithubSignIn = async () => {
-    setLoadingProvider("github");
-    handleSignin({ provider: "github" });
+    setLoadingProvider('github');
+    handleSignin({ provider: 'github' });
   };
 
   return (
@@ -39,7 +39,7 @@ export function OAuthButtons({ callbackUrl }: OAuthButtonsProps) {
         onClick={handleGoogleSignIn}
         disabled={loadingProvider !== null}
       >
-        {loadingProvider === "google" ? (
+        {loadingProvider === 'google' ? (
           <div className="h-5 w-5 mr-2 animate-spin rounded-full border-t-2 border-gray-500 dark:border-gray-300" />
         ) : (
           <GoogleIcon className="mr-2 h-5 w-5" />
@@ -54,7 +54,7 @@ export function OAuthButtons({ callbackUrl }: OAuthButtonsProps) {
         onClick={handleGithubSignIn}
         disabled={loadingProvider !== null}
       >
-        {loadingProvider === "github" ? (
+        {loadingProvider === 'github' ? (
           <div className="h-5 w-5 mr-2 animate-spin rounded-full border-t-2 border-gray-500 dark:border-gray-300" />
         ) : (
           <Github className="mr-2 h-5 w-5" />
@@ -69,7 +69,7 @@ export function OAuthButtons({ callbackUrl }: OAuthButtonsProps) {
         onClick={handleMicrosoftSignIn}
         disabled={loadingProvider !== null}
       >
-        {loadingProvider === "microsoft" ? (
+        {loadingProvider === 'microsoft' ? (
           <div className="h-5 w-5 mr-2 animate-spin rounded-full border-t-2 border-gray-500 dark:border-gray-300" />
         ) : (
           <MicrosoftIcon className="mr-2 h-5 w-5" />

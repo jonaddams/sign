@@ -15,7 +15,7 @@
 /* Custom Renderers */
 .custom-field {
   background: #f0f3f9;
-  border: 1px solid #000 !important;
+  border: 1px solid #000;
   color: #000;
   display: flex;
   font-size: 11px;

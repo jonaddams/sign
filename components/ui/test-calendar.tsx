@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import type * as React from 'react';
 import { DayPicker } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +29,10 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         head_row: 'flex',
         head_cell: 'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]',
         row: 'flex w-full mt-2',
-        cell: cn('relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent', 'h-8 w-8'),
+        cell: cn(
+          'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent',
+          'h-8 w-8',
+        ),
         day: cn(
           'h-8 w-8 p-0 font-normal',
           'inline-flex items-center justify-center rounded-md',
@@ -37,7 +40,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
           'focus:bg-accent focus:text-accent-foreground',
           'aria-selected:opacity-100',
         ),
-        day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+        day_selected:
+          'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
         day_today: 'bg-accent text-accent-foreground',
         day_outside: 'text-muted-foreground opacity-50',
         day_disabled: 'text-muted-foreground opacity-50',
@@ -48,10 +52,12 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       }}
       components={{
         Caption: ({ displayMonth, ...props }) => (
-          <div className='flex w-full justify-center relative px-8'>
-            <div className='absolute left-1'>{props.children?.[0]}</div>
-            <span className='text-sm font-medium'>{displayMonth?.toLocaleString?.('default', { month: 'long', year: 'numeric' })}</span>
-            <div className='absolute right-1'>{props.children?.[1]}</div>
+          <div className="flex w-full justify-center relative px-8">
+            <div className="absolute left-1">{props.children?.[0]}</div>
+            <span className="text-sm font-medium">
+              {displayMonth?.toLocaleString?.('default', { month: 'long', year: 'numeric' })}
+            </span>
+            <div className="absolute right-1">{props.children?.[1]}</div>
           </div>
         ),
       }}

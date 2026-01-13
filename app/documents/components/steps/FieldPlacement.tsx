@@ -1,17 +1,34 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useContext, createContext, useCallback, useMemo } from 'react';
-import { useDocumentFlow } from '../../context/DocumentFlowContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Signature, CalendarDays, Edit, ScrollText, Trash, Info, ZoomIn, Tag, ChevronLeft, ChevronRight, User, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
-import { getNutrientViewerRuntime, getNutrientViewer, safeUnloadViewer, safeLoadViewer, closestByClass, NutrientViewerRuntime } from '@/lib/nutrient-viewer';
-import { Label } from '@/components/ui/label';
-import { CustomSwitch } from '@/components/ui/custom-switch';
-import { Button } from '@/components/ui/button';
+import type * as NutrientViewerSDK from '@nutrient-sdk/viewer';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  ScrollText,
+  Signature,
+  Tag,
+  Trash,
+  User,
+} from 'lucide-react';
+import type React from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { FormPlacementContext, useFormPlacement, FormPlacementProvider } from '../../context/FormPlacementContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  closestByClass,
+  getNutrientViewer,
+  getNutrientViewerRuntime,
+  safeLoadViewer,
+  safeUnloadViewer,
+} from '@/lib/nutrient-viewer';
+import { useDocumentFlow } from '../../context/DocumentFlowContext';
+import { FormPlacementContext, FormPlacementProvider } from '../../context/FormPlacementContext';
 import RecipientDropdown from './RecipientDropdown';
 
 // Import the custom CSS for field styling
@@ -186,7 +203,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     if (!formPlacementMode) return;
 
     // Record the starting touch position
-    if (e.touches && e.touches[0]) {
+    if (e.touches?.[0]) {
       touchStartRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
@@ -196,7 +213,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   };
 
   // This is kept but won't call preventDefault() since we handle that in the useEffect
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = (_e: React.TouchEvent) => {
     // Don't call preventDefault here as it will trigger the warning
     // It's handled by the non-passive event listener in useEffect
   };
@@ -204,7 +221,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!formPlacementMode) return;
 
-    if (e.changedTouches && e.changedTouches[0]) {
+    if (e.changedTouches?.[0]) {
       const touchX = e.changedTouches[0].clientX;
       const touchY = e.changedTouches[0].clientY;
 
@@ -244,7 +261,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
     return (
       <div
         ref={elementRef}
-        className='flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
+        className="flex flex-col items-center p-2 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move"
         draggable
         onDragStart={handleDragStart}
         onTouchStart={handleTouchStart}
@@ -252,14 +269,16 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
         onTouchEnd={handleTouchEnd}
       >
         <div
-          className='mb-2 p-1.5 rounded-md flex items-center justify-center'
+          className="mb-2 p-1.5 rounded-md flex items-center justify-center"
           style={{
-            backgroundColor: getIconBackgroundColor(recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined),
+            backgroundColor: getIconBackgroundColor(
+              recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined,
+            ),
           }}
         >
-          <div className='text-gray-950'>{icon}</div>
+          <div className="text-gray-950">{icon}</div>
         </div>
-        <span className='text-xs font-medium'>{label}</span>
+        <span className="text-xs font-medium">{label}</span>
       </div>
     );
   }
@@ -267,7 +286,7 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
   return (
     <div
       ref={elementRef}
-      className='flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move'
+      className="flex items-center p-3 mb-3 rounded-md bg-white border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 cursor-move"
       draggable
       onDragStart={handleDragStart}
       onTouchStart={handleTouchStart}
@@ -275,14 +294,16 @@ const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) =
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className='mr-3 p-1.5 rounded-md flex items-center justify-center'
+        className="mr-3 p-1.5 rounded-md flex items-center justify-center"
         style={{
-          backgroundColor: getIconBackgroundColor(recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined),
+          backgroundColor: getIconBackgroundColor(
+            recipientColors && currentRecipient ? recipientColors[currentRecipient.email] : undefined,
+          ),
         }}
       >
-        <div className='text-gray-950'>{icon}</div>
+        <div className="text-gray-950">{icon}</div>
       </div>
-      <span className='text-sm font-medium'>{label}</span>
+      <span className="text-sm font-medium">{label}</span>
     </div>
   );
 };
@@ -419,7 +440,12 @@ const createFieldOnPage = (
 
 // Helper function to create a field with fixed and reliable positioning
 // Uses hardware-independent positioning to work on all mobile devices
-const createMobileField = (fieldType: string, instance: NutrientViewerInstance, runtime: any, currentRecipient?: any) => {
+const createMobileField = (
+  fieldType: string,
+  instance: NutrientViewerInstance,
+  runtime: any,
+  currentRecipient?: any,
+) => {
   try {
     console.log('[Mobile] Creating field using fixed positioning approach');
 
@@ -503,7 +529,8 @@ const createMobileField = (fieldType: string, instance: NutrientViewerInstance, 
 
           // Visual feedback
           const toast = document.createElement('div');
-          toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50';
+          toast.className =
+            'fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md z-50';
           toast.textContent = `${fieldType} field added`;
           document.body.appendChild(toast);
 
@@ -541,7 +568,7 @@ const createFieldName = (fieldType: string, currentRecipient?: any) => {
 
 // Create custom renderer for fields with recipient names and improved visual differentiation
 const getAnnotationRenderers =
-  (runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }, signerRecipients: any[] = []) =>
+  (_runtime: any, currentRecipient: any, recipientColors: { [email: string]: string }, signerRecipients: any[] = []) =>
   ({ annotation }: any) => {
     // Skip if no annotation name or it's not one of our fields
     if (!annotation.name || !['signature', 'initials', 'date'].some((type) => annotation.name.startsWith(type))) {
@@ -608,7 +635,8 @@ const getAnnotationRenderers =
     div.className = 'custom-field-container';
 
     // Add background color based on recipient's color
-    const fieldColor = recipientEmail && recipientColors[recipientEmail] ? recipientColors[recipientEmail] : 'hsl(210, 65%, 85%)'; // Default color if none assigned
+    const fieldColor =
+      recipientEmail && recipientColors[recipientEmail] ? recipientColors[recipientEmail] : 'hsl(210, 65%, 85%)'; // Default color if none assigned
 
     // Apply color with better visual differentiation
     // Use solid colors for better visibility
@@ -654,7 +682,7 @@ const getAnnotationRenderers =
   };
 
 // Create an enhanced RecipientNavigation component with dropdown and navigation controls
-const RecipientNavigation = () => {
+const _RecipientNavigation = () => {
   const {
     currentRecipientIndex,
     setCurrentRecipientIndex,
@@ -685,42 +713,55 @@ const RecipientNavigation = () => {
   };
 
   return (
-    <div className='space-y-4'>
+    <div className="space-y-4">
       {/* Dropdown for selecting recipients */}
-      <div className='relative'>
+      <div className="relative">
         {/* Dropdown header/trigger */}
         <div
-          className='flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer'
+          className="flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <div className='flex items-center space-x-2 flex-1'>
-            <div className='h-4 w-4 rounded-full mr-2' style={{ backgroundColor: recipientColors[currentRecipient.email] }} />
-            <User className='h-4 w-4 text-blue-500 mr-1' />
-            <span className='text-sm font-medium'>
+          <div className="flex items-center space-x-2 flex-1">
+            <div
+              className="h-4 w-4 rounded-full mr-2"
+              style={{ backgroundColor: recipientColors[currentRecipient.email] }}
+            />
+            <User className="h-4 w-4 text-blue-500 mr-1" />
+            <span className="text-sm font-medium">
               {currentRecipient.name} ({currentRecipientIndex + 1}/{signerRecipients.length})
             </span>
           </div>
 
           {/* Status indicator */}
-          <div className='flex items-center space-x-2'>
+          <div className="flex items-center space-x-2">
             {recipientHasSignature(currentRecipient.email) ? (
-              <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1'>
-                <CheckCircle className='h-3 w-3' /> Ready
+              <Badge
+                variant="outline"
+                className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1"
+              >
+                <CheckCircle className="h-3 w-3" /> Ready
               </Badge>
             ) : (
-              <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1'>
-                <AlertTriangle className='h-3 w-3' /> Needs signature
+              <Badge
+                variant="outline"
+                className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1"
+              >
+                <AlertTriangle className="h-3 w-3" /> Needs signature
               </Badge>
             )}
-            <div className='text-gray-400'>
-              {isDropdownOpen ? <ChevronRight className='h-4 w-4 rotate-90' /> : <ChevronRight className='h-4 w-4 -rotate-90' />}
+            <div className="text-gray-400">
+              {isDropdownOpen ? (
+                <ChevronRight className="h-4 w-4 rotate-90" />
+              ) : (
+                <ChevronRight className="h-4 w-4 -rotate-90" />
+              )}
             </div>
           </div>
         </div>
 
         {/* Dropdown content */}
         {isDropdownOpen && (
-          <div className='absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg max-h-64 overflow-y-auto'>
+          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg max-h-64 overflow-y-auto">
             {signerRecipients.map((recipient, index) => {
               const hasSignature = recipientHasSignature(recipient.email);
               return (
@@ -734,20 +775,29 @@ const RecipientNavigation = () => {
                     }`}
                   onClick={() => selectRecipient(index)}
                 >
-                  <div className='flex items-center space-x-2'>
-                    <div className='h-3 w-3 rounded-full' style={{ backgroundColor: recipientColors[recipient.email] }} />
-                    <span className='text-sm font-medium truncate'>{recipient.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: recipientColors[recipient.email] }}
+                    />
+                    <span className="text-sm font-medium truncate">{recipient.name}</span>
                   </div>
 
                   {/* Status indicator */}
-                  <div className='flex items-center space-x-2'>
+                  <div className="flex items-center space-x-2">
                     {hasSignature ? (
-                      <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1 text-xs'>
-                        <CheckCircle className='h-3 w-3' /> Ready
+                      <Badge
+                        variant="outline"
+                        className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1 text-xs"
+                      >
+                        <CheckCircle className="h-3 w-3" /> Ready
                       </Badge>
                     ) : (
-                      <Badge variant='outline' className='bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1 text-xs'>
-                        <AlertTriangle className='h-3 w-3' /> Needs signature
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1 text-xs"
+                      >
+                        <AlertTriangle className="h-3 w-3" /> Needs signature
                       </Badge>
                     )}
                   </div>
@@ -759,33 +809,33 @@ const RecipientNavigation = () => {
       </div>
 
       {/* Navigation controls */}
-      <div className='flex items-center justify-between'>
+      <div className="flex items-center justify-between">
         <Button
-          variant='outline'
-          size='sm'
+          variant="outline"
+          size="sm"
           onClick={() => {
             goToPreviousRecipient();
             setIsDropdownOpen(false);
           }}
           disabled={currentRecipientIndex === 0}
-          className='h-8 px-2 flex-1'
+          className="h-8 px-2 flex-1"
         >
-          <ChevronLeft className='h-4 w-4 mr-1' />
+          <ChevronLeft className="h-4 w-4 mr-1" />
           Previous Signer
         </Button>
-        <div className='w-4'></div>
+        <div className="w-4"></div>
         <Button
-          variant='outline'
-          size='sm'
+          variant="outline"
+          size="sm"
           onClick={() => {
             goToNextRecipient();
             setIsDropdownOpen(false);
           }}
           disabled={currentRecipientIndex === signerRecipients.length - 1}
-          className='h-8 px-2 flex-1'
+          className="h-8 px-2 flex-1"
         >
           Next Signer
-          <ChevronRight className='h-4 w-4 ml-1' />
+          <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
     </div>
@@ -810,8 +860,13 @@ export default function FieldPlacement() {
 
   // Wrap the component content with the FormPlacementProvider to ensure context is available
   return (
-    <FormPlacementProvider recipients={recipients}>
-      <FieldPlacementContent localMode={localFormPlacementMode} setLocalMode={setLocalFormPlacementMode} documentState={state} documentDispatch={dispatch} />
+    <FormPlacementProvider recipients={recipients} userWillSign={state.userWillSign}>
+      <FieldPlacementContent
+        localMode={localFormPlacementMode}
+        setLocalMode={setLocalFormPlacementMode}
+        documentState={state}
+        documentDispatch={dispatch}
+      />
     </FormPlacementProvider>
   );
 }
@@ -874,13 +929,18 @@ function FieldPlacementContent({
       id?: string; // Annotation ID
     }[]
   >([]);
-  const [fieldPositions, setFieldPositions] = useState<{ [pageIndex: number]: number }>({});
+  const [_fieldPositions, _setFieldPositions] = useState<{ [pageIndex: number]: number }>({});
   const [debugLogs, setDebugLogs] = useState<{ time: string; message: string }[]>([]);
 
   // Function to add a log entry
-  const addLogEntry = (message: string) => {
+  const _addLogEntry = (message: string) => {
     const now = new Date();
-    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const timeString = now.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
 
     setDebugLogs((prev) => [
       { time: timeString, message },
@@ -895,7 +955,7 @@ function FieldPlacementContent({
   }, []);
 
   // Function to scan and refresh all form fields
-  const refreshFieldPlacements = useCallback(async () => {
+  const _refreshFieldPlacements = useCallback(async () => {
     if (!viewerInstanceRef.current || !isViewerLoaded) return;
 
     try {
@@ -928,7 +988,9 @@ function FieldPlacementContent({
         if (nameParts.length >= 2) {
           const fieldRecipient = nameParts[1];
           // Try to match this identifier with a recipient
-          const matchingRecipient = signerRecipients.find((r) => r.email.includes(fieldRecipient) || r.email.split('@')[0] === fieldRecipient);
+          const matchingRecipient = signerRecipients.find(
+            (r) => r.email.includes(fieldRecipient) || r.email.split('@')[0] === fieldRecipient,
+          );
 
           if (matchingRecipient) {
             recipientEmail = matchingRecipient.email;
@@ -981,7 +1043,7 @@ function FieldPlacementContent({
     } catch (error) {
       console.error('Error refreshing field placements:', error);
     }
-  }, [viewerInstanceRef, isViewerLoaded, currentRecipient, signerRecipients]);
+  }, [isViewerLoaded, currentRecipient, signerRecipients]);
 
   // Set up document viewer when component mounts
   useEffect(() => {
@@ -1090,7 +1152,12 @@ function FieldPlacementContent({
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
           styleSheets: ['/styles/viewer.css'],
           customRenderers: {
-            Annotation: getAnnotationRenderers(getNutrientViewerRuntime(), currentRecipient, recipientColors, signerRecipients),
+            Annotation: getAnnotationRenderers(
+              getNutrientViewerRuntime(),
+              currentRecipient,
+              recipientColors,
+              signerRecipients,
+            ),
           },
         })
           .then((instance: NutrientViewerInstance) => {
@@ -1149,8 +1216,8 @@ function FieldPlacementContent({
               const offsetY = parseFloat(offsetYStr);
               const offsetXPercent = parseFloat(offsetXPercentStr);
               const offsetYPercent = parseFloat(offsetYPercentStr);
-              const elementWidth = parseFloat(elementWidthStr);
-              const elementHeight = parseFloat(elementHeightStr);
+              const _elementWidth = parseFloat(elementWidthStr);
+              const _elementHeight = parseFloat(elementHeightStr);
 
               console.log('Drop offsets:', { offsetX, offsetY, offsetXPercent, offsetYPercent });
 
@@ -1245,7 +1312,9 @@ function FieldPlacementContent({
                     instance
                       .create([widget, formField])
                       .then(() => {
-                        console.log(`Created ${fieldType} field at position (${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`);
+                        console.log(
+                          `Created ${fieldType} field at position (${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
+                        );
 
                         // Add to our debug state for tracking
                         setFieldPlacements((prev) => [
@@ -1323,11 +1392,11 @@ function FieldPlacementContent({
               // Track if we're in the process of a mobile field dragging operation
               let mobileFieldDragActive = false;
               let activeTouchFieldType = '';
-              let touchStartX = 0;
-              let touchStartY = 0;
+              let _touchStartX = 0;
+              let _touchStartY = 0;
 
               // Add touch handling to the document
-              instance.contentDocument.addEventListener('touchstart', (event: Event) => {
+              instance.contentDocument.addEventListener('touchstart', (_event: Event) => {
                 console.log('[Mobile] Touch start event in document viewer');
               });
 
@@ -1494,18 +1563,18 @@ function FieldPlacementContent({
               // Add a global listener to track field type for mobile drag operations
               window.addEventListener('nutrient:fieldDragStart', ((event: Event) => {
                 const customEvent = event as CustomEvent;
-                if (customEvent.detail && customEvent.detail.fieldType) {
+                if (customEvent.detail?.fieldType) {
                   console.log('[Mobile] Custom field drag start event captured:', customEvent.detail);
                   mobileFieldDragActive = true;
                   activeTouchFieldType = customEvent.detail.fieldType;
-                  touchStartX = customEvent.detail.touchX || 0;
-                  touchStartY = customEvent.detail.touchY || 0;
+                  _touchStartX = customEvent.detail.touchX || 0;
+                  _touchStartY = customEvent.detail.touchY || 0;
 
                   // IMMEDIATE TEST: Try to create field right away based on event coordinates
                   try {
                     console.log('[Mobile Debug] Testing immediate field creation with:', customEvent.detail);
-                    const touchX = customEvent.detail.touchX;
-                    const touchY = customEvent.detail.touchY;
+                    const _touchX = customEvent.detail.touchX;
+                    const _touchY = customEvent.detail.touchY;
 
                     // Make sure the runtime is available before proceeding
                     const mobileRuntime = getNutrientViewerRuntime();
@@ -1519,7 +1588,11 @@ function FieldPlacementContent({
                     const docContainer = instance.contentDocument.querySelector('.PSPDFKit-Page');
 
                     if (docContainer) {
-                      console.log('[Mobile Debug] Found document container:', docContainer.tagName, docContainer.className);
+                      console.log(
+                        '[Mobile Debug] Found document container:',
+                        docContainer.tagName,
+                        docContainer.className,
+                      );
 
                       // Get the page index from the container
                       const pageIndex = parseInt((docContainer as HTMLElement).dataset.pageIndex || '0', 10);
@@ -1649,7 +1722,10 @@ function FieldPlacementContent({
                               ]);
                             })
                             .catch((err) => {
-                              console.error('[Mobile Debug] Error in createFieldOnPage execution:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+                              console.error(
+                                '[Mobile Debug] Error in createFieldOnPage execution:',
+                                JSON.stringify(err, Object.getOwnPropertyNames(err)),
+                              );
                             });
                         }
                       } catch (error) {
@@ -1724,7 +1800,7 @@ function FieldPlacementContent({
 
                 // First check our tracked field placements
                 const fieldPlacement = fieldPlacements.find((f) => f.name === fieldName);
-                if (fieldPlacement && fieldPlacement.recipient) {
+                if (fieldPlacement?.recipient) {
                   recipientEmail = fieldPlacement.recipient;
                 } else {
                   // Try to extract from field name (if format includes recipient)
@@ -1732,7 +1808,9 @@ function FieldPlacementContent({
                   if (nameParts.length >= 2) {
                     // Check if any recipient email contains this identifier
                     const identifier = nameParts[1];
-                    const matchingRecipient = signerRecipients.find((r) => r.email.includes(identifier) || r.email.split('@')[0] === identifier);
+                    const matchingRecipient = signerRecipients.find(
+                      (r) => r.email.includes(identifier) || r.email.split('@')[0] === identifier,
+                    );
 
                     if (matchingRecipient) {
                       recipientEmail = matchingRecipient.email;
@@ -1771,7 +1849,18 @@ function FieldPlacementContent({
       }
       setIsLoading(false);
     }
-  }, [proxyUrl, mounted, isMobile]);
+  }, [
+    proxyUrl,
+    mounted,
+    isMobile,
+    currentRecipient,
+    fieldPlacements.find,
+    fieldPlacements.findIndex,
+    isViewerLoaded,
+    recipientColors,
+    signerRecipients,
+    updateFieldCount,
+  ]);
 
   // Toggle form placement mode when the switch changes
   useEffect(() => {
@@ -1804,7 +1893,7 @@ function FieldPlacementContent({
   }, [localMode, mounted]);
 
   // Create a complete context value to pass to children
-  const formPlacementContextValue = {
+  const _formPlacementContextValue = {
     formPlacementMode,
     setFormPlacementMode,
     currentRecipient,
@@ -1837,7 +1926,7 @@ function FieldPlacementContent({
       // Apply the new renderers
       instance.setCustomRenderers(newRenderers);
     }
-  }, [currentRecipientIndex, isViewerLoaded, recipientColors, signerRecipients, fieldPlacements]);
+  }, [isViewerLoaded, recipientColors, signerRecipients, currentRecipient]);
 
   // Update DocumentFlowContext validation state based on field validation status
   useEffect(() => {
@@ -1875,60 +1964,62 @@ function FieldPlacementContent({
 
   return (
     <ViewerContext.Provider value={viewerInstanceRef}>
-      <div className='space-y-6'>
+      <div className="space-y-6">
         <div>
-          <div className='flex items-center justify-between'>
-            <h2 className='text-2xl font-semibold tracking-tight'>Field Placement</h2>
-            <Badge variant='outline' className='ml-2 flex items-center gap-1'>
-              <Tag className='h-3 w-3' />
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold tracking-tight">Field Placement</h2>
+            <Badge variant="outline" className="ml-2 flex items-center gap-1">
+              <Tag className="h-3 w-3" />
               <span>v1.3.1</span>
             </Badge>
           </div>
-          <p className='text-muted-foreground mt-2 text-sm'>Drag fields onto the document where you want recipients to sign.</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Drag fields onto the document where you want recipients to sign.
+          </p>
         </div>
 
         {isMobile ? (
           // Mobile Layout - Vertical with fields at top
-          <div className='flex flex-col space-y-4'>
+          <div className="flex flex-col space-y-4">
             {/* Horizontal field selector for mobile - sticky */}
-            <div className='sticky top-0 z-50'>
-              <Card className='border border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-md'>
-                <CardContent className='py-4'>
-                  <h3 className='font-medium mb-3'>Click to add fields</h3>
+            <div className="sticky top-0 z-50">
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-md">
+                <CardContent className="py-4">
+                  <h3 className="font-medium mb-3">Click to add fields</h3>
 
                   {/* Direct buttons for mobile - simplified approach */}
-                  <div className='grid grid-cols-2 gap-2'>
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
-                      variant='outline'
-                      className='h-auto py-3 flex flex-col items-center justify-center col-span-2'
+                      variant="outline"
+                      className="h-auto py-3 flex flex-col items-center justify-center col-span-2"
                       onClick={() => {
                         console.log('[Mobile Direct] Add Signature button clicked');
                         createDirectMobileField('signature');
                       }}
                     >
-                      <Signature className='h-5 w-5 mb-1' />
+                      <Signature className="h-5 w-5 mb-1" />
                       <span>Add Signature</span>
                     </Button>
                     <Button
-                      variant='outline'
-                      className='h-auto py-2'
+                      variant="outline"
+                      className="h-auto py-2"
                       onClick={() => {
                         console.log('[Mobile Direct] Add Initials button clicked');
                         createDirectMobileField('initials');
                       }}
                     >
-                      <Edit className='h-4 w-4 mr-2' />
+                      <Edit className="h-4 w-4 mr-2" />
                       <span>Add Initials</span>
                     </Button>
                     <Button
-                      variant='outline'
-                      className='h-auto py-2'
+                      variant="outline"
+                      className="h-auto py-2"
                       onClick={() => {
                         console.log('[Mobile Direct] Add Date button clicked');
                         createDirectMobileField('date');
                       }}
                     >
-                      <CalendarDays className='h-4 w-4 mr-2' />
+                      <CalendarDays className="h-4 w-4 mr-2" />
                       <span>Add Date</span>
                     </Button>
                   </div>
@@ -1937,44 +2028,40 @@ function FieldPlacementContent({
             </div>
 
             {/* Document viewer for mobile - takes remaining height */}
-            <Card className='border border-gray-200 dark:border-gray-700 overflow-hidden'>
-              <CardContent className='p-0 relative' style={{ height: '70vh' }}>
-                {isLoading && (
-                  <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
-                    <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
-                  </div>
-                )}
-
+            <Card className="border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <CardContent className="p-0 relative" style={{ height: '70vh' }}>
                 {error && (
-                  <div className='absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10'>
-                    <div className='text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg'>{error}</div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10">
+                    <div className="text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg">
+                      {error}
+                    </div>
                   </div>
                 )}
 
-                <div id='nutrient-viewer-container-mobile' ref={mobileContainerRef} className='w-full h-full' />
+                <div id="nutrient-viewer-container-mobile" ref={mobileContainerRef} className="w-full h-full" />
               </CardContent>
             </Card>
 
             {/* Mobile Event Log for Debugging */}
-            <Card className='border border-gray-200 dark:border-gray-700'>
-              <CardContent className='py-4'>
-                <div className='flex items-center justify-between mb-3'>
-                  <div className='flex items-center gap-2'>
-                    <ScrollText className='h-4 w-4 text-blue-500' />
-                    <h3 className='font-medium'>Debug Event Log</h3>
+            <Card className="border border-gray-200 dark:border-gray-700">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-blue-500" />
+                    <h3 className="font-medium">Debug Event Log</h3>
                   </div>
-                  <Button variant='outline' size='sm' onClick={() => setDebugLogs([])}>
-                    <Trash className='h-4 w-4' />
+                  <Button variant="outline" size="sm" onClick={() => setDebugLogs([])}>
+                    <Trash className="h-4 w-4" />
                   </Button>
                 </div>
 
-                <div className='border rounded-md p-2 bg-gray-50 dark:bg-zinc-800 text-xs font-mono'>
+                <div className="border rounded-md p-2 bg-gray-50 dark:bg-zinc-800 text-xs font-mono">
                   {debugLogs.length === 0 ? (
-                    <div className='text-center text-muted-foreground py-4'>No events logged yet</div>
+                    <div className="text-center text-muted-foreground py-4">No events logged yet</div>
                   ) : (
                     debugLogs.map((log, i) => (
                       <div key={i} className={`mb-1 ${log.message.includes('ERROR') ? 'text-red-500' : ''}`}>
-                        <span className='text-gray-500 dark:text-gray-400 mr-2'>{log.time}</span>
+                        <span className="text-gray-500 dark:text-gray-400 mr-2">{log.time}</span>
                         <span>{log.message}</span>
                       </div>
                     ))
@@ -1985,39 +2072,39 @@ function FieldPlacementContent({
           </div>
         ) : (
           // Desktop Layout - Horizontal with sidebar
-          <div className='flex gap-6 h-[calc(100vh-250px)] min-h-[500px]'>
+          <div className="flex gap-6 h-[calc(100vh-250px)] min-h-[500px]">
             {/* Left sidebar with field options */}
-            <div className='w-64 shrink-0'>
+            <div className="w-64 shrink-0">
               <Card>
-                <CardContent className='pt-6 space-y-6'>
+                <CardContent className="pt-6 space-y-6">
                   {/* Signer Dropdown */}
                   {signerRecipients.length > 1 && (
-                    <div className='space-y-2'>
-                      <h3 className='font-medium mb-1'>Select Signer</h3>
+                    <div className="space-y-2">
+                      <h3 className="font-medium mb-1">Select Signer</h3>
                       <RecipientDropdown />
                     </div>
                   )}
 
                   {/* Available Fields */}
-                  <div className='space-y-2'>
-                    <h3 className='font-medium mb-1'>Available Fields</h3>
-                    <div className='space-y-2'>
-                      <FieldOption icon={<Signature className='h-5 w-5' />} label='Signature' type='signature' />
-                      <FieldOption icon={<Edit className='h-5 w-5' />} label='Initials' type='initials' />
-                      <FieldOption icon={<CalendarDays className='h-5 w-5' />} label='Date Signed' type='date' />
+                  <div className="space-y-2">
+                    <h3 className="font-medium mb-1">Available Fields</h3>
+                    <div className="space-y-2">
+                      <FieldOption icon={<Signature className="h-5 w-5" />} label="Signature" type="signature" />
+                      <FieldOption icon={<Edit className="h-5 w-5" />} label="Initials" type="initials" />
+                      <FieldOption icon={<CalendarDays className="h-5 w-5" />} label="Date Signed" type="date" />
                     </div>
                   </div>
 
                   {/* Field Placements */}
                   {fieldPlacements.length > 0 && (
-                    <div className='space-y-2'>
-                      <h3 className='font-medium mb-1'>Field Placements</h3>
-                      <div className='text-xs space-y-1 max-h-[250px] overflow-y-auto border border-gray-200 dark:border-zinc-700 rounded-md p-2'>
+                    <div className="space-y-2">
+                      <h3 className="font-medium mb-1">Field Placements</h3>
+                      <div className="text-xs space-y-1 max-h-[250px] overflow-y-auto border border-gray-200 dark:border-zinc-700 rounded-md p-2">
                         {fieldPlacements.map((field, i) => (
                           <div
                             id={`field-placement-${i}`}
                             key={i}
-                            className='p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center gap-2'
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center gap-2"
                             onClick={() => {
                               if (viewerInstanceRef.current) {
                                 console.log(`Focusing field: ${field.name}`);
@@ -2044,22 +2131,22 @@ function FieldPlacementContent({
                           >
                             {/* Field type icon with signer color */}
                             <div
-                              className='w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0'
+                              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                               style={{
                                 backgroundColor: field.recipient ? recipientColors[field.recipient] : 'cornflowerblue',
                               }}
                             >
-                              {field.type === 'signature' && <Signature className='h-3 w-3 text-white' />}
-                              {field.type === 'initials' && <Edit className='h-3 w-3 text-white' />}
-                              {field.type === 'date' && <CalendarDays className='h-3 w-3 text-white' />}
+                              {field.type === 'signature' && <Signature className="h-3 w-3 text-white" />}
+                              {field.type === 'initials' && <Edit className="h-3 w-3 text-white" />}
+                              {field.type === 'date' && <CalendarDays className="h-3 w-3 text-white" />}
                             </div>
 
                             {/* Field info */}
-                            <div className='flex-1'>
-                              <div className='flex items-center gap-1'>
-                                <span className='font-medium'>{field.type}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">{field.type}</span>
                                 {field.recipient && (
-                                  <span className='bg-gray-100 dark:bg-zinc-700 text-xs px-1 rounded'>
+                                  <span className="bg-gray-100 dark:bg-zinc-700 text-xs px-1 rounded">
                                     {signerRecipients
                                       .find((r) => r.email === field.recipient)
                                       ?.name.split(' ')[0]
@@ -2067,16 +2154,20 @@ function FieldPlacementContent({
                                       .toUpperCase()}
                                   </span>
                                 )}
-                                {field.id && <span className='text-xs text-gray-500'>ID: {field.id.substring(0, 6)}</span>}
+                                {field.id && (
+                                  <span className="text-xs text-gray-500">ID: {field.id.substring(0, 6)}</span>
+                                )}
                               </div>
-                              <div className='text-xs text-gray-500'>
-                                {field.coordinates ? `Page ${field.pageIndex! + 1} (${field.coordinates.x}, ${field.coordinates.y})` : field.position}
+                              <div className="text-xs text-gray-500">
+                                {field.coordinates
+                                  ? `Page ${field.pageIndex! + 1} (${field.coordinates.x}, ${field.coordinates.y})`
+                                  : field.position}
                               </div>
                             </div>
 
                             {/* Delete button */}
                             <button
-                              className='text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1'
+                              className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1"
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent triggering parent onClick
                                 if (viewerInstanceRef.current && field.name) {
@@ -2116,7 +2207,7 @@ function FieldPlacementContent({
                                 }
                               }}
                             >
-                              <Trash className='h-4 w-4' />
+                              <Trash className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
@@ -2128,22 +2219,29 @@ function FieldPlacementContent({
             </div>
 
             {/* Document viewer */}
-            <div className='flex-1'>
-              <Card className='h-full'>
-                <CardContent className='p-0 h-full relative'>
+            <div className="flex-1">
+              <Card className="h-full">
+                <CardContent className="p-0 h-full relative">
                   {isLoading && (
-                    <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10'>
-                      <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-10">
+                      <div className="text-zinc-700 dark:text-zinc-300 text-lg font-medium">Loading document...</div>
                     </div>
                   )}
 
                   {error && (
-                    <div className='absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10'>
-                      <div className='text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg'>{error}</div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-10">
+                      <div className="text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg">
+                        {error}
+                      </div>
                     </div>
                   )}
 
-                  <div id='nutrient-viewer-container' ref={desktopContainerRef} className='h-full w-full' style={{ minHeight: '500px' }} />
+                  <div
+                    id="nutrient-viewer-container"
+                    ref={desktopContainerRef}
+                    className="h-full w-full"
+                    style={{ minHeight: '500px' }}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -2152,23 +2250,26 @@ function FieldPlacementContent({
 
         {/* Validation message for signature fields */}
         {!allSignersHaveSignatures && signerRecipients.length > 0 && (
-          <div className='mt-4 p-4 border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30 rounded-md'>
-            <div className='flex gap-3'>
-              <AlertTriangle className='h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5' />
+          <div className="mt-4 p-4 border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30 rounded-md">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className='font-medium text-amber-800 dark:text-amber-300'>Required Signature Fields</h4>
-                <p className='text-sm text-amber-700 dark:text-amber-400 mt-1'>
+                <h4 className="font-medium text-amber-800 dark:text-amber-300">Required Signature Fields</h4>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                   {signersWithoutSignatures.length === 1 ? (
-                    <>{signerRecipients.find((r) => r.email === signersWithoutSignatures[0])?.name || 'One recipient'} needs at least one signature field</>
+                    <>
+                      {signerRecipients.find((r) => r.email === signersWithoutSignatures[0])?.name || 'One recipient'}{' '}
+                      needs at least one signature field
+                    </>
                   ) : (
                     <>
-                      {signersWithoutSignatures.length} recipients still need signature fields. Switch between recipients using the controls above to add fields
-                      for each signer.
+                      {signersWithoutSignatures.length} recipients still need signature fields. Switch between
+                      recipients using the controls above to add fields for each signer.
                     </>
                   )}
                 </p>
-                <div className='mt-2 text-xs text-amber-600 dark:text-amber-500'>
-                  <ul className='list-disc pl-4 space-y-1'>
+                <div className="mt-2 text-xs text-amber-600 dark:text-amber-500">
+                  <ul className="list-disc pl-4 space-y-1">
                     {signersWithoutSignatures.map((email) => (
                       <li key={email}>{signerRecipients.find((r) => r.email === email)?.name}</li>
                     ))}

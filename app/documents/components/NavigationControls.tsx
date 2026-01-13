@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NavigationControlsProps {
   currentStep: number;
@@ -41,9 +41,9 @@ export default function NavigationControls({
       >
         {isLastStep ? (
           isSubmitting ? (
-            "Sending..."
+            'Sending...'
           ) : (
-            "Send Document"
+            'Send Document'
           )
         ) : (
           <>

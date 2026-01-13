@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client } from '@/lib/s3';
+import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth-js';
+import { s3Client } from '@/lib/s3';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +41,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url });
   } catch (error) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to upload file' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to upload file' },
+      { status: 500 },
+    );
   }
 }

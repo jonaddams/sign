@@ -1,8 +1,10 @@
 // This file provides context for the field placement functionality
 // with support for recipient navigation and field assignment
 
-import React, { createContext, useState, useContext, useCallback, useMemo } from 'react';
-import { Recipient } from './DocumentFlowContext';
+import type React from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useSession } from '@/contexts/session-context';
+import type { Recipient } from './DocumentFlowContext';
 
 interface FormPlacementContextType {
   formPlacementMode: boolean;
@@ -56,7 +58,9 @@ export const useFormPlacement = () => useContext(FormPlacementContext);
 export const FormPlacementProvider: React.FC<{
   children: React.ReactNode;
   recipients: Recipient[];
-}> = ({ children, recipients }) => {
+  userWillSign?: boolean;
+}> = ({ children, recipients, userWillSign = false }) => {
+  const { session } = useSession();
   const [formPlacementMode, setFormPlacementMode] = useState(false);
   const [currentRecipientIndex, setCurrentRecipientIndex] = useState(0);
 
@@ -65,8 +69,13 @@ export const FormPlacementProvider: React.FC<{
     [email: string]: { signature: number; initials: number; date: number };
   }>({});
 
-  // Filter just signer recipients
-  const signerRecipients = recipients.filter((r) => r.role === 'signer');
+  // Filter signer recipients and add current user if they will sign
+  const signerRecipients = [
+    ...(userWillSign && session?.user
+      ? [{ email: session.user.email, name: session.user.name || 'Me (Current User)', role: 'signer' } as Recipient]
+      : []),
+    ...recipients.filter((r) => r.role === 'signer'),
+  ];
 
   // Get current recipient
   const currentRecipient = signerRecipients.length > 0 ? signerRecipients[currentRecipientIndex] : null;
@@ -119,7 +128,9 @@ export const FormPlacementProvider: React.FC<{
   }, [signerRecipients, recipientFieldCounts]);
 
   const signersWithoutSignatures = useMemo(() => {
-    return signerRecipients.filter((recipient) => (recipientFieldCounts[recipient.email]?.signature || 0) === 0).map((recipient) => recipient.email);
+    return signerRecipients
+      .filter((recipient) => (recipientFieldCounts[recipient.email]?.signature || 0) === 0)
+      .map((recipient) => recipient.email);
   }, [signerRecipients, recipientFieldCounts]);
 
   // Helper function to check if a recipient has a signature

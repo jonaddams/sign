@@ -5,14 +5,18 @@ const renderConfigurations = {};
 let label = '';
 
 function closestByClass(el, className) {
-  return el && el.classList && el.classList.contains(className) ? el : el ? closestByClass(el.parentNode, className) : null;
+  return el && el.classList && el.classList.contains(className)
+    ? el
+    : el
+      ? closestByClass(el.parentNode, className)
+      : null;
 }
 
 function fileToDataURL(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
 
-    reader.onload = function () {
+    reader.onload = () => {
       resolve(reader.result);
     };
     reader.readAsDataURL(file);
@@ -50,7 +54,7 @@ export default function PdfViewer() {
   useEffect(() => {
     const container = containerRef.current;
 
-    (async function () {
+    (async () => {
       if (window.NutrientViewer) {
         window.NutrientViewer.unload(container);
       }
@@ -82,7 +86,9 @@ export default function PdfViewer() {
         if (signaturesString) {
           const storedSignatures = JSON.parse(signaturesString);
           // Construct annotations from serialized entries and call setStoredSignatures API
-          const list = window.NutrientViewer.Immutable.List(storedSignatures.map(window.NutrientViewer.Annotations.fromSerializableObject));
+          const list = window.NutrientViewer.Immutable.List(
+            storedSignatures.map(window.NutrientViewer.Annotations.fromSerializableObject),
+          );
           instance.setStoredSignatures(list);
 
           const attachmentsString = localStorage.getItem(process.env.ATTACHMENTS_KEY);
@@ -132,7 +138,10 @@ export default function PdfViewer() {
           const annotations = storedSignatures.map(PSPDFKit.Annotations.fromSerializableObject);
           const updatedAnnotations = annotations.filter((currentAnnotation) => !currentAnnotation.equals(annotation));
 
-          localStorage.setItem(process.env.STORAGE_KEY, JSON.stringify(updatedAnnotations.map(PSPDFKit.Annotations.toSerializableObject)));
+          localStorage.setItem(
+            process.env.STORAGE_KEY,
+            JSON.stringify(updatedAnnotations.map(PSPDFKit.Annotations.toSerializableObject)),
+          );
           // Use setStoredSignatures API so that the current UI is properly updated
           instance.setStoredSignatures((signatures) => signatures.filter((signature) => !signature.equals(annotation)));
 
@@ -143,13 +152,15 @@ export default function PdfViewer() {
             if (attachmentsString) {
               let attachmentsArray = JSON.parse(attachmentsString);
 
-              attachmentsArray = attachmentsArray.filter((attachment) => attachment.id !== annotation.imageAttachmentId);
+              attachmentsArray = attachmentsArray.filter(
+                (attachment) => attachment.id !== annotation.imageAttachmentId,
+              );
               localStorage.setItem(process.env.ATTACHMENTS_KEY, JSON.stringify(attachmentsArray));
             }
           }
         });
 
-        instance.contentDocument.ondragover = function (event) {
+        instance.contentDocument.ondragover = (event) => {
           debugger;
           isDragAndDropSupported = true;
 
@@ -162,7 +173,7 @@ export default function PdfViewer() {
         };
 
         // drag and drop listener on the document
-        instance.contentDocument.ondrop = async function (event) {
+        instance.contentDocument.ondrop = async (event) => {
           debugger;
 
           event.preventDefault();
@@ -198,7 +209,9 @@ export default function PdfViewer() {
             });
 
             // set the viewer to form creator mode so that the user can place the field
-            instance.setViewState((viewState) => viewState.set('interactionMode', window.NutrientViewer.InteractionMode.FORM_CREATOR));
+            instance.setViewState((viewState) =>
+              viewState.set('interactionMode', window.NutrientViewer.InteractionMode.FORM_CREATOR),
+            );
 
             await instance.create([widget, formField]);
           }
@@ -211,5 +224,5 @@ export default function PdfViewer() {
     return () => window.NutrientViewer && window.NutrientViewer.unload(container);
   }, [docUrl]);
 
-  return <div ref={containerRef} className='h-screen' style={{ height: '100vh' }} />;
+  return <div ref={containerRef} className="h-screen" style={{ height: '100vh' }} />;
 }

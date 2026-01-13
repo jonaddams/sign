@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
-import { documentTemplates } from '@/database/drizzle/document-signing-schema';
-import { eq, and } from 'drizzle-orm';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { and, eq } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
+import { documentTemplates } from '@/database/drizzle/document-signing-schema';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
 
 export async function DELETE(req: NextRequest) {

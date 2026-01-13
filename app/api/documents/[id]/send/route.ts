@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
+import { and, eq } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
+import { documentParticipants, documents } from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants } from '@/database/drizzle/document-signing-schema';
-import { eq, and } from 'drizzle-orm';
+import { auth } from '@/lib/auth/auth-js';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -28,10 +28,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return new NextResponse(JSON.stringify({ error: 'Document not found' }), { status: 404 });
     }
 
-    const document = documentResults[0];
+    const _document = documentResults[0];
 
     // Fetch the document participants
-    const participants = await db.select().from(documentParticipants).where(eq(documentParticipants.documentId, documentId));
+    const participants = await db
+      .select()
+      .from(documentParticipants)
+      .where(eq(documentParticipants.documentId, documentId));
 
     if (participants.length === 0) {
       return new NextResponse(JSON.stringify({ error: 'No recipients found for this document' }), { status: 400 });

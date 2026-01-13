@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Button } from '@/components/ui/button';
 import { safeLoadViewer, safeUnloadViewer } from '@/lib/nutrient-viewer';
 
 interface DocumentViewerProps {
@@ -18,7 +18,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
   const containerRef = useRef<HTMLDivElement>(null);
   const [isViewerLoaded, setIsViewerLoaded] = useState(false);
   const [proxyUrl, setProxyUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -89,7 +89,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
       const container = containerRef.current;
       console.log('Loading viewer with proxy URL:', proxyUrl);
 
-      let toolBarItems = preview
+      const toolBarItems = preview
         ? [
             { type: 'sidebar-thumbnails' },
             { type: 'sidebar-document-outline' },
@@ -125,7 +125,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
     }
     // This effect is always called regardless of conditions
     return () => {}; // Empty cleanup function when conditions aren't met
-  }, [isOpen, proxyUrl, mounted]);
+  }, [isOpen, proxyUrl, mounted, preview]);
 
   // Only render portal content when mounted
   if (!mounted) return null;
@@ -133,39 +133,43 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
   // Create portal content
   const viewerContent = isOpen ? (
     <div
-      className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/70'
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70"
       onClick={() => onClose()} // Close when clicking background
       style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
     >
       <div
-        className='relative bg-white dark:bg-zinc-900 w-[95%] h-[95%] rounded-lg overflow-hidden shadow-2xl'
+        className="relative bg-white dark:bg-zinc-900 w-[95%] h-[95%] rounded-lg overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing
       >
         {/* More visible close button with contrasting background */}
-        <div className='absolute right-4 top-4 z-[10000]'>
-          <Button variant='default' size='sm' className='rounded-full h-10 w-10 bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg' onClick={onClose}>
-            <X className='h-5 w-5' />
+        <div className="absolute right-4 top-4 z-[10000]">
+          <Button
+            variant="default"
+            size="sm"
+            className="rounded-full h-10 w-10 bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {isLoading && (
-          <div className='absolute inset-0 flex items-center justify-center bg-zinc-100/80 dark:bg-zinc-900/80 z-[9999]'>
-            <div className='text-zinc-700 dark:text-zinc-300 text-lg font-medium'>Loading document...</div>
-          </div>
-        )}
-
         {error && (
-          <div className='absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-[9999]'>
-            <div className='text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg'>
+          <div className="absolute inset-0 flex items-center justify-center bg-red-100/10 dark:bg-red-900/10 z-[9999]">
+            <div className="text-red-700 dark:text-red-300 p-6 rounded-md bg-white dark:bg-zinc-800 shadow-lg">
               {error}
-              <Button className='mt-4 w-full' variant='outline' onClick={onClose}>
+              <Button className="mt-4 w-full" variant="outline" onClick={onClose}>
                 Close
               </Button>
             </div>
           </div>
         )}
 
-        <div id='nutrient-viewer-container' ref={containerRef} className='absolute inset-0 p-2' style={{ width: '100%', height: '100%' }} />
+        <div
+          id="nutrient-viewer-container"
+          ref={containerRef}
+          className="absolute inset-0 p-2"
+          style={{ width: '100%', height: '100%' }}
+        />
       </div>
     </div>
   ) : null;

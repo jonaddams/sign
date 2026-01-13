@@ -1,7 +1,7 @@
 /**
  * Utility functions and types for working with Nutrient Viewer SDK
  */
-import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
+import type * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 
 /**
  * Extended interface that includes the runtime properties not covered in the official type definitions
@@ -13,7 +13,13 @@ export interface NutrientViewerRuntime {
     Rect: new (options: { left: number; top: number; width: number; height: number }) => any;
   };
   Annotations: {
-    WidgetAnnotation: new (options: { boundingBox: any; formFieldName: string; id: string; pageIndex: number; name: string }) => any;
+    WidgetAnnotation: new (options: {
+      boundingBox: any;
+      formFieldName: string;
+      id: string;
+      pageIndex: number;
+      name: string;
+    }) => any;
   };
   FormFields: {
     SignatureFormField: new (options: { annotationIds: any; name: string; type?: string }) => any;
@@ -88,7 +94,7 @@ export function safeLoadViewer(options: {
   }
 
   if (typeof window.NutrientViewer.load === 'function') {
-    return Promise.resolve().then(() => window.NutrientViewer!.load(options));
+    return Promise.resolve().then(() => window.NutrientViewer?.load(options));
   }
 
   return Promise.reject(new Error('Nutrient Viewer load method not available'));
@@ -99,5 +105,5 @@ export function safeLoadViewer(options: {
  * Used for finding PSPDFKit-Page elements in the viewer
  */
 export function closestByClass(el: any, className: string): any {
-  return el && el.classList && el.classList.contains(className) ? el : el ? closestByClass(el.parentNode, className) : null;
+  return el?.classList?.contains(className) ? el : el ? closestByClass(el.parentNode, className) : null;
 }

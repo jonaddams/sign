@@ -1,9 +1,10 @@
-import React, { useState, useContext } from 'react';
-import { User, Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, User } from 'lucide-react';
+import { useContext, useState } from 'react';
 import { FormPlacementContext } from '../../context/FormPlacementContext';
 
 const RecipientDropdown = () => {
-  const { currentRecipientIndex, setCurrentRecipientIndex, signerRecipients, recipientColors } = useContext(FormPlacementContext);
+  const { currentRecipientIndex, setCurrentRecipientIndex, signerRecipients, recipientColors } =
+    useContext(FormPlacementContext);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -14,7 +15,7 @@ const RecipientDropdown = () => {
   const currentRecipient = signerRecipients[currentRecipientIndex];
 
   // Function to create a solid background color from the recipient's color
-  const getRecipientBackgroundColor = (color: string | undefined): string => {
+  const _getRecipientBackgroundColor = (color: string | undefined): string => {
     if (!color) return 'rgb(210, 225, 245)';
 
     // Extract RGB components if it's an rgba or rgb color
@@ -103,36 +104,36 @@ const RecipientDropdown = () => {
   };
 
   return (
-    <div className='relative'>
+    <div className="relative">
       {/* Dropdown trigger - styled like FieldOption */}
       <div
-        className='flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer'
+        className="flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer"
         // style={{
         //   backgroundColor: getRecipientBackgroundColor(recipientColors[currentRecipient.email]),
         //   borderColor: recipientColors[currentRecipient.email],
         // }}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
       >
-        <div className='flex items-center flex-1'>
+        <div className="flex items-center flex-1">
           <div
-            className='mr-3 p-1.5 rounded-md flex items-center justify-center'
+            className="mr-3 p-1.5 rounded-md flex items-center justify-center"
             style={{
               backgroundColor: getIconBackgroundColor(recipientColors[currentRecipient.email]),
             }}
           >
-            <User className='h-5 w-5 text-gray-950' />
+            <User className="h-5 w-5 text-gray-950" />
           </div>
-          <span className='text-sm font-medium'>{currentRecipient.name}</span>
+          <span className="text-sm font-medium">{currentRecipient.name}</span>
         </div>
-        <div className='ml-2 p-0.5 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700'>
-          <ChevronDown className='h-3 w-3 text-gray-700 dark:text-gray-300' />
+        <div className="ml-2 p-0.5 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+          <ChevronDown className="h-3 w-3 text-gray-700 dark:text-gray-300" />
         </div>
       </div>
 
       {/* Dropdown content */}
       {isDropdownOpen && (
         <div
-          className='absolute z-50 w-full mt-1 border-2 border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md shadow-lg max-h-64 overflow-y-auto'
+          className="absolute z-50 w-full mt-1 border-2 border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md shadow-lg max-h-64 overflow-y-auto"
           style={{
             borderColor: recipientColors[currentRecipient.email],
           }}
@@ -154,25 +155,25 @@ const RecipientDropdown = () => {
                   setCurrentRecipientIndex(index);
                 }}
               >
-                <div className='flex items-center'>
+                <div className="flex items-center">
                   <div
-                    className='mr-3 p-1 rounded-md flex items-center justify-center'
+                    className="mr-3 p-1 rounded-md flex items-center justify-center"
                     style={{
                       backgroundColor: getIconBackgroundColor(recipientColors[recipient.email]),
                     }}
                   >
-                    <User className='h-4 w-4 text-gray-950' />
+                    <User className="h-4 w-4 text-gray-950" />
                   </div>
-                  <span className='text-sm font-medium truncate'>{recipient.name}</span>
+                  <span className="text-sm font-medium truncate">{recipient.name}</span>
                 </div>
                 {isSelected && (
                   <div
-                    className='ml-2 p-0.5 rounded-md flex items-center justify-center'
+                    className="ml-2 p-0.5 rounded-md flex items-center justify-center"
                     style={{
                       backgroundColor: getIconBackgroundColor(recipientColors[recipient.email]),
                     }}
                   >
-                    <Check className='h-3 w-3 text-gray-950' />
+                    <Check className="h-3 w-3 text-gray-950" />
                   </div>
                 )}
               </div>

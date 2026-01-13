@@ -171,17 +171,17 @@
 }
 
 .btn-palatinate {
-  background-color: var(--palatinate-blue) !important;
-  color: #ffffff !important;
-  font-family: "SF Pro Text" !important;
-  font-size: 0.8125rem !important;
-  font-style: normal !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.08px !important;
-  line-height: 1.125rem !important;
-  text-align: center !important;
-  text-transform: none !important;
-  padding: 0.6875rem 1.5rem !important;
+  background-color: var(--palatinate-blue);
+  color: #ffffff;
+  font-family: "SF Pro Text";
+  font-size: 0.8125rem;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.08px;
+  line-height: 1.125rem;
+  text-align: center;
+  text-transform: none;
+  padding: 0.6875rem 1.5rem;
 }
 
 /* Tables */
@@ -218,7 +218,7 @@
 }
 
 .table .font-bold {
-  font-weight: 700 !important;
+  font-weight: 700;
 }
 
 /* Dashboard: Highlight row on hover */
@@ -228,17 +228,17 @@
 
 /* Dashboard: Highlight row on hover */
 .envelope-row:hover {
-  background-color: var(--anti-flash-white) !important;
+  background-color: var(--anti-flash-white);
 }
 
 /* Forms */
 .checked\:bg-palatinate-blue:checked {
   --tw-bg-opacity: 1;
-  background-color: rgb(69 55 222 / var(--tw-bg-opacity)) !important;
+  background-color: rgb(69 55 222 / var(--tw-bg-opacity));
 }
 
 .checkbox {
-  border-radius: 0.25rem !important;
+  border-radius: 0.25rem;
 }
 
 .form-error {
@@ -246,8 +246,8 @@
 }
 
 .select-ghost:focus {
-  outline: none !important;
-  outline-offset: 0 !important;
+  outline: none;
+  outline-offset: 0;
 }
 
 .option-bg-person {
@@ -268,7 +268,7 @@
 /* Loading */
 .loader {
   animation: rotation 1s linear infinite;
-  border-bottom-color: #4537de !important;
+  border-bottom-color: #4537de;
   border-radius: 50%;
   border: 5px solid #fff;
   box-sizing: border-box;
@@ -280,7 +280,7 @@
 /* Navbar */
 div.navbar ul.menu li details summary:active,
 div.navbar ul.menu li details summary:hover {
-  background-color: inherit !important;
+  background-color: inherit;
 }
 
 div.navbar ul.menu li details summary::after {
@@ -303,16 +303,9 @@ div.navbar ul.menu li > details > ul > li > a.hover {
 } */
 
 @media (hover: hover) {
-  .menu
-    :where(
-      li:not(.menu-title):not(.disabled)
-        > *:not(ul):not(details):not(.menu-title)
-    ):hover,
-  .menu
-    :where(
-      li:not(.menu-title):not(.disabled) > details > summary:not(.menu-title)
-    ):hover {
-    background-color: inherit !important;
+  .menu :where(li:not(.menu-title):not(.disabled) > *:not(ul):not(details):not(.menu-title)):hover,
+  .menu :where(li:not(.menu-title):not(.disabled) > details > summary:not(.menu-title)):hover {
+    background-color: inherit;
     border-radius: 4px;
     /* outline: 2px solid transparent; */
     /* outline-offset: 2px; */

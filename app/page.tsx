@@ -1,8 +1,8 @@
-import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
-import { isAuthenticated } from '@/server/auth/is-authenticated';
-import { LandingPage } from '@/components/layout/landing-page';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { LandingPage } from '@/components/layout/landing-page';
+import { isAuthenticated } from '@/server/auth/is-authenticated';
 
 export default async function HomePage() {
   // Get headers to ensure we're on the server side
@@ -35,17 +35,17 @@ export default async function HomePage() {
 
 function LoadingSpinner() {
   return (
-    <div className='flex min-h-screen items-center justify-center'>
-      <div className='h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent' />
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
     </div>
   );
 }
 
 function ErrorComponent() {
   return (
-    <div className='flex min-h-screen flex-col items-center justify-center'>
-      <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Something went wrong</h2>
-      <p className='mt-2 text-gray-600 dark:text-gray-300'>Please try refreshing the page</p>
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Something went wrong</h2>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">Please try refreshing the page</p>
     </div>
   );
 }

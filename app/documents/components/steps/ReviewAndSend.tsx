@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useDocumentFlow } from '../../context/DocumentFlowContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { AlertTriangle, Check, Clock, File, Info, Mail, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, Clock, File, Info, Mail, Users, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useDocumentFlow } from '../../context/DocumentFlowContext';
 
 export default function ReviewAndSend() {
   const { state, dispatch } = useDocumentFlow();
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const { toast } = useToast();
   const router = useRouter();
   const [isSending, setIsSending] = useState(false);
@@ -64,7 +64,7 @@ export default function ReviewAndSend() {
         throw new Error(errorData.error || 'Failed to send document');
       }
 
-      const data = await response.json();
+      const _data = await response.json();
 
       toast({
         title: 'Document sent successfully',
@@ -78,7 +78,8 @@ export default function ReviewAndSend() {
       console.error('Error sending document:', error);
       toast({
         title: 'Failed to send document',
-        description: error instanceof Error ? error.message : 'There was an error sending your document. Please try again.',
+        description:
+          error instanceof Error ? error.message : 'There was an error sending your document. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -101,53 +102,53 @@ export default function ReviewAndSend() {
   };
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <div>
-        <div className='flex items-center justify-between'>
-          <h2 className='text-2xl font-semibold tracking-tight'>Review and Send</h2>
-          <Badge variant='outline' className='ml-2'>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold tracking-tight">Review and Send</h2>
+          <Badge variant="outline" className="ml-2">
             Step 5 of 5
           </Badge>
         </div>
-        <p className='text-muted-foreground mt-2 text-sm'>Review your document details and send it to recipients.</p>
+        <p className="text-muted-foreground mt-2 text-sm">Review your document details and send it to recipients.</p>
       </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Document Information */}
         <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-lg flex items-center gap-2'>
-              <File className='h-5 w-5 text-primary' />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <File className="h-5 w-5 text-primary" />
               Document Details
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className='space-y-4'>
+            <dl className="space-y-4">
               <div>
-                <dt className='text-sm font-medium text-muted-foreground'>Title</dt>
-                <dd className='mt-1'>{state.document.title}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Title</dt>
+                <dd className="mt-1">{state.document.title}</dd>
               </div>
 
               {state.document.saveAsTemplate && (
                 <div>
-                  <dt className='text-sm font-medium text-muted-foreground'>Saved as Template</dt>
-                  <dd className='mt-1'>{state.document.templateName || state.document.title}</dd>
+                  <dt className="text-sm font-medium text-muted-foreground">Saved as Template</dt>
+                  <dd className="mt-1">{state.document.templateName || state.document.title}</dd>
                 </div>
               )}
 
               {state.document.expiresAt && (
                 <div>
-                  <dt className='text-sm font-medium text-muted-foreground flex items-center gap-1'>
-                    <Clock className='h-4 w-4' />
+                  <dt className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
                     Expires On
                   </dt>
-                  <dd className='mt-1'>{format(new Date(state.document.expiresAt), 'MMMM d, yyyy')}</dd>
+                  <dd className="mt-1">{format(new Date(state.document.expiresAt), 'MMMM d, yyyy')}</dd>
                 </div>
               )}
 
               <div>
-                <dt className='text-sm font-medium text-muted-foreground'>Signing Order</dt>
-                <dd className='mt-1 capitalize'>{state.signingOrder}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Signing Order</dt>
+                <dd className="mt-1 capitalize">{state.signingOrder}</dd>
               </div>
             </dl>
           </CardContent>
@@ -155,25 +156,25 @@ export default function ReviewAndSend() {
 
         {/* Recipients Information */}
         <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-lg flex items-center gap-2'>
-              <Users className='h-5 w-5 text-primary' />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
               Recipients ({state.recipients.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {state.recipients.length > 0 ? (
-              <ul className='space-y-4'>
-                {state.recipients.map((recipient, index) => (
-                  <li key={recipient.id} className='flex justify-between p-3 border rounded-md'>
+              <ul className="space-y-4">
+                {state.recipients.map((recipient, _index) => (
+                  <li key={recipient.id} className="flex justify-between p-3 border rounded-md">
                     <div>
-                      <div className='font-medium'>{recipient.name}</div>
-                      <div className='text-sm text-muted-foreground'>{recipient.email}</div>
-                      <Badge variant='outline' className='mt-1'>
+                      <div className="font-medium">{recipient.name}</div>
+                      <div className="text-sm text-muted-foreground">{recipient.email}</div>
+                      <Badge variant="outline" className="mt-1">
                         {formatRole(recipient.role)}
                       </Badge>
                       {state.signingOrder === 'sequential' && recipient.role === 'signer' && (
-                        <Badge variant='secondary' className='ml-2 mt-1'>
+                        <Badge variant="secondary" className="ml-2 mt-1">
                           Order: {recipient.signingOrder}
                         </Badge>
                       )}
@@ -182,28 +183,28 @@ export default function ReviewAndSend() {
                 ))}
               </ul>
             ) : (
-              <div className='text-muted-foreground text-center py-4'>No recipients added</div>
+              <div className="text-muted-foreground text-center py-4">No recipients added</div>
             )}
           </CardContent>
         </Card>
 
         {/* Email Information */}
         <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-lg flex items-center gap-2'>
-              <Mail className='h-5 w-5 text-primary' />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
               Email Details
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className='space-y-4'>
+            <dl className="space-y-4">
               <div>
-                <dt className='text-sm font-medium text-muted-foreground'>Subject</dt>
-                <dd className='mt-1'>{state.email.subject}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Subject</dt>
+                <dd className="mt-1">{state.email.subject}</dd>
               </div>
               <div>
-                <dt className='text-sm font-medium text-muted-foreground'>Message</dt>
-                <dd className='mt-1 text-sm whitespace-pre-wrap bg-muted p-3 rounded-md'>{state.email.message}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Message</dt>
+                <dd className="mt-1 text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{state.email.message}</dd>
               </div>
             </dl>
           </CardContent>
@@ -211,35 +212,36 @@ export default function ReviewAndSend() {
 
         {/* Fields Summary */}
         <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-lg flex items-center gap-2'>
-              <Check className='h-5 w-5 text-primary' />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Check className="h-5 w-5 text-primary" />
               Fields Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
             {state.fields.length > 0 ? (
               <div>
-                <dl className='space-y-4'>
+                <dl className="space-y-4">
                   {['signature', 'initial', 'date', 'text', 'checkbox', 'dropdown'].map((fieldType) => {
                     const count = state.fields.filter((f) => f.type === fieldType).length;
                     if (count === 0) return null;
 
                     return (
                       <div key={fieldType}>
-                        <dt className='text-sm font-medium text-muted-foreground capitalize'>{fieldType} Fields</dt>
-                        <dd className='mt-1'>{count}</dd>
+                        <dt className="text-sm font-medium text-muted-foreground capitalize">{fieldType} Fields</dt>
+                        <dd className="mt-1">{count}</dd>
                       </div>
                     );
                   })}
                 </dl>
               </div>
             ) : (
-              <div className='flex flex-col items-center py-6 text-center'>
-                <AlertTriangle className='h-8 w-8 text-amber-500 mb-2' />
-                <h3 className='font-medium'>No Fields Added</h3>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  You haven't added any fields to your document. Recipients won't have specific places to sign or fill in information.
+              <div className="flex flex-col items-center py-6 text-center">
+                <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                <h3 className="font-medium">No Fields Added</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You haven't added any fields to your document. Recipients won't have specific places to sign or fill
+                  in information.
                 </p>
               </div>
             )}
@@ -248,12 +250,13 @@ export default function ReviewAndSend() {
       </div>
 
       {/* Information card */}
-      <Card className='mt-6'>
-        <CardContent className='pt-6 flex items-start gap-3'>
-          <Info className='h-5 w-5 text-blue-500 shrink-0 mt-0.5' />
-          <div className='text-sm text-muted-foreground'>
-            <p className='mb-2'>
-              <strong>What happens next?</strong> When you click Send, your document will be processed and emails will be sent to all recipients.
+      <Card className="mt-6">
+        <CardContent className="pt-6 flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-2">
+              <strong>What happens next?</strong> When you click Send, your document will be processed and emails will
+              be sent to all recipients.
             </p>
             <p>
               {state.signingOrder === 'sequential'
@@ -265,8 +268,8 @@ export default function ReviewAndSend() {
       </Card>
 
       {/* Action buttons */}
-      <div className='flex justify-end gap-3 pt-4'>
-        <Button size='lg' onClick={handleSendDocument} className='min-w-[120px]' disabled={isSending}>
+      <div className="flex justify-end gap-3 pt-4">
+        <Button size="lg" onClick={handleSendDocument} className="min-w-[120px]" disabled={isSending}>
           {isSending ? 'Sending...' : 'Send Document'}
         </Button>
       </div>

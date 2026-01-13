@@ -11,7 +11,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -29,7 +29,8 @@
     ".next/types/**/*.ts",
     "components/enhanced-theme-toggle-simple.tsx.st",
     "lib/schema.prisma",
-    "components/layout.tsx"
+    "components/layout.tsx",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

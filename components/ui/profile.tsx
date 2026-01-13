@@ -1,7 +1,7 @@
-import { handleSignOut } from '@/server/auth/sign-out';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { handleSignOut } from '@/server/auth/sign-out';
 
 // interface MenuItem {
 //   label: string;
@@ -75,27 +75,29 @@ export default function Profile({
   };
 
   return (
-    <div className='mx-auto w-full max-w-sm'>
-      <div className='relative overflow-hidden rounded-2xl'>
-        <div className='relative px-6 pb-6 pt-6'>
-          <div className=' flex items-center gap-4'>
+    <div className="mx-auto w-full max-w-sm">
+      <div className="relative overflow-hidden rounded-2xl">
+        <div className="relative px-6 pb-6 pt-6">
+          <div className=" flex items-center gap-4">
             {/* Profile Info */}
-            <div className='flex-1'>
-              <p className='text-sm font-semibold text-zinc-900 dark:text-zinc-100'>{name}</p>
-              <p className='text-zinc-600 dark:text-zinc-400'>{email}</p>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{name}</p>
+              <p className="text-zinc-600 dark:text-zinc-400">{email}</p>
             </div>
           </div>
-          <div className='my-3 h-px bg-zinc-200 dark:bg-zinc-800' />
-          <div className='space-y-2'>
+          <div className="my-3 h-px bg-zinc-200 dark:bg-zinc-800" />
+          <div className="space-y-2">
             <button
-              type='button'
+              type="button"
               onClick={onLogout}
               disabled={isLoggingOut}
-              className='flex w-full items-center justify-between rounded-lg p-2 transition-colors duration-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+              className="flex w-full items-center justify-between rounded-lg p-2 transition-colors duration-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
             >
-              <div className='flex items-center gap-2'>
-                <LogOut className='h-4 w-4' />
-                <span className='text-sm font-medium text-zinc-900 dark:text-zinc-100'>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+              <div className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </span>
               </div>
             </button>
           </div>

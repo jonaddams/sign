@@ -1,9 +1,9 @@
-import PageLayout from '@/components/layout/page-layout';
+import { Download, Filter } from 'lucide-react';
 import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Filter } from 'lucide-react';
 
 // Mock transactions data
 const transactions = [
@@ -55,20 +55,20 @@ export default function TransactionsPage() {
 
   return (
     <PageLayout>
-      <PageContent title='Transactions' description='View and manage your financial transactions'>
-        <div className='mb-4 flex items-center justify-between'>
-          <Button variant='outline' className='flex items-center gap-2'>
-            <Filter className='h-4 w-4' />
+      <PageContent title="Transactions" description="View and manage your financial transactions">
+        <div className="mb-4 flex items-center justify-between">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
             <span>Filter</span>
           </Button>
-          <Button className='flex items-center gap-2'>
-            <Download className='h-4 w-4' />
+          <Button className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
             <span>Export</span>
           </Button>
         </div>
 
-        <Card className='border border-zinc-200 shadow-sm dark:border-zinc-700'>
-          <CardContent className='p-0'>
+        <Card className="border border-zinc-200 shadow-sm dark:border-zinc-700">
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -80,7 +80,7 @@ export default function TransactionsPage() {
               </TableHeader>
               <TableBody>
                 {transactions.map((transaction) => (
-                  <TableRow key={transaction.id} className='cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'>
+                  <TableRow key={transaction.id} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                     <TableCell>{transaction.date}</TableCell>
                     <TableCell>{transaction.description}</TableCell>
                     <TableCell>{formatCurrency(transaction.amount)}</TableCell>

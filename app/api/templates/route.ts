@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/database/drizzle/drizzle';
-import { documentTemplates } from '@/database/drizzle/document-signing-schema';
-import { auth } from '@/lib/auth/auth-js';
 import { desc } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
+import { documentTemplates } from '@/database/drizzle/document-signing-schema';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await auth();
 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     const templates = await db.query.documentTemplates.findMany({
       where: (documentTemplates, { eq }) => {
-        const userId = session.user!.id as string;
+        const userId = session.user?.id as string;
         return eq(documentTemplates.creatorId, userId);
       },
       orderBy: [desc(documentTemplates.createdAt)],

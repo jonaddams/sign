@@ -1,4 +1,3 @@
-import { File } from 'lucide-react';
 import { ImageIcon } from '@/components/icons';
 
 type FileTypeIcon = {

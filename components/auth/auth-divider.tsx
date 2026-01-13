@@ -5,9 +5,7 @@ export function AuthDivider() {
         <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
       </div>
       <div className="relative flex justify-center text-xs">
-        <span className="bg-white px-2 text-gray-500 dark:bg-zinc-900 dark:text-gray-400">
-          or send a login link
-        </span>
+        <span className="bg-white px-2 text-gray-500 dark:bg-zinc-900 dark:text-gray-400">or send a login link</span>
       </div>
     </div>
   );

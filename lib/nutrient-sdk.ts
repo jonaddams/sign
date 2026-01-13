@@ -1,7 +1,7 @@
 /**
  * Utility functions for working with Nutrient Viewer SDK
  */
-import * as NutrientViewerSDK from '@nutrient-sdk/viewer';
+import type * as NutrientViewerSDK from '@nutrient-sdk/viewer';
 
 /**
  * Safely gets the Nutrient Viewer SDK with proper TypeScript typing

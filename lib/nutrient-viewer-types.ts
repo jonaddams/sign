@@ -6,7 +6,7 @@
  */
 
 // Import all types from the official SDK package
-import * as NutrientViewerTypes from '@nutrient-sdk/viewer';
+import type * as NutrientViewerTypes from '@nutrient-sdk/viewer';
 
 // Re-export all types for use throughout the application
 export * from '@nutrient-sdk/viewer';

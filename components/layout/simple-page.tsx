@@ -1,5 +1,5 @@
-import PageLayout from '@/components/layout/page-layout';
 import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 
 interface SimplePageProps {
   title: string;

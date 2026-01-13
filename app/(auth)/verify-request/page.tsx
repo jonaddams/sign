@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PenTool } from "lucide-react"
-import Link from "next/link"
+import { PenTool } from 'lucide-react';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function VerifyRequestPage() {
   return (
@@ -19,8 +19,8 @@ export default function VerifyRequestPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            If you don&apos;t see it, check your spam folder. If you still don&apos;t see it, try again or use another sign in
-            method.
+            If you don&apos;t see it, check your spam folder. If you still don&apos;t see it, try again or use another
+            sign in method.
           </p>
           <div className="pt-4">
             <Link href="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
@@ -30,6 +30,5 @@ export default function VerifyRequestPage() {
         </CardContent>
       </Card>
     </>
-  )
+  );
 }
-

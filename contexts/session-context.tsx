@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import type { Session } from "@/server/auth/get-session";
-import { createContext, ReactNode, useContext, useState } from "react";
+import { createContext, type ReactNode, useContext, useState } from 'react';
+import type { Session } from '@/server/auth/get-session';
 
 const SessionContext = createContext<{
   session: Session | null;
@@ -20,11 +20,7 @@ export const SessionProvider = ({
 }) => {
   const [session, setSession] = useState<Session | null>(initialSession);
 
-  return (
-    <SessionContext.Provider value={{ session, setSession }}>
-      {children}
-    </SessionContext.Provider>
-  );
+  return <SessionContext.Provider value={{ session, setSession }}>{children}</SessionContext.Provider>;
 };
 
 export const useSession = () => useContext(SessionContext);

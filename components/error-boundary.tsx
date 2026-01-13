@@ -1,6 +1,6 @@
 'use client';
 
-import { Component, ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -23,9 +23,12 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className='flex min-h-screen flex-col items-center justify-center'>
-          <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Something went wrong</h2>
-          <button onClick={() => this.setState({ hasError: false })} className='mt-4 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700'>
+        <div className="flex min-h-screen flex-col items-center justify-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Something went wrong</h2>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
             Try again
           </button>
         </div>

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client } from '@/lib/s3';
+import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth-js';
+import { s3Client } from '@/lib/s3';
 
 export async function GET(request: NextRequest) {
   try {

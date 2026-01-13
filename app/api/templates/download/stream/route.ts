@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
+import { PassThrough, Readable } from 'node:stream';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import type { NextRequest } from 'next/server';
+import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
-import { Readable, PassThrough } from 'stream';
 
 export async function GET(req: NextRequest) {
   try {

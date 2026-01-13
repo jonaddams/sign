@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
-import { documentTemplates } from '@/database/drizzle/document-signing-schema';
-import { eq } from 'drizzle-orm';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { type NextRequest, NextResponse } from 'next/server';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
 
 export async function GET(req: NextRequest) {

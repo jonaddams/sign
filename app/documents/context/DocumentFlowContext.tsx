@@ -63,6 +63,7 @@ export type DocumentFlowState = {
   stepValidation: StepValidation;
   userWillSign: boolean;
   signingOrder: 'sequential' | 'parallel';
+  userDisplayName: string | null;
 };
 
 // Action type definitions
@@ -81,6 +82,7 @@ export type DocumentFlowAction =
   | { type: 'SET_EMAIL'; payload: Partial<Email> }
   | { type: 'SET_USER_WILL_SIGN'; payload: boolean }
   | { type: 'SET_SIGNING_ORDER'; payload: 'sequential' | 'parallel' }
+  | { type: 'SET_USER_DISPLAY_NAME'; payload: string | null }
   | {
       type: 'VALIDATE_STEP';
       payload: { step: keyof StepValidation; isValid: boolean };
@@ -108,6 +110,7 @@ export const initialState: DocumentFlowState = {
   },
   userWillSign: false,
   signingOrder: 'sequential',
+  userDisplayName: null,
 };
 
 // Reducer function
@@ -137,7 +140,9 @@ export const documentFlowReducer = (state: DocumentFlowState, action: DocumentFl
     case 'UPDATE_RECIPIENT':
       return {
         ...state,
-        recipients: state.recipients.map((recipient) => (recipient.id === action.payload.id ? { ...recipient, ...action.payload.data } : recipient)),
+        recipients: state.recipients.map((recipient) =>
+          recipient.id === action.payload.id ? { ...recipient, ...action.payload.data } : recipient,
+        ),
       };
 
     case 'REMOVE_RECIPIENT':
@@ -157,7 +162,9 @@ export const documentFlowReducer = (state: DocumentFlowState, action: DocumentFl
     case 'UPDATE_FIELD':
       return {
         ...state,
-        fields: state.fields.map((field) => (field.id === action.payload.id ? { ...field, ...action.payload.data } : field)),
+        fields: state.fields.map((field) =>
+          field.id === action.payload.id ? { ...field, ...action.payload.data } : field,
+        ),
       };
 
     case 'REMOVE_FIELD':
@@ -185,6 +192,12 @@ export const documentFlowReducer = (state: DocumentFlowState, action: DocumentFl
       return {
         ...state,
         signingOrder: action.payload,
+      };
+
+    case 'SET_USER_DISPLAY_NAME':
+      return {
+        ...state,
+        userDisplayName: action.payload,
       };
 
     case 'VALIDATE_STEP':

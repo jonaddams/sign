@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Component, type ErrorInfo, type ReactNode } from "react";
-import { FallbackOAuthButtons } from "./fallback-oauth-buttons";
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { FallbackOAuthButtons } from './fallback-oauth-buttons';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error('Uncaught error:', error, errorInfo);
   }
 
   public render() {

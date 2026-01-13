@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {

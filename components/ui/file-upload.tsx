@@ -1,11 +1,11 @@
 'use client';
+import { CheckCircle2, FileText, Upload } from 'lucide-react';
+import { type ChangeEvent, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CheckCircle2, FileText, Upload } from 'lucide-react';
-import { ChangeEvent, useRef, useState } from 'react';
 
 // Valid file types
 const VALID_FILE_TYPES = [
@@ -33,7 +33,12 @@ interface FileUploadProps {
   onSaveAsTemplateChange?: (checked: boolean) => void;
 }
 
-export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, onSaveAsTemplateChange }: FileUploadProps) {
+export function FileUpload({
+  onUploadComplete,
+  onError,
+  saveAsTemplate = false,
+  onSaveAsTemplateChange,
+}: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploadedFile, setUploadedFile] = useState<{
     name: string;
@@ -46,9 +51,9 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
   const isMobile = useIsMobile();
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       const selectedFile = e.target.files[0];
-      const fileExtension = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
+      const fileExtension = `.${selectedFile.name.split('.').pop()?.toLowerCase()}`;
 
       // Check both MIME type and file extension
       if (!VALID_FILE_TYPES.includes(selectedFile.type) && !VALID_EXTENSIONS.includes(fileExtension)) {
@@ -91,7 +96,7 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
         }
       };
 
-      xhr.onload = function () {
+      xhr.onload = () => {
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText);
@@ -128,14 +133,14 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
           try {
             const response = JSON.parse(xhr.responseText);
             onError?.(response.error || 'Upload failed');
-          } catch (e) {
+          } catch (_e) {
             onError?.(`Upload failed: ${xhr.statusText}`);
           }
         }
         setUploading(false);
       };
 
-      xhr.onerror = function () {
+      xhr.onerror = () => {
         onError?.('Network error occurred during upload.');
         setUploading(false);
       };
@@ -169,14 +174,20 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
   };
 
   return (
-    <div className='flex flex-col'>
-      <input type='file' ref={fileInputRef} onChange={handleFileChange} className='hidden' accept={VALID_FILE_TYPES.join(',')} />
+    <div className="flex flex-col">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept={VALID_FILE_TYPES.join(',')}
+      />
 
       <div className={`flex items-center gap-2 ${isMobile ? 'w-full justify-center' : ''}`}>
         {!uploadedFile ? (
           <>
             <Button
-              type='button'
+              type="button"
               onClick={handleButtonClick}
               disabled={uploading}
               variant={file ? 'default' : 'outline'}
@@ -184,26 +195,31 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
             >
               {file ? (
                 <>
-                  <Upload className='h-4 w-4' />
+                  <Upload className="h-4 w-4" />
                   Upload Now
                 </>
               ) : (
                 <>
-                  <FileText className='h-4 w-4' />
+                  <FileText className="h-4 w-4" />
                   Upload Document
                 </>
               )}
             </Button>
 
             {file && !uploading && (
-              <Button type='button' onClick={resetFileState} variant='destructive' className='cursor-pointer'>
+              <Button type="button" onClick={resetFileState} variant="destructive" className="cursor-pointer">
                 Cancel
               </Button>
             )}
           </>
         ) : (
-          <Button type='button' onClick={selectNewFile} variant='outline' className='flex cursor-pointer items-center gap-2'>
-            <FileText className='h-4 w-4' />
+          <Button
+            type="button"
+            onClick={selectNewFile}
+            variant="outline"
+            className="flex cursor-pointer items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
             Select Different Document
           </Button>
         )}
@@ -211,49 +227,52 @@ export function FileUpload({ onUploadComplete, onError, saveAsTemplate = false, 
 
       {file && !uploading && !uploadedFile && (
         <>
-          <div className='mt-2 text-sm text-zinc-500'>
+          <div className="mt-2 text-sm text-zinc-500">
             {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
           </div>
 
           {/* Save as template checkbox shown as soon as file is selected */}
           {onSaveAsTemplateChange && (
-            <div className='mt-4 flex items-center space-x-2'>
-              <Checkbox id='save-template' checked={saveAsTemplate} onCheckedChange={onSaveAsTemplateChange} className='border-gray-400 dark:border-gray-500' />
-              <Label htmlFor='save-template'>Save as template for future use</Label>
+            <div className="mt-4 flex items-center space-x-2">
+              <Checkbox
+                id="save-template"
+                checked={saveAsTemplate}
+                onCheckedChange={onSaveAsTemplateChange}
+                className="border-gray-400 dark:border-gray-500"
+              />
+              <Label htmlFor="save-template">Save as template for future use</Label>
             </div>
           )}
         </>
       )}
 
       {uploadedFile && (
-        <>
-          <div className='mt-4 rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-900/20'>
-            <div className='flex items-center gap-2'>
-              <CheckCircle2 className='h-5 w-5 text-green-600 dark:text-green-400' />
-              <span className='sm:font-xs font-medium text-green-800 dark:text-green-300'>Successfully uploaded</span>
-            </div>
-            <div className='mt-2 text-sm text-zinc-600 dark:text-zinc-300'>
-              {uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
-            </div>
-            {onSaveAsTemplateChange && (
-              <div className='mt-3 flex items-center space-x-2'>
-                <Checkbox
-                  id='save-template'
-                  checked={saveAsTemplate}
-                  onCheckedChange={onSaveAsTemplateChange}
-                  className='border-gray-400 dark:border-gray-500'
-                />
-                <Label htmlFor='save-template sm:font-xs'>Save as template for future use</Label>
-              </div>
-            )}
+        <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-900/20">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <span className="sm:font-xs font-medium text-green-800 dark:text-green-300">Successfully uploaded</span>
           </div>
-        </>
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+            {uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
+          </div>
+          {onSaveAsTemplateChange && (
+            <div className="mt-3 flex items-center space-x-2">
+              <Checkbox
+                id="save-template"
+                checked={saveAsTemplate}
+                onCheckedChange={onSaveAsTemplateChange}
+                className="border-gray-400 dark:border-gray-500"
+              />
+              <Label htmlFor="save-template sm:font-xs">Save as template for future use</Label>
+            </div>
+          )}
+        </div>
       )}
 
       {uploading && (
-        <div className='mt-2'>
-          <Progress value={progress} className='h-2 w-full' />
-          <p className='mt-1 text-xs text-zinc-500'>Uploading: {progress}%</p>
+        <div className="mt-2">
+          <Progress value={progress} className="h-2 w-full" />
+          <p className="mt-1 text-xs text-zinc-500">Uploading: {progress}%</p>
         </div>
       )}
     </div>

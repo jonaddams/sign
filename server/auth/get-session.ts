@@ -1,5 +1,5 @@
-"use server";
-import { auth } from "@/lib/auth/auth-js";
+'use server';
+import { auth } from '@/lib/auth/auth-js';
 
 export interface Session {
   user: {
@@ -12,7 +12,7 @@ export interface Session {
 
 export const getSession = async (): Promise<Session | false> => {
   const session = await auth();
-  if (session && session.user) {
+  if (session?.user) {
     return session as Session;
   } else {
     return false;

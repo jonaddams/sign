@@ -1,16 +1,14 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Github } from "lucide-react";
-import { useState } from "react";
+import { Github } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface FallbackOAuthButtonsProps {
   callbackUrl?: string;
 }
 
-export function FallbackOAuthButtons({
-  callbackUrl = "/dashboard",
-}: FallbackOAuthButtonsProps) {
+export function FallbackOAuthButtons({ callbackUrl = '/dashboard' }: FallbackOAuthButtonsProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleGoogleSignIn = async () => {
@@ -44,9 +42,7 @@ export function FallbackOAuthButtons({
         {isLoading ? (
           <div className="h-5 w-5 animate-spin rounded-full border-t-2 border-gray-500 dark:border-gray-300" />
         ) : (
-          <span className="mr-2 font-bold text-blue-500 dark:text-blue-400">
-            G
-          </span>
+          <span className="mr-2 font-bold text-blue-500 dark:text-blue-400">G</span>
         )}
         <span>Continue with Google</span>
       </Button>

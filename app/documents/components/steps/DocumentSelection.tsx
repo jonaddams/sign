@@ -1,8 +1,12 @@
 'use client';
 
+import { Calendar, CheckCircle2, Clock, FileText, Search } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Pagination,
   PaginationContent,
@@ -12,18 +16,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { ReactDatePickerCustom } from '@/components/ui/react-datepicker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { extractFileExtension, getFileTypeIcon } from '@/lib/file-utils';
-import { Calendar, CheckCircle2, FileText, Search, Clock } from 'lucide-react';
-import Image from 'next/image';
-import { useEffect, useState } from 'react';
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
-import { ReactDatePickerCustom } from '@/components/ui/react-datepicker';
-import { Label } from '@/components/ui/label';
 
 interface Template {
   id: string;
@@ -86,7 +86,8 @@ export default function DocumentSelection() {
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = templates.filter(
-        (template) => template.name.toLowerCase().includes(query) || (template.description && template.description.toLowerCase().includes(query)),
+        (template) =>
+          template.name.toLowerCase().includes(query) || template.description?.toLowerCase().includes(query),
       );
       setFilteredTemplates(filtered);
     }
@@ -212,7 +213,7 @@ export default function DocumentSelection() {
   };
 
   // Handle template name change
-  const handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({
       type: 'SET_DOCUMENT',
       payload: { templateName: e.target.value },
@@ -223,7 +224,7 @@ export default function DocumentSelection() {
   const renderMobileTemplateCard = (template: Template) => {
     const isSelected = selectedTemplateId === template.id;
     const fileExt = extractFileExtension(template.templateFilePath) || 'DOC';
-    const fileType = fileExt.toUpperCase();
+    const _fileType = fileExt.toUpperCase();
     const displayType =
       fileExt === 'pdf'
         ? 'PDF Document'
@@ -244,22 +245,22 @@ export default function DocumentSelection() {
         className={`mb-3 cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
         onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
       >
-        <CardContent className='py-3 px-0'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <div className='rounded-md bg-blue-100 p-2 dark:bg-blue-900'>
+        <CardContent className="py-3 px-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-blue-100 p-2 dark:bg-blue-900">
                 {iconData.image ? (
                   <Image src={iconData.image} alt={displayType} width={16} height={16} className={iconData.className} />
                 ) : iconData.icon ? (
                   <iconData.icon className={iconData.className} />
                 ) : (
-                  <FileText className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 )}
               </div>
               <div>
                 <div className={`line-clamp-1 font-medium ${isMobile ? 'text-sm' : ''}`}>{template.name}</div>
-                <div className='text-muted-foreground mt-1 flex items-center text-xs'>
-                  <Calendar className='mr-1 h-3 w-3' />
+                <div className="text-muted-foreground mt-1 flex items-center text-xs">
+                  <Calendar className="mr-1 h-3 w-3" />
                   {new Date(template.createdAt).toLocaleDateString('en-US', {
                     day: '2-digit',
                     month: 'short',
@@ -268,7 +269,7 @@ export default function DocumentSelection() {
                 </div>
               </div>
             </div>
-            {isSelected && <CheckCircle2 className='h-5 w-5 text-blue-500' />}
+            {isSelected && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
           </div>
         </CardContent>
       </Card>
@@ -276,32 +277,36 @@ export default function DocumentSelection() {
   };
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <div>
-        <h2 className='text-2xl font-semibold tracking-tight'>Document Selection</h2>
-        <p className='text-muted-foreground mt-2 text-sm'>Choose an existing template or upload a new document to send for signing.</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Document Selection</h2>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Choose an existing template or upload a new document to send for signing.
+        </p>
       </div>
 
-      <Tabs defaultValue='upload' className='w-full'>
-        <TabsList className={`${isMobile ? 'flex h-auto w-full flex-col space-y-2 py-2' : 'mb-4 grid grid-cols-2'} bg-gray-200 dark:bg-gray-600`}>
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList
+          className={`${isMobile ? 'flex h-auto w-full flex-col space-y-2 py-2' : 'mb-4 grid grid-cols-2'} bg-gray-200 dark:bg-gray-600`}
+        >
           <TabsTrigger
-            value='upload'
+            value="upload"
             className={`${isMobile ? 'mb-2 w-full' : ''} text-foreground cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500 dark:data-[state=active]:text-white`}
           >
             Upload New Document
           </TabsTrigger>
           <TabsTrigger
-            value='template'
+            value="template"
             className={`${isMobile ? 'w-full' : ''} text-foreground cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500 dark:data-[state=active]:text-white`}
           >
             Use Template
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value='upload' className='mt-4 space-y-6'>
+        <TabsContent value="upload" className="mt-4 space-y-6">
           <Card>
-            <CardContent className='pt-6'>
-              <div className='mt-4'>
+            <CardContent className="pt-6">
+              <div className="mt-4">
                 <FileUpload
                   onUploadComplete={handleUploadComplete}
                   onError={(message) => {
@@ -317,25 +322,30 @@ export default function DocumentSelection() {
               </div>
 
               {state.document.url && (
-                <div className='mt-6 border-t pt-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='document-title'>Document Title</Label>
-                    <Input id='document-title' value={state.document.title} onChange={handleTitleChange} placeholder='Enter document title' />
+                <div className="mt-6 border-t pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="document-title">Document Title</Label>
+                    <Input
+                      id="document-title"
+                      value={state.document.title}
+                      onChange={handleTitleChange}
+                      placeholder="Enter document title"
+                    />
                   </div>
 
-                  <div className='mt-4 space-y-2'>
-                    <div className='flex items-center'>
-                      <Label htmlFor='document-expiration'>Document Expiration Date</Label>
-                      <span className='ml-1 text-muted-foreground text-xs'>(Optional)</span>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center">
+                      <Label htmlFor="document-expiration">Document Expiration Date</Label>
+                      <span className="ml-1 text-muted-foreground text-xs">(Optional)</span>
                     </div>
                     <ReactDatePickerCustom
-                      id='document-expiration'
+                      id="document-expiration"
                       date={state.document.expiresAt}
                       setDate={handleExpirationDateChange}
-                      placeholder='Set document expiration date'
+                      placeholder="Set document expiration date"
                     />
-                    <div className='text-xs text-muted-foreground flex items-center items-start items-start'>
-                      <Clock className='h-3 w-3 mr-1 sm:mt-1' />
+                    <div className="text-xs text-muted-foreground flex items-center items-start items-start">
+                      <Clock className="h-3 w-3 mr-1 sm:mt-1" />
                       If set, the document cannot be signed after this date
                     </div>
                   </div>
@@ -345,28 +355,37 @@ export default function DocumentSelection() {
           </Card>
         </TabsContent>
 
-        <TabsContent value='template' className='space-y-4'>
-          <div className='relative'>
+        <TabsContent value="template" className="space-y-4">
+          <div className="relative">
             <div className={`relative mb-4 ${isMobile ? 'mt-4' : ''}`}>
-              <Search className='text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2' />
-              <Input placeholder='Search templates...' className='pl-10' value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <Input
+                placeholder="Search templates..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
 
             {isLoading ? (
-              <div className='py-8 text-center'>Loading templates...</div>
+              <div className="py-8 text-center">Loading templates...</div>
             ) : filteredTemplates.length === 0 ? (
-              <div className='py-8 text-center'>
+              <div className="py-8 text-center">
                 <p>
-                  {searchQuery.trim() !== '' ? 'No templates match your search.' : 'No templates found. Upload a document and save it as a template first.'}
+                  {searchQuery.trim() !== ''
+                    ? 'No templates match your search.'
+                    : 'No templates found. Upload a document and save it as a template first.'}
                 </p>
               </div>
             ) : (
               <>
                 {isMobile ? (
-                  <div className='space-y-2'>{currentTemplates.map((template) => renderMobileTemplateCard(template))}</div>
+                  <div className="space-y-2">
+                    {currentTemplates.map((template) => renderMobileTemplateCard(template))}
+                  </div>
                 ) : (
-                  <Card className='border shadow-sm'>
-                    <ScrollArea className='h-[360px]'>
+                  <Card className="border shadow-sm">
+                    <ScrollArea className="h-[360px]">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -383,20 +402,25 @@ export default function DocumentSelection() {
                               className={`cursor-pointer transition-all ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                               onClick={() => handleSelectTemplate(template.id, template.templateFilePath)}
                             >
-                              <TableCell className='w-1/3'>
-                                <div className='flex items-center'>
-                                  <div className='flex-grow truncate mr-2'>
-                                    <span className={`${selectedTemplateId === template.id ? 'font-medium' : ''} truncate`} title={template.name}>
+                              <TableCell className="w-1/3">
+                                <div className="flex items-center">
+                                  <div className="flex-grow truncate mr-2">
+                                    <span
+                                      className={`${selectedTemplateId === template.id ? 'font-medium' : ''} truncate`}
+                                      title={template.name}
+                                    >
                                       {template.name}
                                     </span>
                                   </div>
-                                  <div className='w-5 flex-shrink-0'>
-                                    {selectedTemplateId === template.id && <CheckCircle2 className='h-4 w-4 text-blue-500' />}
+                                  <div className="w-5 flex-shrink-0">
+                                    {selectedTemplateId === template.id && (
+                                      <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                                    )}
                                   </div>
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className='flex items-center gap-2'>
+                                <div className="flex items-center gap-2">
                                   {(() => {
                                     const fileExt = extractFileExtension(template.templateFilePath) || 'DOC';
                                     const displayType =
@@ -408,17 +432,27 @@ export default function DocumentSelection() {
                                             ? 'Excel Spreadsheet'
                                             : fileExt === 'ppt' || fileExt === 'pptx'
                                               ? 'PowerPoint'
-                                              : fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png' || fileExt === 'tiff' || fileExt === 'tif'
+                                              : fileExt === 'jpg' ||
+                                                  fileExt === 'jpeg' ||
+                                                  fileExt === 'png' ||
+                                                  fileExt === 'tiff' ||
+                                                  fileExt === 'tif'
                                                 ? 'Image'
                                                 : 'Document';
                                     const iconData = getFileTypeIcon(displayType);
                                     return iconData.image ? (
-                                      <Image src={iconData.image} alt={displayType} width={16} height={16} className={iconData.className} />
+                                      <Image
+                                        src={iconData.image}
+                                        alt={displayType}
+                                        width={16}
+                                        height={16}
+                                        className={iconData.className}
+                                      />
                                     ) : iconData.icon ? (
                                       <iconData.icon className={iconData.className} />
                                     ) : null;
                                   })()}
-                                  <span className='inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium uppercase text-blue-800 dark:bg-blue-900 dark:text-blue-200'>
+                                  <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium uppercase text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                     {extractFileExtension(template.templateFilePath) || 'DOC'}
                                   </span>
                                 </div>
@@ -449,22 +483,22 @@ export default function DocumentSelection() {
 
                 {/* Document Expiration Date section for templates */}
                 {selectedTemplateId && (
-                  <Card className='mt-4'>
-                    <CardContent className='pt-6'>
-                      <div className='space-y-4'>
-                        <div className='space-y-2'>
-                          <div className='flex items-center'>
-                            <Label htmlFor='template-document-expiration'>Document Expiration Date</Label>
-                            <span className='ml-1 text-muted-foreground text-xs'>(Optional)</span>
+                  <Card className="mt-4">
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <Label htmlFor="template-document-expiration">Document Expiration Date</Label>
+                            <span className="ml-1 text-muted-foreground text-xs">(Optional)</span>
                           </div>
                           <ReactDatePickerCustom
-                            id='template-document-expiration'
+                            id="template-document-expiration"
                             date={state.document.expiresAt}
                             setDate={handleExpirationDateChange}
-                            placeholder='Set document expiration date'
+                            placeholder="Set document expiration date"
                           />
-                          <div className='text-sm text-muted-foreground flex items-center items-start'>
-                            <Clock className='h-3 w-3 mr-2 mt-1' />
+                          <div className="text-sm text-muted-foreground flex items-center items-start">
+                            <Clock className="h-3 w-3 mr-2 mt-1" />
                             If set, the document cannot be signed after this date
                           </div>
                         </div>
@@ -474,7 +508,7 @@ export default function DocumentSelection() {
                 )}
 
                 {totalPages > 1 && (
-                  <div className='mt-4'>
+                  <div className="mt-4">
                     <Pagination>
                       <PaginationContent>
                         <PaginationItem>
@@ -492,7 +526,11 @@ export default function DocumentSelection() {
                                 </PaginationItem>
                               ) : (
                                 <PaginationItem key={page}>
-                                  <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
+                                  <PaginationLink
+                                    isActive={currentPage === page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className="cursor-pointer"
+                                  >
                                     {page}
                                   </PaginationLink>
                                 </PaginationItem>
@@ -504,7 +542,11 @@ export default function DocumentSelection() {
                                 {page === 'ellipsis' ? (
                                   <PaginationEllipsis />
                                 ) : (
-                                  <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)} className='cursor-pointer'>
+                                  <PaginationLink
+                                    isActive={currentPage === page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className="cursor-pointer"
+                                  >
                                     {page}
                                   </PaginationLink>
                                 )}
