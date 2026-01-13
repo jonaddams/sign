@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const documentId = params.id;
 
     // Get the request body with email customization and other details
-    const { email } = await request.json();
+    const _body = await request.json();
 
     // Verify the document exists and belongs to the user
     const documentResults = await db
