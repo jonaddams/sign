@@ -78,16 +78,33 @@ export function FileUpload({
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     setUploading(true);
     setProgress(0);
 
     try {
+      // Step 1: Get presigned URL from API
+      const presignedResponse = await fetch('/api/upload/presigned-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          fileSize: file.size,
+        }),
+      });
+
+      if (!presignedResponse.ok) {
+        const error = await presignedResponse.json();
+        throw new Error(error.error || 'Failed to get upload URL');
+      }
+
+      const { presignedUrl, fileUrl } = await presignedResponse.json();
+
+      // Step 2: Upload directly to S3 using presigned URL with progress tracking
       const xhr = new XMLHttpRequest();
 
-      xhr.open('POST', '/api/upload', true);
+      xhr.open('PUT', presignedUrl, true);
+      xhr.setRequestHeader('Content-Type', file.type);
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -98,54 +115,38 @@ export function FileUpload({
 
       xhr.onload = () => {
         if (xhr.status === 200) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            if (!response.url) {
-              throw new Error('Upload successful but no URL returned');
-            }
-            // Normalize file type for consistency
-            const fileType = file.type || `image/${file.name.split('.').pop()?.toLowerCase()}`;
+          // Save the uploaded file info for display
+          setUploadedFile({
+            name: file.name,
+            size: file.size,
+            url: fileUrl,
+          });
 
-            // Save the uploaded file info for display
-            setUploadedFile({
-              name: file.name,
-              size: file.size,
-              url: response.url,
-            });
+          onUploadComplete({
+            url: fileUrl,
+            name: file.name,
+            file_type: file.type,
+            size: file.size,
+          });
 
-            onUploadComplete({
-              url: response.url,
-              name: file.name,
-              file_type: fileType,
-              size: file.size,
-            });
-
-            // Keep reference to uploaded file, but clear the input
-            if (fileInputRef.current) {
-              fileInputRef.current.value = '';
-            }
-            setFile(null);
-          } catch (e) {
-            console.error('Response parsing error:', e, xhr.responseText);
-            onError?.(`Upload failed: ${e instanceof Error ? e.message : 'Invalid server response'}`);
+          // Clear the file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
           }
+          setFile(null);
+          setUploading(false);
         } else {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            onError?.(response.error || 'Upload failed');
-          } catch (_e) {
-            onError?.(`Upload failed: ${xhr.statusText}`);
-          }
+          onError?.(`S3 upload failed: ${xhr.statusText}`);
+          setUploading(false);
         }
-        setUploading(false);
       };
 
       xhr.onerror = () => {
-        onError?.('Network error occurred during upload.');
+        onError?.('Network error occurred during upload to S3.');
         setUploading(false);
       };
 
-      xhr.send(formData);
+      xhr.send(file);
     } catch (error) {
       console.error('Error uploading file:', error);
       onError?.('An unexpected error occurred.');
