@@ -1,22 +1,6 @@
 'use client';
 
-import {
-  CreditCard,
-  Files,
-  FileText,
-  HelpCircle,
-  Home,
-  Inbox,
-  Menu,
-  MessagesSquare,
-  Receipt,
-  SendHorizontal,
-  Settings,
-  Shield,
-  Users2,
-  Video,
-  Wallet,
-} from 'lucide-react';
+import { Archive, Files, FileText, Home, Inbox, Menu, SendHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type React from 'react';
@@ -108,56 +92,14 @@ export default function Sidebar() {
                   <NavItem href="/templates" icon={Files}>
                     Templates
                   </NavItem>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Finance
-                </div>
-                <div className="space-y-1">
-                  <NavItem href="/transactions" icon={Wallet}>
-                    Transactions
+                  <NavItem href="/archive" icon={Archive}>
+                    Archive
                   </NavItem>
-                  <NavItem href="/invoices" icon={Receipt}>
-                    Invoices
-                  </NavItem>
-                  <NavItem href="/payments" icon={CreditCard}>
-                    Payments
+                  <NavItem href="/trash" icon={Trash2}>
+                    Trash
                   </NavItem>
                 </div>
               </div>
-
-              <div>
-                <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Team
-                </div>
-                <div className="space-y-1">
-                  <NavItem href="/members" icon={Users2}>
-                    Members
-                  </NavItem>
-                  <NavItem href="/permissions" icon={Shield}>
-                    Permissions
-                  </NavItem>
-                  <NavItem href="/chat" icon={MessagesSquare}>
-                    Chat
-                  </NavItem>
-                  <NavItem href="/meetings" icon={Video}>
-                    Meetings
-                  </NavItem>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 px-4 py-4 dark:border-[#1F1F23]">
-            <div className="space-y-1">
-              <NavItem href="/settings" icon={Settings}>
-                Settings
-              </NavItem>
-              <NavItem href="/help" icon={HelpCircle}>
-                Help
-              </NavItem>
             </div>
           </div>
         </div>
