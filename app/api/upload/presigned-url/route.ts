@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Create presigned URL for upload
     const command = new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME,
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: s3Key,
       ContentType: contentType,
       Metadata: {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const presignedUrl = await getSignedUrl(presignedUrlClient, command, { expiresIn: 900 });
 
     // The final S3 URL after upload
-    const fileUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+    const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
     return NextResponse.json({
       presignedUrl,

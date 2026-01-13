@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // Upload to S3
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME,
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: fileName,
         Body: buffer,
         ContentType: file.type,
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Return the S3 URL
-    const url = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+    const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({
       url,
