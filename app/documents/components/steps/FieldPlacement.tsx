@@ -1150,6 +1150,7 @@ function FieldPlacementContent({
           document: proxyUrl,
           toolbarItems: toolBarItems,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+          useCDN: true,
           styleSheets: ['/styles/viewer.css'],
           customRenderers: {
             Annotation: getAnnotationRenderers(

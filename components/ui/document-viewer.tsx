@@ -114,6 +114,7 @@ export default function DocumentViewer({ documentUrl, documentId, isOpen, onClos
           document: proxyUrl,
           toolbarItems: toolBarItems,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
+          useCDN: true,
         });
         setIsViewerLoaded(true);
         console.log('NutrientViewer loaded successfully');
