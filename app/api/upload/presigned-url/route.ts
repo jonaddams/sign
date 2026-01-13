@@ -10,8 +10,10 @@ const presignedUrlClient = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
-  useArnRegion: true,
-  forcePathStyle: false, // Use virtual-hosted style for CORS compatibility
+  // Explicitly disable path-style URLs to force virtual-hosted style
+  endpoint: undefined,
+  forcePathStyle: false,
+  useGlobalEndpoint: false,
 });
 
 // File upload security configuration
