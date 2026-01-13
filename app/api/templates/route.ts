@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         id: crypto.randomUUID(),
         name: data.name,
         templateFilePath: data.file_url,
+        templateFileHash: null,
         creatorId: session.user.id,
         createdAt: new Date(),
         size: data.file_size ? Number(data.file_size) : null,
