@@ -3,7 +3,7 @@
 import { HelpCircle, Plus, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,35 +35,14 @@ export default function RecipientConfig() {
     }
   }, [session?.user?.name, state.userDisplayName, dispatch]);
 
-  // Validate the recipients
-  useEffect(() => {
-    const isValid = validateRecipients();
+  // Email validation helper
+  const isValidEmail = useCallback((email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }, []);
 
-    dispatch({
-      type: 'VALIDATE_STEP',
-      payload: { step: 'step2Valid', isValid },
-    });
-  }, [dispatch, validateRecipients]);
-
-  // Check if the DocumentFlow component is attempting to navigate to the next step
-  useEffect(() => {
-    // Create an event handler for the Navigation Controls' Next button
-    const handleBeforeNextStep = () => {
-      if (state.currentStep === 2 && !validateRecipients()) {
-        setValidateAttempt(true);
-      }
-    };
-
-    // Listen for the custom event
-    window.addEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
-
-    return () => {
-      window.removeEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
-    };
-  }, [state.currentStep, validateRecipients]);
-
-  // Validate required recipient fields
-  const validateRecipients = () => {
+  // Validate required recipient fields - wrapped in useCallback to prevent infinite loops
+  const validateRecipients = useCallback(() => {
     // If user will sign, make sure they have provided their name
     if (state.userWillSign && (!state.userDisplayName || !state.userDisplayName.trim())) {
       return false;
@@ -96,13 +75,30 @@ export default function RecipientConfig() {
     });
 
     return allRecipientsValid;
-  };
+  }, [state.userWillSign, state.userDisplayName, state.recipients, isOnlySigner, isValidEmail]);
 
-  // Email validation
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Validate the recipients whenever dependencies change
+  useEffect(() => {
+    const isValid = validateRecipients();
+    dispatch({
+      type: 'VALIDATE_STEP',
+      payload: { step: 'step2Valid', isValid },
+    });
+  }, [validateRecipients, dispatch]);
+
+  // Check if the DocumentFlow component is attempting to navigate to the next step
+  useEffect(() => {
+    const handleBeforeNextStep = () => {
+      if (state.currentStep === 2 && !validateRecipients()) {
+        setValidateAttempt(true);
+      }
+    };
+
+    window.addEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
+    return () => {
+      window.removeEventListener('beforeDocumentFlowNext', handleBeforeNextStep);
+    };
+  }, [state.currentStep, validateRecipients]);
 
   // Add a new recipient
   const addRecipient = () => {
