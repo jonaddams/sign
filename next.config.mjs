@@ -18,7 +18,13 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
     serverActions: {
-      bodySizeLimit: '50mb', // Increase body size limit for file uploads
+      bodySizeLimit: '50mb',
+    },
+  },
+  // Increase API route body size limit for file uploads
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
     },
   },
 };

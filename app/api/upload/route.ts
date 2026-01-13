@@ -3,6 +3,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
 
+// Next.js route configuration for large file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 60; // 60 seconds max execution time
+export const dynamic = 'force-dynamic'; // Don't cache uploads
+
 // File upload security configuration
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_MIME_TYPES = [
