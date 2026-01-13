@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { AuthDivider } from '@/components/auth/auth-divider';
-import { EmailAuthForm } from '@/components/auth/email-auth-form';
 import { ErrorBoundary } from '@/components/auth/error-boundary';
 import { FallbackOAuthButtons } from '@/components/auth/fallback-oauth-buttons';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { NutrientLogo } from '@/components/icons';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
   return (
@@ -19,26 +17,14 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-center text-2xl font-semibold ">Welcome back</CardTitle>
-          <CardDescription className="text-center">Log in to your account</CardDescription>
+          <CardTitle className="text-center text-2xl font-semibold">Welcome back</CardTitle>
+          <CardDescription className="text-center">Sign in with your enterprise account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ErrorBoundary fallback={<FallbackOAuthButtons callbackUrl="/dashboard" />}>
             <OAuthButtons callbackUrl="/dashboard" />
           </ErrorBoundary>
-
-          <AuthDivider />
-
-          <EmailAuthForm mode="login" callbackUrl="/dashboard" />
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-center text-sm">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-blue-600 hover:underline dark:text-blue-400">
-              Sign up
-            </Link>
-          </div>
-        </CardFooter>
       </Card>
     </>
   );
