@@ -1,5 +1,6 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { type NextRequest, NextResponse } from 'next/server';
+import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
 
@@ -23,8 +24,28 @@ export async function GET(request: NextRequest) {
     // Fix double-encoding issue if present
     documentKey = decodeURIComponent(documentKey);
 
-    console.log('Accessing S3 document with key:', documentKey);
-    const bucketName = process.env.AWS_S3_BUCKET_NAME || 'nutrient-sign';
+    // Verify user owns this document by checking both templates and documents tables
+    const template = await db.query.documentTemplates.findFirst({
+      where: (documentTemplates, { and, eq, like }) =>
+        and(
+          eq(documentTemplates.creatorId, session.user.id as string),
+          like(documentTemplates.templateFilePath, `%${documentKey}`)
+        ),
+    });
+
+    const document = await db.query.documents.findFirst({
+      where: (documents, { and, eq, like }) =>
+        and(
+          eq(documents.ownerId, session.user.id as string),
+          like(documents.documentFilePath, `%${documentKey}`)
+        ),
+    });
+
+    if (!template && !document) {
+      return new Response('Forbidden - Document not found or access denied', { status: 403 });
+    }
+
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
 
     // Create a GetObject command
     const command = new GetObjectCommand({

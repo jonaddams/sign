@@ -5,8 +5,6 @@ import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id';
 import { db } from '@/database/drizzle/drizzle';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  accountLinking: true,
-  allowDangerousEmailAccountLinking: true,
   adapter: DrizzleAdapter(db),
   pages: {
     signIn: '/login',

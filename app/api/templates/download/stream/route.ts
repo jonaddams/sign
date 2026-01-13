@@ -1,6 +1,7 @@
 import { PassThrough, Readable } from 'node:stream';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { NextRequest } from 'next/server';
+import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
 
@@ -19,8 +20,21 @@ export async function GET(req: NextRequest) {
       return new Response('Key parameter is required', { status: 400 });
     }
 
+    // Verify user owns the template by checking the S3 key matches a template they created
+    const template = await db.query.documentTemplates.findFirst({
+      where: (documentTemplates, { and, eq, like }) =>
+        and(
+          eq(documentTemplates.creatorId, session.user.id as string),
+          like(documentTemplates.templateFilePath, `%${key}`)
+        ),
+    });
+
+    if (!template) {
+      return new Response('Forbidden - Template not found or access denied', { status: 403 });
+    }
+
     const command = new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME || 'nutrient-sign',
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: key,
     });
 

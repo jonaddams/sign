@@ -19,8 +19,10 @@ export async function middleware(request: NextRequest) {
     // If no session exists, redirect to login
     if (!session) {
       const loginUrl = new URL('/login', request.url);
-      // Add the original path as a redirect parameter
-      loginUrl.searchParams.set('redirectTo', path);
+      // Validate redirectTo is a safe relative path (prevent open redirect)
+      if (path?.startsWith('/') && !path.startsWith('//') && !path.includes('://')) {
+        loginUrl.searchParams.set('redirectTo', path);
+      }
       return NextResponse.redirect(loginUrl);
     }
   }
