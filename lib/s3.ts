@@ -6,4 +6,6 @@ export const s3Client = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
+  // Use virtual-hosted-style URLs (bucket-name.s3.region.amazonaws.com) for CORS
+  forcePathStyle: false,
 });
