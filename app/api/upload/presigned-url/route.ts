@@ -1,8 +1,18 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth-js';
-import { s3Client } from '@/lib/s3';
+
+// Create S3 client specifically for presigned URLs with virtual-hosted style
+const presignedUrlClient = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  },
+  useArnRegion: true,
+  forcePathStyle: false, // Use virtual-hosted style for CORS compatibility
+});
 
 // File upload security configuration
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -77,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate presigned URL (valid for 15 minutes)
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+    const presignedUrl = await getSignedUrl(presignedUrlClient, command, { expiresIn: 900 });
 
     // The final S3 URL after upload
     const fileUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
