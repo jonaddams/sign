@@ -1,14 +1,8 @@
-let userConfig;
-try {
-  userConfig = await import('./v0-user-next.config');
-} catch (_e) {
-  // ignore error
-}
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // TODO: Fix TypeScript errors in error/page.tsx and other files
   },
   images: {
     unoptimized: true,
@@ -21,25 +15,8 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
+  // Set output for Docker/containerized deployments if needed
+  // output: 'standalone',
 };
-
-mergeConfig(nextConfig, userConfig);
-
-function mergeConfig(nextConfig, userConfig) {
-  if (!userConfig) {
-    return;
-  }
-
-  for (const key in userConfig) {
-    if (typeof nextConfig[key] === 'object' && !Array.isArray(nextConfig[key])) {
-      nextConfig[key] = {
-        ...nextConfig[key],
-        ...userConfig[key],
-      };
-    } else {
-      nextConfig[key] = userConfig[key];
-    }
-  }
-}
 
 export default nextConfig;

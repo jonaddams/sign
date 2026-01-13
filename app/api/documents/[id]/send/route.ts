@@ -4,7 +4,7 @@ import { documentParticipants, documents } from '@/database/drizzle/document-sig
 import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Verify the user is authenticated
     const session = await auth();
@@ -12,8 +12,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // Get the document ID from the route params
-    const documentId = params.id;
+    // Get the document ID from the route params (await params in Next.js 15+)
+    const { id: documentId } = await params;
 
     // Get the request body with email customization and other details
     const _body = await request.json();
