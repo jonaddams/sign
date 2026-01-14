@@ -1,8 +1,17 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
-import { documentParticipants, documents } from '@/database/drizzle/document-signing-schema';
+import { users } from '@/database/drizzle/auth-schema';
+import {
+  documentAuditLog,
+  documentNotifications,
+  documentParticipants,
+  documents,
+  signatureRequests,
+} from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
+import { generateSigningEmail, sendEmail } from '@/lib/email-service';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,8 +24,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Get the document ID from the route params (await params in Next.js 15+)
     const { id: documentId } = await params;
 
-    // Get the request body with email customization and other details
-    const _body = await request.json();
+    // Get the request body with email customization
+    const body = await request.json();
+    const { emailSubject, emailMessage } = body;
 
     // Verify the document exists and belongs to the user
     const documentResults = await db
@@ -28,38 +38,142 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return new NextResponse(JSON.stringify({ error: 'Document not found' }), { status: 404 });
     }
 
-    const _document = documentResults[0];
+    const document = documentResults[0];
 
-    // Fetch the document participants
+    // Fetch the document participants ordered by signing order
     const participants = await db
       .select()
       .from(documentParticipants)
-      .where(eq(documentParticipants.documentId, documentId));
+      .where(eq(documentParticipants.documentId, documentId))
+      .orderBy(asc(documentParticipants.signingOrder));
 
     if (participants.length === 0) {
       return new NextResponse(JSON.stringify({ error: 'No recipients found for this document' }), { status: 400 });
     }
 
-    // Update the document's updated_at timestamp
+    // Create signature requests for each signer
+    const signatureRequestIds: string[] = [];
+    const accessTokens: Record<string, string> = {};
+
+    for (const participant of participants) {
+      if (participant.accessLevel === 'SIGNER') {
+        // Generate a secure access token for this participant
+        const accessToken = crypto.randomUUID();
+        accessTokens[participant.id] = accessToken;
+
+        // Create signature request with access token
+        await db.insert(signatureRequests).values({
+          id: crypto.randomUUID(),
+          documentId,
+          participantId: participant.id,
+          status: 'PENDING',
+          signatureType: 'ELECTRONIC',
+          accessToken, // Store the token for verification
+          requestedAt: new Date(),
+        });
+
+        signatureRequestIds.push(participant.id);
+      }
+    }
+
+    // Update document status to PENDING
     await db
       .update(documents)
       .set({
-        updatedAt: new Date(), // This maps to updated_at in the database
+        updatedAt: new Date(),
       })
       .where(eq(documents.id, documentId));
 
-    // In a real implementation, we would now:
-    // 1. Send emails to recipients based on the signing order
-    // 2. Update participant status
-    // 3. Create audit logs
-    // 4. Generate document access tokens
+    // Create audit log entry
+    await db.insert(documentAuditLog).values({
+      id: crypto.randomUUID(),
+      documentId,
+      userId: session.user.id,
+      action: 'DOCUMENT_SENT',
+      details: {
+        recipientCount: participants.length,
+        signerCount: signatureRequestIds.length,
+        emailSubject,
+      },
+      createdAt: new Date(),
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    });
 
-    // For now, we'll just return success
+    // Send emails to recipients based on signing order
+    // For sequential signing, only send to signingOrder 0
+    // For parallel signing, send to all
+    const recipientsToNotify = participants.filter((p) => p.signingOrder === 0);
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    let emailsSent = 0;
+
+    for (const participant of recipientsToNotify) {
+      if (participant.accessLevel === 'SIGNER') {
+        // Fetch user information for this participant
+        const recipientUser = await db.query.users.findFirst({
+          where: (users, { eq }) => eq(users.id, participant.userId),
+        });
+
+        if (!recipientUser || !recipientUser.email) {
+          logger.warn('Participant user not found or has no email', { participantId: participant.id });
+          continue;
+        }
+
+        const accessToken = accessTokens[participant.id];
+        const signingUrl = `${appUrl}/sign/${accessToken}`;
+
+        const emailHtml = generateSigningEmail({
+          recipientName: recipientUser.name || recipientUser.email,
+          senderName: session.user.name || 'A user',
+          documentName: document.name,
+          signingUrl,
+          message: emailMessage,
+          expiresAt: document.expiresAt || undefined,
+        });
+
+        const emailSent = await sendEmail({
+          to: recipientUser.email,
+          subject: emailSubject || 'Please sign this document',
+          html: emailHtml,
+        });
+
+        if (emailSent) {
+          emailsSent++;
+
+          // Track notification
+          await db.insert(documentNotifications).values({
+            id: crypto.randomUUID(),
+            documentId,
+            recipientEmail: recipientUser.email,
+            notificationType: 'SIGNATURE_REQUEST',
+            sentAt: new Date(),
+            isDelivered: true,
+            deliveredAt: new Date(),
+          });
+        } else {
+          logger.warn('Failed to send email to participant', { participantId: participant.id });
+
+          // Track failed notification
+          await db.insert(documentNotifications).values({
+            id: crypto.randomUUID(),
+            documentId,
+            recipientEmail: recipientUser.email,
+            notificationType: 'SIGNATURE_REQUEST',
+            sentAt: new Date(),
+            isDelivered: false,
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Document sent successfully',
       documentId,
       recipientCount: participants.length,
+      emailsSent,
+      accessTokens, // Return tokens for testing purposes (remove in production)
     });
   } catch (error) {
     console.error('Error sending document:', error);

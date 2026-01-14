@@ -10,7 +10,7 @@ export type RecipientRole = 'signer' | 'viewer' | 'cc';
 export type FieldType = 'signature' | 'initial' | 'date' | 'text' | 'checkbox' | 'dropdown';
 
 export type Document = {
-  id?: string;
+  id?: string; // Database document ID after saving
   title: string;
   file?: File;
   url?: string;
@@ -70,6 +70,7 @@ export type DocumentFlowState = {
 export type DocumentFlowAction =
   | { type: 'SET_STEP'; payload: number }
   | { type: 'SET_DOCUMENT'; payload: Partial<Document> }
+  | { type: 'SET_DOCUMENT_ID'; payload: string }
   | { type: 'ADD_RECIPIENT'; payload: Recipient }
   | {
       type: 'UPDATE_RECIPIENT';
@@ -128,6 +129,15 @@ export const documentFlowReducer = (state: DocumentFlowState, action: DocumentFl
         document: {
           ...state.document,
           ...action.payload,
+        },
+      };
+
+    case 'SET_DOCUMENT_ID':
+      return {
+        ...state,
+        document: {
+          ...state.document,
+          id: action.payload,
         },
       };
 

@@ -8,28 +8,84 @@ interface EmailOptions {
 }
 
 /**
- * Send email using SendGrid
- * Note: SendGrid account needs to be active for this to work
+ * Send email using Resend or SendGrid (Resend preferred)
+ * Automatically detects which service is configured
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   const { to, subject, html, from } = options;
 
-  // Check if SendGrid is configured
+  const resendKey = process.env.RESEND_KEY;
   const sendGridKey = process.env.AUTH_SENDGRID_KEY;
-  const emailFrom = from || process.env.EMAIL_FROM;
+  const emailFrom = from || process.env.EMAIL_FROM || 'noreply@nutrient.io';
 
-  if (!sendGridKey || !emailFrom) {
-    logger.warn('SendGrid not configured - email not sent', { to, subject });
-    return false;
+  // Prefer Resend if configured
+  if (resendKey) {
+    return sendEmailViaResend({ to, subject, html, from: emailFrom }, resendKey);
   }
 
+  // Fall back to SendGrid
+  if (sendGridKey) {
+    return sendEmailViaSendGrid({ to, subject, html, from: emailFrom }, sendGridKey);
+  }
+
+  logger.warn('No email service configured - email not sent', { to, subject });
+  return false;
+}
+
+/**
+ * Send email via Resend API
+ */
+async function sendEmailViaResend(
+  options: EmailOptions & { from: string },
+  apiKey: string,
+): Promise<boolean> {
+  const { to, subject, html, from } = options;
+
   try {
-    // SendGrid API v3
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Resend API error', new Error(errorText));
+      return false;
+    }
+
+    const result = await response.json();
+    logger.info('Email sent successfully via Resend', { to, subject, emailId: result.id });
+    return true;
+  } catch (error) {
+    logger.error('Error sending email via Resend', error);
+    return false;
+  }
+}
+
+/**
+ * Send email via SendGrid API
+ */
+async function sendEmailViaSendGrid(
+  options: EmailOptions & { from: string },
+  apiKey: string,
+): Promise<boolean> {
+  const { to, subject, html, from } = options;
+
+  try {
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${sendGridKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         personalizations: [
@@ -38,7 +94,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
             subject,
           },
         ],
-        from: { email: emailFrom },
+        from: { email: from },
         content: [
           {
             type: 'text/html',
@@ -54,10 +110,10 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       return false;
     }
 
-    logger.info('Email sent successfully', { to, subject });
+    logger.info('Email sent successfully via SendGrid', { to, subject });
     return true;
   } catch (error) {
-    logger.error('Error sending email', error);
+    logger.error('Error sending email via SendGrid', error);
     return false;
   }
 }

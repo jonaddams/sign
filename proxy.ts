@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-export async function middleware(_request: NextRequest) {
+export async function proxy(_request: NextRequest) {
   // Add cache control headers to prevent caching of dynamic pages
   const response = NextResponse.next();
 
@@ -14,6 +14,6 @@ export async function middleware(_request: NextRequest) {
 
 export const config = {
   // Apply cache headers to all routes except static files
-  // Note: Authentication is now handled by (protected) layout, not middleware
+  // Note: Authentication is now handled by (protected) layout, not proxy
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

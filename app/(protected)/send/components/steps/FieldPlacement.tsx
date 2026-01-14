@@ -1105,6 +1105,12 @@ function FieldPlacementContent({
     // Skip if no proxy URL or not mounted
     if (!mounted || !proxyUrl) return;
 
+    // CRITICAL: Skip if viewer is already loaded to prevent re-initialization
+    if (isViewerLoaded) {
+      console.log('Viewer already loaded, skipping re-initialization');
+      return;
+    }
+
     // Get the appropriate container based on view mode
     const container = isMobile ? mobileContainerRef.current : desktopContainerRef.current;
 
@@ -1114,18 +1120,6 @@ function FieldPlacementContent({
     if (container && nutrientSDK.current) {
       console.log(`Loading viewer in ${isMobile ? 'mobile' : 'desktop'} mode with proxy URL:`, proxyUrl);
       setIsLoading(true);
-
-      // First, clean up any existing viewer instance
-      if (isViewerLoaded) {
-        console.log(`Unloading existing viewer before loading in ${isMobile ? 'mobile' : 'desktop'} mode`);
-        if (desktopContainerRef.current) {
-          safeUnloadViewer(desktopContainerRef.current);
-        }
-        if (mobileContainerRef.current) {
-          safeUnloadViewer(mobileContainerRef.current);
-        }
-        setIsViewerLoaded(false);
-      }
 
       // Define toolbar items - use a more minimal toolbar for mobile
       const toolBarItems = isMobile
@@ -1143,6 +1137,17 @@ function FieldPlacementContent({
 
       try {
         console.log('Creating NutrientViewer instance');
+        console.log('Container element:', container);
+        console.log('Initial child count:', container.childNodes.length);
+        console.log('Child nodes:', Array.from(container.childNodes));
+
+        // CRITICAL: Ensure container is completely empty before loading
+        // Remove any React-generated nodes, comments, or whitespace
+        while (container.firstChild) {
+          console.log('Removing child:', container.firstChild);
+          container.removeChild(container.firstChild);
+        }
+        console.log('Container cleared, final child count:', container.childNodes.length);
 
         // Load the viewer using the same pattern as in pdf-viewer.jsx
         safeLoadViewer({
@@ -1240,18 +1245,11 @@ function FieldPlacementContent({
                   const fieldWidth = fieldType === 'initials' ? 100 : 200;
                   const fieldHeight = 50;
 
-                  // Adjust drop position based on the offset where the user grabbed the element
-                  // This is where we use the more reliable percentage approach
-                  // Calculate the correct drop position by accounting for the grab offset
-                  const adjustedDropX = event.clientX - offsetXPercent * fieldWidth;
-                  const adjustedDropY = event.clientY - offsetYPercent * fieldHeight;
-
-                  console.log('Adjusted drop position:', { adjustedDropX, adjustedDropY });
-
-                  // Create a client rect for where we want to place the field
+                  // Center the field at the cursor position (like the demo)
+                  // This is simpler and more reliable than offset calculations
                   const clientRect = new nutrientRuntime.Geometry.Rect({
-                    left: adjustedDropX,
-                    top: adjustedDropY,
+                    left: event.clientX - fieldWidth / 2,
+                    top: event.clientY - fieldHeight / 2,
                     width: fieldWidth,
                     height: fieldHeight,
                   });
@@ -1850,17 +1848,18 @@ function FieldPlacementContent({
       }
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Note: Intentionally minimal dependencies to prevent re-initialization
+    // - fieldPlacements.find/findIndex omitted (function refs change)
+    // - currentRecipient omitted (handled via custom renderers update)
+    // - recipientColors omitted (object ref changes)
+    // - signerRecipients omitted (array ref changes)
+    // - isViewerLoaded omitted (would cause loop when set to true)
+    // - updateFieldCount omitted (function ref changes)
   }, [
     proxyUrl,
     mounted,
     isMobile,
-    currentRecipient,
-    fieldPlacements.find,
-    fieldPlacements.findIndex,
-    isViewerLoaded,
-    recipientColors,
-    signerRecipients,
-    updateFieldCount,
   ]);
 
   // Toggle form placement mode when the switch changes

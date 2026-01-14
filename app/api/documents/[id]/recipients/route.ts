@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
+import { users } from '@/database/drizzle/auth-schema';
 import { documentParticipants, documents } from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
@@ -33,13 +34,45 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Create participant records for each recipient
     const createdParticipants = [];
     for (const recipient of recipients) {
+      let recipientUserId = recipient.userId;
+
+      // If no userId provided, try to find or create a user by email
+      if (!recipientUserId && recipient.email) {
+        // Try to find existing user by email
+        const existingUser = await db.query.users.findFirst({
+          where: (users, { eq }) => eq(users.email, recipient.email),
+        });
+
+        if (existingUser) {
+          recipientUserId = existingUser.id;
+        } else {
+          // Create a placeholder user for this email
+          const newUser = await db
+            .insert(users)
+            .values({
+              id: crypto.randomUUID(),
+              email: recipient.email,
+              name: recipient.name || recipient.email,
+              emailVerified: null,
+            })
+            .returning();
+
+          recipientUserId = newUser[0].id;
+        }
+      }
+
+      // Fallback to session user if still no userId
+      if (!recipientUserId) {
+        recipientUserId = session.user.id;
+      }
+
       const participant = await db
         .insert(documentParticipants)
         .values({
           id: crypto.randomUUID(),
           documentId,
-          userId: recipient.userId || session.user.id, // Use session user if not provided
-          accessLevel: recipient.role === 'viewer' ? 'VIEWER' : recipient.role === 'editor' ? 'EDITOR' : 'SIGNER',
+          userId: recipientUserId,
+          accessLevel: recipient.accessLevel || (recipient.role === 'viewer' ? 'VIEWER' : recipient.role === 'editor' ? 'EDITOR' : 'SIGNER'),
           signingOrder: recipient.signingOrder || 0,
           isRequired: recipient.isRequired !== false,
         })

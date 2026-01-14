@@ -75,6 +75,12 @@ export function safeUnloadViewer(container: HTMLElement | null): void {
   if (typeof window.NutrientViewer.unload === 'function') {
     window.NutrientViewer.unload(container);
   }
+
+  // Ensure container is completely empty after unload
+  // This prevents "container is not empty" errors on reload
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
 }
 
 /**
@@ -91,6 +97,13 @@ export function safeLoadViewer(options: {
 }): Promise<any> {
   if (typeof window === 'undefined' || !window.NutrientViewer) {
     return Promise.reject(new Error('Nutrient Viewer not available'));
+  }
+
+  // Ensure container is completely empty before loading
+  // This prevents "container is not empty" errors
+  const container = options.container;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
   }
 
   if (typeof window.NutrientViewer.load === 'function') {

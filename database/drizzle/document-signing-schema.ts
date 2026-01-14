@@ -93,6 +93,9 @@ export const signatureRequests = pgTable('signature_requests', {
   requestedAt: timestamp('requested_at', { mode: 'date' }).defaultNow(),
   signedAt: timestamp('signed_at', { mode: 'date' }),
 
+  // Secure access token for signing (used in email links)
+  accessToken: text('access_token').unique(),
+
   digitalSignatureHash: text('digital_signature_hash'),
   signatureCertificatePath: text('signature_certificate_path'),
 });

@@ -84,6 +84,110 @@ function DocumentFlowContent({ children }: { children: (state: any) => React.Rea
     }
   };
 
+  // Function to create document in database
+  const createDocument = async () => {
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: state.document.title,
+          documentFilePath: state.document.url,
+          templateId: state.document.templateId,
+          expiresAt: state.document.expiresAt?.toISOString(),
+          size: state.document.fileSize,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create document');
+      }
+
+      const { document } = await response.json();
+
+      // Save document ID to state
+      dispatch({ type: 'SET_DOCUMENT_ID', payload: document.id });
+
+      return document.id;
+    } catch (error) {
+      console.error('Error creating document:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create document. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  // Function to save recipients to database
+  const saveRecipients = async () => {
+    if (!state.document.id) {
+      console.error('Cannot save recipients: document ID is missing');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/documents/${state.document.id}/recipients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: state.recipients.map((r) => ({
+            name: r.name,
+            email: r.email,
+            accessLevel: r.role.toUpperCase(),
+            signingOrder: state.signingOrder === 'sequential' ? r.signingOrder : 0,
+            isRequired: r.role === 'signer',
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save recipients');
+      }
+    } catch (error) {
+      console.error('Error saving recipients:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save recipients. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  // Function to save field annotations to database
+  const saveFieldAnnotations = async () => {
+    if (!state.document.id) {
+      console.error('Cannot save fields: document ID is missing');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/documents/${state.document.id}/fields`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          annotationData: {
+            fields: state.fields,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save field annotations');
+      }
+    } catch (error) {
+      console.error('Error saving field annotations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save field placements. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   // Function to handle moving to the next step
   const handleNext = async () => {
     if (state.currentStep === state.totalSteps) {
@@ -91,9 +195,39 @@ function DocumentFlowContent({ children }: { children: (state: any) => React.Rea
       // No need to do anything special here, just let the UI component handle it
       return;
     } else if (canMoveForward()) {
-      // If moving from step 1 and user wants to save as template
-      if (state.currentStep === 1 && state.document.saveAsTemplate) {
-        await saveAsTemplate();
+      // If moving from step 1, create the document in the database
+      if (state.currentStep === 1 && !state.document.id) {
+        try {
+          await createDocument();
+
+          // If user wants to save as template, do that too
+          if (state.document.saveAsTemplate) {
+            await saveAsTemplate();
+          }
+        } catch {
+          // Don't proceed if document creation failed
+          return;
+        }
+      }
+
+      // If moving from step 2, save recipients to the database
+      if (state.currentStep === 2) {
+        try {
+          await saveRecipients();
+        } catch {
+          // Don't proceed if recipient saving failed
+          return;
+        }
+      }
+
+      // If moving from step 3, save field annotations to the database
+      if (state.currentStep === 3) {
+        try {
+          await saveFieldAnnotations();
+        } catch {
+          // Don't proceed if field annotation saving failed
+          return;
+        }
       }
 
       // Move to the next step
