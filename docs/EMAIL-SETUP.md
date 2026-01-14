@@ -15,9 +15,9 @@ This document covers the email configuration for Nutrient Sign using Resend.
 
 ### 1. Get Your API Key
 
-You already have this configured:
+Get your API key from [Resend Dashboard](https://resend.com/api-keys):
 ```bash
-RESEND_KEY="re_8U4QD3XL_KoRM6cgfs6W3VdP4ctDHViJE"
+RESEND_KEY="<your-resend-api-key>"
 ```
 
 ### 2. Set Sender Email

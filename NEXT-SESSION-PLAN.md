@@ -40,7 +40,7 @@
 
 **Configuration:**
 ```bash
-RESEND_KEY=re_8U4QD3XL_KoRM6cgfs6W3VdP4ctDHViJE
+RESEND_KEY=<your-resend-api-key>
 EMAIL_FROM=onboarding@resend.dev
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
@@ -357,7 +357,7 @@ const documentsToSign = await db
 **Vercel Environment Variables:**
 ```bash
 # Add to Vercel Dashboard
-RESEND_KEY=re_8U4QD3XL_KoRM6cgfs6W3VdP4ctDHViJE
+RESEND_KEY=<your-resend-api-key>
 EMAIL_FROM=onboarding@resend.dev
 NEXT_PUBLIC_APP_URL=https://sign-sage.vercel.app
 

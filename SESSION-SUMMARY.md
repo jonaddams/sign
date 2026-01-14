@@ -60,7 +60,7 @@ Successfully completed Phases 1-3 of the implementation plan from [NEXT-SESSION-
 
 **Configuration:**
 ```bash
-RESEND_KEY=re_8U4QD3XL_KoRM6cgfs6W3VdP4ctDHViJE
+RESEND_KEY=<your-resend-api-key>
 EMAIL_FROM=onboarding@resend.dev
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
