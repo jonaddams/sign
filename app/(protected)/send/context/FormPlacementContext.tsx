@@ -59,7 +59,9 @@ export const FormPlacementProvider: React.FC<{
   children: React.ReactNode;
   recipients: Recipient[];
   userWillSign?: boolean;
-}> = ({ children, recipients, userWillSign = false }) => {
+  userDisplayName?: string;
+  userEmail?: string;
+}> = ({ children, recipients, userWillSign = false, userDisplayName, userEmail }) => {
   const { session } = useSession();
   const [formPlacementMode, setFormPlacementMode] = useState(false);
   const [currentRecipientIndex, setCurrentRecipientIndex] = useState(0);
@@ -69,13 +71,37 @@ export const FormPlacementProvider: React.FC<{
     [email: string]: { signature: number; initials: number; date: number };
   }>({});
 
+  // Determine current user info - prefer passed props, fallback to session
+  const currentUserEmail = userEmail || session?.user?.email;
+  const currentUserName = userDisplayName || session?.user?.name || 'Me (Current User)';
+
+  // Create a placeholder email if needed (for "I am the only signer" scenarios without session)
+  // This ensures the signer list is populated even when session isn't available
+  const effectiveEmail = currentUserEmail ||
+    (userWillSign && currentUserName
+      ? `${currentUserName.toLowerCase().replace(/\s+/g, '.')}@placeholder.local`
+      : undefined);
+
   // Filter signer recipients and add current user if they will sign
   const signerRecipients = [
-    ...(userWillSign && session?.user
-      ? [{ email: session.user.email, name: session.user.name || 'Me (Current User)', role: 'signer' } as Recipient]
+    ...(userWillSign && (effectiveEmail || currentUserName)
+      ? [{
+          email: effectiveEmail || 'current.user@placeholder.local',
+          name: currentUserName,
+          role: 'signer'
+        } as Recipient]
       : []),
     ...recipients.filter((r) => r.role === 'signer'),
   ];
+
+  console.log('[FormPlacementContext] Computed signers:', {
+    userWillSign,
+    hasSession: !!session,
+    sessionUser: session?.user,
+    recipientsCount: recipients.length,
+    signerRecipientsCount: signerRecipients.length,
+    signerRecipients
+  });
 
   // Get current recipient
   const currentRecipient = signerRecipients.length > 0 ? signerRecipients[currentRecipientIndex] : null;

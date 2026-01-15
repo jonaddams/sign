@@ -30,6 +30,7 @@ import {
 import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { FormPlacementContext, FormPlacementProvider } from '../../context/FormPlacementContext';
 import RecipientDropdown from './RecipientDropdown';
+import { useSession } from '@/contexts/session-context';
 
 // Import the custom CSS for field styling
 import '@/public/styles/custom-fields.css';
@@ -630,49 +631,56 @@ const getAnnotationRenderers =
       console.log(`[FIELD-DEBUG] Field name has insufficient parts for recipient extraction: ${annotation.name}`);
     }
 
-    // Create a div to hold our custom field
+    // Create a div to hold our custom field (matching simple-signing-demo style)
     const div = document.createElement('div');
-    div.className = 'custom-field-container';
+    div.className = 'custom-signature-field unsigned-field';
 
-    // Add background color based on recipient's color
-    const fieldColor =
-      recipientEmail && recipientColors[recipientEmail] ? recipientColors[recipientEmail] : 'hsl(210, 65%, 85%)'; // Default color if none assigned
+    // Get recipient's color or use default
+    const signerColor = recipientEmail && recipientColors[recipientEmail]
+      ? recipientColors[recipientEmail]
+      : '#4A90E2'; // Default blue
 
-    // Apply color with better visual differentiation
-    // Use solid colors for better visibility
-    div.style.borderColor = fieldColor;
-    div.style.backgroundColor = fieldColor;
+    // Determine field type from annotation name
+    const fieldType = annotation.name.startsWith('signature') ? 'signature'
+      : annotation.name.startsWith('initials') ? 'initial'
+      : annotation.name.startsWith('date') ? 'date'
+      : 'signature';
 
-    // Determine if this is the current recipient's field
-    const isCurrentRecipientField = currentRecipient && recipientEmail === currentRecipient.email;
-
-    // Add a highlight effect for the current recipient's fields
-    if (isCurrentRecipientField) {
-      div.classList.add('current-recipient-field');
-    }
-
-    // Field type icon and label
-    let icon = '/signature.svg';
-    let fieldTypeLabel = 'Signature';
-
-    if (annotation.name.startsWith('initials')) {
-      icon = '/file-icons/initials-icon.svg';
-      fieldTypeLabel = 'Initials';
-    } else if (annotation.name.startsWith('date')) {
-      icon = '/file-icons/date-icon.svg';
-      fieldTypeLabel = 'Date';
-    }
-
-    // Add recipient label and icon with optional badge
-    div.innerHTML = `
-      <div class="custom-field-recipient">
-        ${recipientName}
-      </div>
-      ${isCurrentRecipientField ? '<div class="current-badge">C</div>' : ''}
-      <div class="custom-field-type">
-        <img class="custom-field-icon" src="${icon}" alt="${fieldTypeLabel}" />
-      </div>
+    // Apply styling matching simple-signing-demo
+    div.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: 2px solid ${signerColor};
+      background-color: ${signerColor}15;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: ${fieldType === 'date' ? '#999' : '#333'};
+      cursor: pointer;
+      user-select: none;
+      pointer-events: none;
     `;
+
+    // Display text based on field type
+    let displayText = '';
+    if (fieldType === 'initial') {
+      // Show initials (first letter of each name part, uppercase)
+      displayText = recipientName
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase();
+    } else if (fieldType === 'date') {
+      displayText = 'mm/dd/yyyy'; // Show date format placeholder
+    } else {
+      // Signature - show full name
+      displayText = recipientName;
+    }
+
+    div.textContent = displayText;
 
     // Return the custom renderer configuration
     return {
@@ -852,15 +860,31 @@ export default function FieldPlacement() {
     dispatch: () => {},
   };
 
+  // Get session to access current user email
+  const { session } = useSession();
+
   // Define a local useState for form placement mode to ensure it's always functional
   const [localFormPlacementMode, setLocalFormPlacementMode] = useState(false);
 
   // Extract recipients from the document flow state
   const recipients = state.recipients || [];
 
+  console.log('[FieldPlacement] Provider props:', {
+    recipientsCount: recipients.length,
+    userWillSign: state.userWillSign,
+    userDisplayName: state.userDisplayName,
+    sessionEmail: session?.user?.email,
+    recipients: recipients
+  });
+
   // Wrap the component content with the FormPlacementProvider to ensure context is available
   return (
-    <FormPlacementProvider recipients={recipients} userWillSign={state.userWillSign}>
+    <FormPlacementProvider
+      recipients={recipients}
+      userWillSign={state.userWillSign}
+      userDisplayName={state.userDisplayName}
+      userEmail={session?.user?.email}
+    >
       <FieldPlacementContent
         localMode={localFormPlacementMode}
         setLocalMode={setLocalFormPlacementMode}
@@ -908,6 +932,16 @@ function FieldPlacementContent({
     signersWithoutSignatures,
     recipientHasSignature,
   } = useContext(FormPlacementContext);
+
+  // Store current recipient index in a ref so event handlers always get latest value
+  const currentRecipientIndexRef = useRef(currentRecipientIndex);
+  const signerRecipientsRef = useRef(signerRecipients);
+
+  // Keep refs updated
+  useEffect(() => {
+    currentRecipientIndexRef.current = currentRecipientIndex;
+    signerRecipientsRef.current = signerRecipients;
+  }, [currentRecipientIndex, signerRecipients]);
 
   // Synchronize local mode state with context - always in edit mode
   useEffect(() => {
@@ -1193,7 +1227,7 @@ function FieldPlacementContent({
               event.preventDefault();
             });
 
-            instance.contentDocument.addEventListener('drop', (event: any) => {
+            instance.contentDocument.addEventListener('drop', async (event: any) => {
               // These are critical to make drop work
               event.preventDefault();
               event.stopPropagation();
@@ -1209,59 +1243,101 @@ function FieldPlacementContent({
                 return;
               }
 
-              // Get the drag offsets to adjust placement
-              const offsetXStr = event.dataTransfer.getData('offsetX') || '0';
-              const offsetYStr = event.dataTransfer.getData('offsetY') || '0';
-              const offsetXPercentStr = event.dataTransfer.getData('offsetXPercent') || '0.5';
-              const offsetYPercentStr = event.dataTransfer.getData('offsetYPercent') || '0.5';
-              const elementWidthStr = event.dataTransfer.getData('elementWidth') || '0';
-              const elementHeightStr = event.dataTransfer.getData('elementHeight') || '0';
+              // Get the drag offset data (where user grabbed the draggable)
+              const offsetXPercent = parseFloat(event.dataTransfer.getData('offsetXPercent') || '0.5');
+              const offsetYPercent = parseFloat(event.dataTransfer.getData('offsetYPercent') || '0.5');
+              console.log('Grab offsets:', { offsetXPercent, offsetYPercent });
 
-              // Convert to numbers
-              const offsetX = parseFloat(offsetXStr);
-              const offsetY = parseFloat(offsetYStr);
-              const offsetXPercent = parseFloat(offsetXPercentStr);
-              const offsetYPercent = parseFloat(offsetYPercentStr);
-              const _elementWidth = parseFloat(elementWidthStr);
-              const _elementHeight = parseFloat(elementHeightStr);
-
-              console.log('Drop offsets:', { offsetX, offsetY, offsetXPercent, offsetYPercent });
+              // Get runtime
+              const nutrientRuntime = getNutrientViewerRuntime();
+              if (!nutrientRuntime) {
+                console.error('NutrientRuntime not available');
+                return;
+              }
 
               // Find the page element under the drop
-              const pageElement = closestByClass(event.target, 'PSPDFKit-Page');
-              if (pageElement) {
-                const pageIndex = parseInt(pageElement.dataset.pageIndex || '0', 10);
-                console.log('Dropped on page element:', pageElement, 'Page index:', pageIndex);
+              let pageElement = closestByClass(event.target, 'PSPDFKit-Page');
+              if (!pageElement) {
+                pageElement = closestByClass(event.target, 'pspdfkit-page');
+              }
 
-                // Get runtime
-                const nutrientRuntime = getNutrientViewerRuntime();
-                if (!nutrientRuntime) {
-                  console.error('NutrientRuntime not available');
+              if (!pageElement) {
+                console.warn('No page element found at drop position');
+                return;
+              }
+
+              const pageIndex = parseInt((pageElement as HTMLElement).dataset.pageIndex || '0', 10);
+              console.log('Dropped on page:', pageIndex);
+
+              try {
+                // Get dimensions for the field based on type
+                const fieldWidth = fieldType === 'initials' ? 80 : 150;
+                const fieldHeight = fieldType === 'initials' ? 40 : 50;
+
+                console.log('Event client position:', { x: event.clientX, y: event.clientY });
+
+                // Get page info and calculate manual transformation
+                const pageInfo = await instance.pageInfoForIndex(pageIndex);
+                if (!pageInfo) {
+                  console.error('Could not get page info');
                   return;
                 }
 
-                try {
-                  // Get dimensions for the field based on type
-                  const fieldWidth = fieldType === 'initials' ? 100 : 200;
-                  const fieldHeight = 50;
+                const pageRect = pageElement.getBoundingClientRect();
+                console.log('Page element rect:', {
+                  left: pageRect.left,
+                  top: pageRect.top,
+                  width: pageRect.width,
+                  height: pageRect.height
+                });
 
-                  // Center the field at the cursor position (like the demo)
-                  // This is simpler and more reliable than offset calculations
-                  const clientRect = new nutrientRuntime.Geometry.Rect({
-                    left: event.clientX - fieldWidth / 2,
-                    top: event.clientY - fieldHeight / 2,
-                    width: fieldWidth,
-                    height: fieldHeight,
-                  });
+                // Calculate page-relative position
+                const pageRelativeX = event.clientX - pageRect.left;
+                const pageRelativeY = event.clientY - pageRect.top;
 
-                  console.log('Client rect:', clientRect);
+                // Calculate scale factors
+                const scaleX = pageInfo.width / pageRect.width;
+                const scaleY = pageInfo.height / pageRect.height;
+                console.log('Scale factors:', { scaleX, scaleY });
 
-                  // Convert client coordinates to PDF coordinates
-                  const transformedPageRect = instance.transformContentClientToPageSpace(clientRect, pageIndex);
-                  console.log('Transformed page rect:', transformedPageRect);
+                // Account for grab offset
+                const grabOffsetX = fieldWidth * offsetXPercent;
+                const grabOffsetY = fieldHeight * offsetYPercent;
+                console.log('Grab offset (pixels):', { x: grabOffsetX, y: grabOffsetY });
 
-                  // Create a unique field name that includes the recipient identifier
-                  const fieldName = createFieldName(fieldType, currentRecipient);
+                // Convert to PDF coordinates with grab offset
+                const pdfX = (pageRelativeX - grabOffsetX) * scaleX;
+                const pdfY = (pageRelativeY - grabOffsetY) * scaleY;
+                console.log('PDF position (top-left of field):', { x: pdfX, y: pdfY });
+
+                // Create bounding box in PDF coordinates
+                const transformedPageRect = new nutrientRuntime.Geometry.Rect({
+                  left: pdfX,
+                  top: pdfY,
+                  width: fieldWidth * scaleX,
+                  height: fieldHeight * scaleY,
+                });
+
+                console.log('Final bounding box (PDF coords):', {
+                  left: transformedPageRect.left,
+                  top: transformedPageRect.top,
+                  width: transformedPageRect.width,
+                  height: transformedPageRect.height
+                });
+
+                // Validate the transformed coordinates
+                if (!transformedPageRect || transformedPageRect.width <= 0 || transformedPageRect.height <= 0) {
+                  console.error('Invalid transformed rect:', transformedPageRect);
+                  return;
+                }
+
+                // Get the CURRENT recipient from ref (not closure-captured value)
+                const activeRecipient = signerRecipientsRef.current[currentRecipientIndexRef.current];
+                console.log('Active recipient (from ref):', activeRecipient);
+                console.log('Current recipient index (from ref):', currentRecipientIndexRef.current);
+
+                // Create a unique field name that includes the recipient identifier
+                const fieldName = createFieldName(fieldType, activeRecipient);
 
                   // Create widget annotation with typed SDK
                   const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
@@ -1322,7 +1398,7 @@ function FieldPlacementContent({
                             type: fieldType,
                             position: `(${Math.round(transformedPageRect.left)}, ${Math.round(transformedPageRect.top)})`,
                             name: fieldName,
-                            recipient: currentRecipient?.email,
+                            recipient: activeRecipient?.email,
                             pageIndex: pageIndex,
                             coordinates: {
                               x: Math.round(transformedPageRect.left),
@@ -1333,8 +1409,8 @@ function FieldPlacementContent({
                         ]);
 
                         // Update the recipient field count in context
-                        if (currentRecipient?.email) {
-                          updateFieldCount(currentRecipient.email, fieldType, true);
+                        if (activeRecipient?.email) {
+                          updateFieldCount(activeRecipient.email, fieldType, true);
                         }
                       })
                       .catch((error: any) => {
@@ -1344,10 +1420,7 @@ function FieldPlacementContent({
                 } catch (error) {
                   console.error('Error in form field creation:', error);
                 }
-              } else {
-                console.log('No page element found at drop position');
-              }
-            });
+              });
 
             setIsViewerLoaded(true);
             setIsLoading(false);
@@ -1856,11 +1929,7 @@ function FieldPlacementContent({
     // - signerRecipients omitted (array ref changes)
     // - isViewerLoaded omitted (would cause loop when set to true)
     // - updateFieldCount omitted (function ref changes)
-  }, [
-    proxyUrl,
-    mounted,
-    isMobile,
-  ]);
+  }, [proxyUrl, mounted, isMobile]);
 
   // Toggle form placement mode when the switch changes
   useEffect(() => {
@@ -1968,10 +2037,6 @@ function FieldPlacementContent({
         <div>
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold tracking-tight">Field Placement</h2>
-            <Badge variant="outline" className="ml-2 flex items-center gap-1">
-              <Tag className="h-3 w-3" />
-              <span>v1.3.1</span>
-            </Badge>
           </div>
           <p className="text-muted-foreground mt-2 text-sm">
             Drag fields onto the document where you want recipients to sign.
@@ -2077,10 +2142,12 @@ function FieldPlacementContent({
             <div className="w-64 shrink-0">
               <Card>
                 <CardContent className="pt-6 space-y-6">
-                  {/* Signer Dropdown */}
-                  {signerRecipients.length > 1 && (
+                  {/* Signer Selector - Show for all signers (DocuSign-style) */}
+                  {signerRecipients.length > 0 && (
                     <div className="space-y-2">
-                      <h3 className="font-medium mb-1">Select Signer</h3>
+                      <h3 className="font-medium mb-1">
+                        {signerRecipients.length > 1 ? 'Select Signer' : 'Placing Fields For'}
+                      </h3>
                       <RecipientDropdown />
                     </div>
                   )}
@@ -2099,118 +2166,108 @@ function FieldPlacementContent({
                   {fieldPlacements.length > 0 && (
                     <div className="space-y-2">
                       <h3 className="font-medium mb-1">Field Placements</h3>
-                      <div className="text-xs space-y-1 max-h-[250px] overflow-y-auto border border-gray-200 dark:border-zinc-700 rounded-md p-2">
-                        {fieldPlacements.map((field, i) => (
-                          <div
-                            id={`field-placement-${i}`}
-                            key={i}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded cursor-pointer flex items-center gap-2"
-                            onClick={() => {
-                              if (viewerInstanceRef.current) {
-                                console.log(`Focusing field: ${field.name}`);
-                                try {
-                                  // Focus the annotation in the viewer
-                                  const annotationElement = viewerInstanceRef.current.contentDocument.querySelector(
-                                    `.PSPDFKit-Annotation-Widget[name='${field.name}']`,
-                                  );
+                      <div className="space-y-1.5 max-h-[250px] overflow-y-auto border border-gray-200 dark:border-zinc-700 rounded-md p-2">
+                        {fieldPlacements.map((field, i) => {
+                          const fieldRecipient = signerRecipients.find((r) => r.email === field.recipient);
+                          const fieldColor = field.recipient && recipientColors[field.recipient]
+                            ? recipientColors[field.recipient]
+                            : '#4A90E2';
 
-                                  if (annotationElement) {
-                                    // Focus the element
-                                    (annotationElement as HTMLElement).focus();
-                                    // Scroll to it
-                                    annotationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    console.log('Annotation element focused:', annotationElement);
-                                  } else {
-                                    console.log(`Annotation element with name '${field.name}' not found`);
-                                  }
-                                } catch (error) {
-                                  console.error('Error focusing annotation:', error);
-                                }
-                              }
-                            }}
-                          >
-                            {/* Field type icon with signer color */}
+                          return (
                             <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                              id={`field-placement-${i}`}
+                              key={i}
+                              className="p-2 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded cursor-pointer border border-gray-200 dark:border-zinc-700 transition-colors"
                               style={{
-                                backgroundColor: field.recipient ? recipientColors[field.recipient] : 'cornflowerblue',
+                                borderLeftColor: fieldColor,
+                                borderLeftWidth: '3px'
+                              }}
+                              onClick={() => {
+                                if (viewerInstanceRef.current) {
+                                  try {
+                                    const annotationElement = viewerInstanceRef.current.contentDocument.querySelector(
+                                      `.PSPDFKit-Annotation-Widget[name='${field.name}']`,
+                                    );
+                                    if (annotationElement) {
+                                      (annotationElement as HTMLElement).focus();
+                                      annotationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }
+                                  } catch (error) {
+                                    console.error('Error focusing annotation:', error);
+                                  }
+                                }
                               }}
                             >
-                              {field.type === 'signature' && <Signature className="h-3 w-3 text-white" />}
-                              {field.type === 'initials' && <Edit className="h-3 w-3 text-white" />}
-                              {field.type === 'date' && <CalendarDays className="h-3 w-3 text-white" />}
-                            </div>
+                              <div className="flex items-center justify-between">
+                                {/* Left side - field type and signer */}
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {/* Field type icon */}
+                                  <div
+                                    className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+                                    style={{ backgroundColor: `${fieldColor}30` }}
+                                  >
+                                    {field.type === 'signature' && <Signature className="h-4 w-4" style={{ color: fieldColor }} />}
+                                    {field.type === 'initials' && <Edit className="h-4 w-4" style={{ color: fieldColor }} />}
+                                    {field.type === 'date' && <CalendarDays className="h-4 w-4" style={{ color: fieldColor }} />}
+                                  </div>
 
-                            {/* Field info */}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium">{field.type}</span>
-                                {field.recipient && (
-                                  <span className="bg-gray-100 dark:bg-zinc-700 text-xs px-1 rounded">
-                                    {signerRecipients
-                                      .find((r) => r.email === field.recipient)
-                                      ?.name.split(' ')[0]
-                                      .substring(0, 3)
-                                      .toUpperCase()}
-                                  </span>
-                                )}
-                                {field.id && (
-                                  <span className="text-xs text-gray-500">ID: {field.id.substring(0, 6)}</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {field.coordinates
-                                  ? `Page ${field.pageIndex! + 1} (${field.coordinates.x}, ${field.coordinates.y})`
-                                  : field.position}
-                              </div>
-                            </div>
+                                  {/* Field info */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm capitalize truncate">
+                                      {field.type} {fieldRecipient && (
+                                        <span className="font-normal text-gray-600 dark:text-gray-400">
+                                          {fieldRecipient.name.split(' ')[0]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      Page {field.pageIndex! + 1} ({field.coordinates?.x}, {field.coordinates?.y})
+                                    </div>
+                                  </div>
+                                </div>
 
-                            {/* Delete button */}
-                            <button
-                              className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent triggering parent onClick
-                                if (viewerInstanceRef.current && field.name) {
-                                  // Get runtime
-                                  const runtime = getNutrientViewerRuntime();
-                                  const instance = viewerInstanceRef.current;
+                                {/* Delete button */}
+                                <button
+                                  type="button"
+                                  className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1 flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (viewerInstanceRef.current && field.name) {
+                                      const runtime = getNutrientViewerRuntime();
+                                      const instance = viewerInstanceRef.current;
 
-                                  if (runtime && instance) {
-                                    console.log(`Deleting field: ${field.name}`);
+                                      if (runtime && instance) {
+                                        console.log(`Deleting field: ${field.name}`);
 
-                                    // Find the annotation by name
-                                    instance.getFormFields().then((formFields) => {
-                                      const formField = formFields.find((f: any) => f.name === field.name);
+                                        instance.getFormFields().then((formFields) => {
+                                          const formField = formFields.find((f: any) => f.name === field.name);
 
-                                      if (formField) {
-                                        // Get the annotation IDs
-                                        const annotationIds = formField.annotationIds?.toArray() || [];
-                                        console.log(`Found annotations to delete: ${annotationIds.join(', ')}`);
+                                          if (formField) {
+                                            const annotationIds = formField.annotationIds?.toArray() || [];
+                                            console.log(`Found annotations to delete: ${annotationIds.join(', ')}`);
 
-                                        // Delete the annotations
-                                        instance.delete(annotationIds).then(() => {
-                                          console.log(`Successfully deleted field: ${field.name}`);
+                                            instance.delete(annotationIds).then(() => {
+                                              console.log(`Successfully deleted field: ${field.name}`);
+                                              setFieldPlacements((prev) => prev.filter((f) => f.name !== field.name));
 
-                                          // Remove from field placements
-                                          setFieldPlacements((prev) => prev.filter((f) => f.name !== field.name));
-
-                                          // Update field count for the recipient
-                                          if (field.recipient) {
-                                            updateFieldCount(field.recipient, field.type, false);
+                                              if (field.recipient) {
+                                                updateFieldCount(field.recipient, field.type, false);
+                                              }
+                                            });
+                                          } else {
+                                            console.error(`Form field not found: ${field.name}`);
                                           }
                                         });
-                                      } else {
-                                        console.error(`Form field not found: ${field.name}`);
                                       }
-                                    });
-                                  }
-                                }
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
+                                    }
+                                  }}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

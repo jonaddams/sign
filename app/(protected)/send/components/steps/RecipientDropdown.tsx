@@ -8,11 +8,15 @@ const RecipientDropdown = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  if (signerRecipients.length <= 1) {
-    return null; // Don't show dropdown if there's only one recipient
+  // If no signers at all, don't show anything
+  if (signerRecipients.length === 0) {
+    return null;
   }
 
   const currentRecipient = signerRecipients[currentRecipientIndex];
+
+  // If there's only one signer, show a non-interactive display instead of dropdown
+  const isSingleSigner = signerRecipients.length === 1;
 
   // Function to create a solid background color from the recipient's color
   const _getRecipientBackgroundColor = (color: string | undefined): string => {
@@ -107,12 +111,8 @@ const RecipientDropdown = () => {
     <div className="relative">
       {/* Dropdown trigger - styled like FieldOption */}
       <div
-        className="flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 cursor-pointer"
-        // style={{
-        //   backgroundColor: getRecipientBackgroundColor(recipientColors[currentRecipient.email]),
-        //   borderColor: recipientColors[currentRecipient.email],
-        // }}
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className={`flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 ${isSingleSigner ? '' : 'cursor-pointer'}`}
+        onClick={() => !isSingleSigner && setIsDropdownOpen(!isDropdownOpen)}
       >
         <div className="flex items-center flex-1">
           <div
@@ -123,15 +123,20 @@ const RecipientDropdown = () => {
           >
             <User className="h-5 w-5 text-gray-950" />
           </div>
-          <span className="text-sm font-medium">{currentRecipient.name}</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">{currentRecipient.name}</span>
+            {isSingleSigner && <span className="text-xs text-gray-500 dark:text-gray-400">Only signer</span>}
+          </div>
         </div>
-        <div className="ml-2 p-0.5 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-          <ChevronDown className="h-3 w-3 text-gray-700 dark:text-gray-300" />
-        </div>
+        {!isSingleSigner && (
+          <div className="ml-2 p-0.5 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+            <ChevronDown className="h-3 w-3 text-gray-700 dark:text-gray-300" />
+          </div>
+        )}
       </div>
 
-      {/* Dropdown content */}
-      {isDropdownOpen && (
+      {/* Dropdown content - only show if multiple signers */}
+      {!isSingleSigner && isDropdownOpen && (
         <div
           className="absolute z-50 w-full mt-1 border-2 border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md shadow-lg max-h-64 overflow-y-auto"
           style={{

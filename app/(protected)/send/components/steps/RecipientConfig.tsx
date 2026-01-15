@@ -249,8 +249,8 @@ export default function RecipientConfig() {
             {/* User options */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <Checkbox id="user-will-sign" checked={state.userWillSign} onCheckedChange={toggleUserWillSign} />
-                <Label htmlFor="user-will-sign" className="font-medium">
+                <Checkbox id="user-will-sign" checked={state.userWillSign} onCheckedChange={toggleUserWillSign} className="cursor-pointer" />
+                <Label htmlFor="user-will-sign" className="font-medium cursor-pointer">
                   I will also sign this document
                 </Label>
               </div>
@@ -262,8 +262,9 @@ export default function RecipientConfig() {
                       id="only-signer"
                       checked={state.recipients.length === 0 && state.userWillSign && isOnlySigner}
                       onCheckedChange={toggleOnlySigner}
+                      className="cursor-pointer"
                     />
-                    <Label htmlFor="only-signer">I am the only signer</Label>
+                    <Label htmlFor="only-signer" className="cursor-pointer">I am the only signer</Label>
                   </div>
 
                   <div className="space-y-2">
@@ -479,7 +480,7 @@ export default function RecipientConfig() {
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-4"
+                className="mt-4 cursor-pointer"
                 onClick={addRecipient}
                 disabled={state.userWillSign && state.recipients.length === 0 && isOnlySigner}
               >
