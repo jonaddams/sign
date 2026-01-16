@@ -128,17 +128,34 @@ function DocumentFlowContent({ children }: { children: (state: any) => React.Rea
     }
 
     try {
+      // Build recipients list
+      let recipientsList = state.recipients.map((r) => ({
+        name: r.name,
+        email: r.email,
+        accessLevel: r.role.toUpperCase(),
+        signingOrder: state.signingOrder === 'sequential' ? r.signingOrder : 0,
+        isRequired: r.role === 'signer',
+      }));
+
+      // If user will sign and there are no other recipients (they're the only signer),
+      // add them as a recipient. The backend will use the session user's ID.
+      if (state.userWillSign && state.recipients.length === 0 && state.userDisplayName) {
+        recipientsList = [
+          {
+            name: state.userDisplayName,
+            email: '', // Empty email signals backend to use session user
+            accessLevel: 'SIGNER',
+            signingOrder: 0,
+            isRequired: true,
+          },
+        ];
+      }
+
       const response = await fetch(`/api/documents/${state.document.id}/recipients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipients: state.recipients.map((r) => ({
-            name: r.name,
-            email: r.email,
-            accessLevel: r.role.toUpperCase(),
-            signingOrder: state.signingOrder === 'sequential' ? r.signingOrder : 0,
-            isRequired: r.role === 'signer',
-          })),
+          recipients: recipientsList,
         }),
       });
 

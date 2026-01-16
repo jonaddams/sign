@@ -34,23 +34,15 @@ export default function NavigationControls({
         Back
       </Button>
 
-      <Button
-        onClick={onNext}
-        disabled={!canMoveForward || isSubmitting}
-        className="flex cursor-pointer items-center gap-2"
-      >
-        {isLastStep ? (
-          isSubmitting ? (
-            'Sending...'
-          ) : (
-            'Send Document'
-          )
-        ) : (
-          <>
-            Next <ArrowRight className="h-4 w-4" />
-          </>
-        )}
-      </Button>
+      {!isLastStep && (
+        <Button
+          onClick={onNext}
+          disabled={!canMoveForward || isSubmitting}
+          className="flex cursor-pointer items-center gap-2"
+        >
+          Next <ArrowRight className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }

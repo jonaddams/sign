@@ -988,6 +988,46 @@ function FieldPlacementContent({
     return () => setMounted(false);
   }, []);
 
+  // Sync fieldPlacements to DocumentFlowContext
+  useEffect(() => {
+    if (!documentDispatch || !mounted) return;
+
+    // Convert local fieldPlacements to DocumentFlowContext Field format
+    const contextFields = fieldPlacements.map((field) => {
+      // Find the recipient by email using the stable ref
+      const recipient = signerRecipientsRef.current.find((r) => r.email === field.recipient);
+
+      // Normalize field type: 'initials' -> 'initial'
+      const normalizedType = field.type === 'initials' ? 'initial' : field.type;
+
+      return {
+        id: field.id || field.name, // Use annotation ID or field name as ID
+        type: normalizedType as 'signature' | 'initial' | 'date' | 'text' | 'checkbox' | 'dropdown',
+        recipientId: recipient?.id || '', // Use recipient ID from context
+        position: {
+          x: field.coordinates?.x || 0,
+          y: field.coordinates?.y || 0,
+          page: field.pageIndex || 0,
+        },
+        size: {
+          width: 200, // Default width
+          height: 50, // Default height
+        },
+        required: true,
+        label: field.name,
+      };
+    });
+
+    // Update DocumentFlowContext with all fields at once
+    // Clear existing fields and add all new ones
+    documentDispatch({
+      type: 'SET_FIELDS',
+      payload: contextFields,
+    });
+
+    console.log(`[FieldPlacement] Synced ${contextFields.length} fields to DocumentFlowContext`);
+  }, [fieldPlacements, documentDispatch, mounted]);
+
   // Function to scan and refresh all form fields
   const _refreshFieldPlacements = useCallback(async () => {
     if (!viewerInstanceRef.current || !isViewerLoaded) return;

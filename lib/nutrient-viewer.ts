@@ -72,14 +72,24 @@ export function safeUnloadViewer(container: HTMLElement | null): void {
     return;
   }
 
-  if (typeof window.NutrientViewer.unload === 'function') {
-    window.NutrientViewer.unload(container);
+  try {
+    if (typeof window.NutrientViewer.unload === 'function') {
+      window.NutrientViewer.unload(container);
+    }
+  } catch (error) {
+    // Suppress Nutrient Viewer internal errors during unload
+    // These are often harmless and related to cleanup timing
+    console.warn('Nutrient Viewer unload warning (safe to ignore):', error);
   }
 
   // Ensure container is completely empty after unload
   // This prevents "container is not empty" errors on reload
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
+  try {
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+  } catch (error) {
+    console.warn('Container cleanup warning:', error);
   }
 }
 

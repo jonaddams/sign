@@ -22,7 +22,7 @@ export default function ReviewAndSend() {
   useEffect(() => {
     dispatch({
       type: 'VALIDATE_STEP',
-      payload: { step: 'step4Valid', isValid: true },
+      payload: { step: 'step5Valid', isValid: true },
     });
   }, [dispatch]);
 
@@ -36,7 +36,7 @@ export default function ReviewAndSend() {
       return;
     }
 
-    if (state.recipients.length === 0) {
+    if (state.recipients.length === 0 && !(state.userWillSign && state.userDisplayName)) {
       toast({
         title: 'No recipients',
         description: 'You must add at least one recipient before sending the document.',
@@ -159,7 +159,7 @@ export default function ReviewAndSend() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Recipients ({state.recipients.length})
+              Recipients ({state.userWillSign && state.recipients.length === 0 ? 1 : state.recipients.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -181,6 +181,18 @@ export default function ReviewAndSend() {
                     </div>
                   </li>
                 ))}
+              </ul>
+            ) : state.userWillSign && state.userDisplayName ? (
+              <ul className="space-y-4">
+                <li className="flex justify-between p-3 border rounded-md">
+                  <div>
+                    <div className="font-medium">{state.userDisplayName}</div>
+                    <div className="text-sm text-muted-foreground">You (only signer)</div>
+                    <Badge variant="outline" className="mt-1">
+                      Needs to sign
+                    </Badge>
+                  </div>
+                </li>
               </ul>
             ) : (
               <div className="text-muted-foreground text-center py-4">No recipients added</div>
@@ -228,7 +240,9 @@ export default function ReviewAndSend() {
 
                     return (
                       <div key={fieldType}>
-                        <dt className="text-sm font-medium text-muted-foreground capitalize">{fieldType} Fields</dt>
+                        <dt className="text-sm font-medium text-muted-foreground capitalize">
+                          {fieldType === 'initial' ? 'Initials' : fieldType} Fields
+                        </dt>
                         <dd className="mt-1">{count}</dd>
                       </div>
                     );
@@ -269,7 +283,7 @@ export default function ReviewAndSend() {
 
       {/* Action buttons */}
       <div className="flex justify-end gap-3 pt-4">
-        <Button size="lg" onClick={handleSendDocument} className="min-w-[120px]" disabled={isSending}>
+        <Button size="lg" onClick={handleSendDocument} className="min-w-[120px] cursor-pointer" disabled={isSending}>
           {isSending ? 'Sending...' : 'Send Document'}
         </Button>
       </div>

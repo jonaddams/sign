@@ -183,6 +183,12 @@ export const documentFlowReducer = (state: DocumentFlowState, action: DocumentFl
         fields: state.fields.filter((field) => field.id !== action.payload.id),
       };
 
+    case 'SET_FIELDS':
+      return {
+        ...state,
+        fields: action.payload,
+      };
+
     case 'SET_EMAIL':
       return {
         ...state,
