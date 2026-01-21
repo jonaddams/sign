@@ -22,14 +22,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Verify document exists and user owns it
-    const document = await db.query.documents.findFirst({
-      where: (documents, { and, eq }) =>
-        and(eq(documents.id, documentId), eq(documents.ownerId, session.user.id as string)),
-    });
+    const documentResults = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, documentId), eq(documents.ownerId, session.user.id)))
+      .limit(1);
 
-    if (!document) {
+    if (documentResults.length === 0) {
       return NextResponse.json({ error: 'Document not found or access denied' }, { status: 404 });
     }
+
+    // First, delete existing participants to allow re-configuration
+    await db
+      .delete(documentParticipants)
+      .where(eq(documentParticipants.documentId, documentId));
 
     // Create participant records for each recipient
     const createdParticipants = [];
@@ -39,12 +45,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // If no userId provided, try to find or create a user by email
       if (!recipientUserId && recipient.email) {
         // Try to find existing user by email
-        const existingUser = await db.query.users.findFirst({
-          where: (users, { eq }) => eq(users.email, recipient.email),
-        });
+        const existingUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, recipient.email))
+          .limit(1);
 
-        if (existingUser) {
-          recipientUserId = existingUser.id;
+        if (existingUsers.length > 0) {
+          recipientUserId = existingUsers[0].id;
         } else {
           // Create a placeholder user for this email
           const newUser = await db
@@ -100,20 +108,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id: documentId } = await params;
 
     // Verify document exists and user owns it
-    const document = await db.query.documents.findFirst({
-      where: (documents, { and, eq }) =>
-        and(eq(documents.id, documentId), eq(documents.ownerId, session.user.id as string)),
-    });
+    const documentResults = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, documentId), eq(documents.ownerId, session.user.id)))
+      .limit(1);
 
-    if (!document) {
+    if (documentResults.length === 0) {
       return NextResponse.json({ error: 'Document not found or access denied' }, { status: 404 });
     }
 
     // Get participants for this document
-    const participants = await db.query.documentParticipants.findMany({
-      where: (documentParticipants, { eq }) => eq(documentParticipants.documentId, documentId),
-      orderBy: (documentParticipants, { asc }) => [asc(documentParticipants.signingOrder)],
-    });
+    const participants = await db
+      .select()
+      .from(documentParticipants)
+      .where(eq(documentParticipants.documentId, documentId))
+      .orderBy(documentParticipants.signingOrder);
 
     return NextResponse.json({ participants });
   } catch (error) {

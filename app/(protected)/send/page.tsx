@@ -8,6 +8,7 @@ import EmailCustomization from './components/steps/EmailCustomization';
 import FieldPlacement from './components/steps/FieldPlacement';
 import RecipientConfig from './components/steps/RecipientConfig';
 import ReviewAndSend from './components/steps/ReviewAndSend';
+import { ViewerInstanceProvider } from './context/ViewerInstanceContext';
 
 // Send for Signature workflow page
 export default function SendPage() {
@@ -17,7 +18,8 @@ export default function SendPage() {
         title="Send for Signature"
         description="Upload a document or use a template to send for electronic signature"
       >
-        <DocumentFlow>
+        <ViewerInstanceProvider>
+          <DocumentFlow>
           {/* The Step content will be rendered by DocumentFlow based on the current step */}
           {(state) => {
             // Render the appropriate component based on the current step
@@ -37,6 +39,7 @@ export default function SendPage() {
             }
           }}
         </DocumentFlow>
+        </ViewerInstanceProvider>
       </PageContent>
     </PageLayout>
   );

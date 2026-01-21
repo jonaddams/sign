@@ -49,6 +49,12 @@ export const documents = pgTable('documents', {
 
   // Document expiration timestamp
   expiresAt: timestamp('expires_at', { mode: 'date' }),
+
+  // Document status tracking
+  status: documentStatus('status').default('DRAFT'),
+
+  // Soft delete timestamp
+  deletedAt: timestamp('deleted_at', { mode: 'date' }),
 });
 
 // Document Participants Table

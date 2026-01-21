@@ -1,8 +1,10 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/database/drizzle/drizzle';
+import { documents, documentParticipants } from '@/database/drizzle/document-signing-schema';
 import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
+import { eq, and, like } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,25 +26,38 @@ export async function GET(request: NextRequest) {
     // Fix double-encoding issue if present
     documentKey = decodeURIComponent(documentKey);
 
-    // Verify user owns this document by checking both templates and documents tables
-    const template = await db.query.documentTemplates.findFirst({
-      where: (documentTemplates, { and, eq, like }) =>
-        and(
-          eq(documentTemplates.creatorId, session.user.id as string),
-          like(documentTemplates.templateFilePath, `%${documentKey}`)
-        ),
-    });
+    // Find the document by file path
+    const documentResults = await db
+      .select()
+      .from(documents)
+      .where(like(documents.documentFilePath, `%${documentKey}`))
+      .limit(1);
 
-    const document = await db.query.documents.findFirst({
-      where: (documents, { and, eq, like }) =>
-        and(
-          eq(documents.ownerId, session.user.id as string),
-          like(documents.documentFilePath, `%${documentKey}`)
-        ),
-    });
+    if (documentResults.length === 0) {
+      return new Response('Document not found', { status: 404 });
+    }
 
-    if (!template && !document) {
-      return new Response('Forbidden - Document not found or access denied', { status: 403 });
+    const document = documentResults[0];
+
+    // Check if user has access: either owner OR participant
+    const isOwner = document.ownerId === session.user.id;
+
+    if (!isOwner) {
+      // Check if user is a participant
+      const participantResults = await db
+        .select()
+        .from(documentParticipants)
+        .where(
+          and(
+            eq(documentParticipants.documentId, document.id),
+            eq(documentParticipants.userId, session.user.id)
+          )
+        )
+        .limit(1);
+
+      if (participantResults.length === 0) {
+        return new Response('Forbidden - Access denied', { status: 403 });
+      }
     }
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;

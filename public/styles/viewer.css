@@ -62,3 +62,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Center text in date form fields */
+input[type="text"].PSPDFKit-Form-Input {
+  text-align: center !important;
+}
+
+/* Style date field inputs specifically */
+.PSPDFKit-Annotation-Widget input[type="text"] {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}

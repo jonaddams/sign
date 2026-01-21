@@ -8,6 +8,13 @@
       "when": 1745432429524,
       "tag": "0000_nebulous_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769023740060,
+      "tag": "0001_special_inhumans",
+      "breakpoints": true
     }
   ]
 }

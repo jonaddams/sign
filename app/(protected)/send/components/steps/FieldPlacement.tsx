@@ -31,15 +31,13 @@ import { useDocumentFlow } from '../../context/DocumentFlowContext';
 import { FormPlacementContext, FormPlacementProvider } from '../../context/FormPlacementContext';
 import RecipientDropdown from './RecipientDropdown';
 import { useSession } from '@/contexts/session-context';
+import { useViewerInstance } from '../../context/ViewerInstanceContext';
 
 // Import the custom CSS for field styling
 import '@/public/styles/custom-fields.css';
 
 // Define the instance type for local use
 type NutrientViewerInstance = NutrientViewerSDK.Instance;
-
-// Create a shared context for the viewer reference
-const ViewerContext = createContext<React.MutableRefObject<NutrientViewerInstance | null> | null>(null);
 
 interface FieldOptionProps {
   icon: React.ReactNode;
@@ -54,6 +52,11 @@ interface FieldPlacement {
   position: string;
   name: string; // Store the field name to find it in the DOM
   recipient?: string;
+  pageIndex?: number;
+  coordinates?: { x: number; y: number };
+  id?: string;
+  width?: number;
+  height?: number;
 }
 
 // Define interfaces for document flow state
@@ -69,7 +72,7 @@ interface DocumentFlowState {
 
 const FieldOption = ({ icon, label, type, compact = false }: FieldOptionProps) => {
   const { formPlacementMode, currentRecipient, recipientColors } = useContext(FormPlacementContext);
-  const viewerInstanceRef = useContext(ViewerContext);
+  const { viewerInstanceRef } = useViewerInstance();
 
   // Function to create icon background colors with good contrast in both modes
   const getIconBackgroundColor = (color: string | undefined): string => {
@@ -354,14 +357,40 @@ const createFieldOnPage = (
     // Create unique field name using helper function
     const fieldName = createFieldName(fieldType, currentRecipient);
 
-    // Create widget annotation
-    const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
+    // Create widget annotation with customData for recipient info
+    // For date fields, add border and date formatting actions
+    const widgetConfig: any = {
       boundingBox: transformedPageRect,
       formFieldName: fieldName,
       id: nutrientRuntime.generateInstantId(),
       pageIndex,
       name: fieldName,
-    });
+      customData: {
+        recipientId: currentRecipient?.id || currentRecipient?.participantId || '',
+        recipientName: currentRecipient?.name || 'Unknown',
+        recipientEmail: currentRecipient?.email || '',
+        recipientColor: currentRecipient?.color || '#4A90E2',
+        type: fieldType,
+        // Also add Nutrient-style naming for compatibility
+        signerID: currentRecipient?.id || currentRecipient?.participantId || '',
+        signerName: currentRecipient?.name || 'Unknown',
+        signerEmail: currentRecipient?.email || '',
+        signerColor: currentRecipient?.color || '#4A90E2',
+      },
+    };
+
+    // Add border and date formatting for date fields
+    if (fieldType === 'date' && nutrientRuntime.Color && nutrientRuntime.Actions?.JavaScriptAction) {
+      widgetConfig.borderColor = nutrientRuntime.Color.fromHex(currentRecipient?.color || '#4A90E2');
+      widgetConfig.borderWidth = 2;
+      widgetConfig.additionalActions = {
+        onFormat: new nutrientRuntime.Actions.JavaScriptAction({
+          script: 'AFDate_FormatEx("mm/dd/yyyy")',
+        }),
+      };
+    }
+
+    const widget = new nutrientRuntime.Annotations.WidgetAnnotation(widgetConfig);
 
     // Create form field based on type
     let formField;
@@ -384,11 +413,7 @@ const createFieldOnPage = (
       formField = new nutrientRuntime.FormFields.TextFormField({
         annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
         name: fieldName,
-        defaultValue: new Date().toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
+        defaultValue: '',
       });
     }
 
@@ -421,6 +446,8 @@ const createFieldOnPage = (
                 y: Math.round(transformedPageRect.top),
               },
               id: widget.id,
+              width: Math.round(transformedPageRect.width),
+              height: Math.round(transformedPageRect.height),
             } as FieldPlacement,
           ]);
 
@@ -479,14 +506,40 @@ const createMobileField = (
 
     console.log('[Mobile] Creating field with fixed PDF coordinates:', pdfRect);
 
-    // Create widget annotation
-    const widget = new runtime.Annotations.WidgetAnnotation({
+    // Create widget annotation with customData for recipient info
+    // For date fields, add border and date formatting actions
+    const widgetConfig: any = {
       boundingBox: pdfRect,
       formFieldName: fieldName,
       id: runtime.generateInstantId(),
       pageIndex,
       name: fieldName,
-    });
+      customData: {
+        recipientId: currentRecipient?.id || currentRecipient?.participantId || '',
+        recipientName: currentRecipient?.name || 'Unknown',
+        recipientEmail: currentRecipient?.email || '',
+        recipientColor: currentRecipient?.color || '#4A90E2',
+        type: fieldType,
+        // Also add Nutrient-style naming for compatibility
+        signerID: currentRecipient?.id || currentRecipient?.participantId || '',
+        signerName: currentRecipient?.name || 'Unknown',
+        signerEmail: currentRecipient?.email || '',
+        signerColor: currentRecipient?.color || '#4A90E2',
+      },
+    };
+
+    // Add border and date formatting for date fields
+    if (fieldType === 'date' && runtime.Color && runtime.Actions?.JavaScriptAction) {
+      widgetConfig.borderColor = runtime.Color.fromHex(currentRecipient?.color || '#4A90E2');
+      widgetConfig.borderWidth = 2;
+      widgetConfig.additionalActions = {
+        onFormat: new runtime.Actions.JavaScriptAction({
+          script: 'AFDate_FormatEx("mm/dd/yyyy")',
+        }),
+      };
+    }
+
+    const widget = new runtime.Annotations.WidgetAnnotation(widgetConfig);
 
     // Create form field based on type
     let formField;
@@ -505,11 +558,7 @@ const createMobileField = (
       formField = new runtime.FormFields.TextFormField({
         annotationIds: new runtime.Immutable.List([widget.id]),
         name: fieldName,
-        defaultValue: new Date().toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
+        defaultValue: '',
       });
     }
 
@@ -563,7 +612,9 @@ const createMobileField = (
 // Helper function to create consistent field names across all field creation methods
 const createFieldName = (fieldType: string, currentRecipient?: any) => {
   // Always include the recipient identifier in the field name to ensure correct assignment
-  const recipientId = currentRecipient?.email.split('@')[0] || 'unknown';
+  // Sanitize the email to remove dots and special characters that can cause issues
+  const recipientEmail = currentRecipient?.email || 'unknown';
+  const recipientId = recipientEmail.split('@')[0].replace(/\./g, '_').replace(/[^a-zA-Z0-9_]/g, '');
   return `${fieldType}_${recipientId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 };
 
@@ -915,7 +966,7 @@ function FieldPlacementContent({
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  const viewerInstanceRef = useRef<NutrientViewerInstance | null>(null);
+  const { viewerInstanceRef } = useViewerInstance();
 
   // Use FormPlacementContext for field tracking
   const {
@@ -1010,8 +1061,8 @@ function FieldPlacementContent({
           page: field.pageIndex || 0,
         },
         size: {
-          width: 200, // Default width
-          height: 50, // Default height
+          width: field.width || 200,
+          height: field.height || 50,
         },
         required: true,
         label: field.name,
@@ -1379,14 +1430,40 @@ function FieldPlacementContent({
                 // Create a unique field name that includes the recipient identifier
                 const fieldName = createFieldName(fieldType, activeRecipient);
 
-                  // Create widget annotation with typed SDK
-                  const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
+                  // Create widget annotation with customData for recipient info
+                  // For date fields, add border and date formatting actions
+                  const widgetConfig: any = {
                     boundingBox: transformedPageRect,
                     formFieldName: fieldName,
                     id: nutrientRuntime.generateInstantId(),
                     pageIndex,
                     name: fieldName,
-                  });
+                    customData: {
+                      recipientId: activeRecipient?.id || activeRecipient?.participantId || '',
+                      recipientName: activeRecipient?.name || 'Unknown',
+                      recipientEmail: activeRecipient?.email || '',
+                      recipientColor: activeRecipient?.color || '#4A90E2',
+                      type: fieldType,
+                      // Also add Nutrient-style naming for compatibility
+                      signerID: activeRecipient?.id || activeRecipient?.participantId || '',
+                      signerName: activeRecipient?.name || 'Unknown',
+                      signerEmail: activeRecipient?.email || '',
+                      signerColor: activeRecipient?.color || '#4A90E2',
+                    },
+                  };
+
+                  // Add border and date formatting for date fields
+                  if (fieldType === 'date' && nutrientRuntime.Color && nutrientRuntime.Actions?.JavaScriptAction) {
+                    widgetConfig.borderColor = nutrientRuntime.Color.fromHex(activeRecipient?.color || '#4A90E2');
+                    widgetConfig.borderWidth = 2;
+                    widgetConfig.additionalActions = {
+                      onFormat: new nutrientRuntime.Actions.JavaScriptAction({
+                        script: 'AFDate_FormatEx("mm/dd/yyyy")',
+                      }),
+                    };
+                  }
+
+                  const widget = new nutrientRuntime.Annotations.WidgetAnnotation(widgetConfig);
 
                   // Create the form field based on type
                   let formField;
@@ -1406,11 +1483,7 @@ function FieldPlacementContent({
                     formField = new nutrientRuntime.FormFields.TextFormField({
                       annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                       name: fieldName,
-                      defaultValue: new Date().toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      }),
+                      defaultValue: '',
                     });
                   }
 
@@ -1445,6 +1518,8 @@ function FieldPlacementContent({
                               y: Math.round(transformedPageRect.top),
                             },
                             id: widget.id,
+                            width: Math.round(transformedPageRect.width),
+                            height: Math.round(transformedPageRect.height),
                           },
                         ]);
 
@@ -1593,14 +1668,40 @@ function FieldPlacementContent({
                     // Create a unique field name with recipient info
                     const fieldName = createFieldName(activeTouchFieldType, currentRecipient);
 
-                    // Create widget annotation
-                    const widget = new nutrientRuntime.Annotations.WidgetAnnotation({
+                    // Create widget annotation with customData for recipient info
+                    // For date fields, add border and date formatting actions
+                    const widgetConfig: any = {
                       boundingBox: transformedPageRect,
                       formFieldName: fieldName,
                       id: nutrientRuntime.generateInstantId(),
                       pageIndex,
                       name: fieldName,
-                    });
+                      customData: {
+                        recipientId: currentRecipient?.id || currentRecipient?.participantId || '',
+                        recipientName: currentRecipient?.name || 'Unknown',
+                        recipientEmail: currentRecipient?.email || '',
+                        recipientColor: currentRecipient?.color || '#4A90E2',
+                        type: activeTouchFieldType,
+                        // Also add Nutrient-style naming for compatibility
+                        signerID: currentRecipient?.id || currentRecipient?.participantId || '',
+                        signerName: currentRecipient?.name || 'Unknown',
+                        signerEmail: currentRecipient?.email || '',
+                        signerColor: currentRecipient?.color || '#4A90E2',
+                      },
+                    };
+
+                    // Add border and date formatting for date fields
+                    if (activeTouchFieldType === 'date' && nutrientRuntime.Color && nutrientRuntime.Actions?.JavaScriptAction) {
+                      widgetConfig.borderColor = nutrientRuntime.Color.fromHex(currentRecipient?.color || '#4A90E2');
+                      widgetConfig.borderWidth = 2;
+                      widgetConfig.additionalActions = {
+                        onFormat: new nutrientRuntime.Actions.JavaScriptAction({
+                          script: 'AFDate_FormatEx("mm/dd/yyyy")',
+                        }),
+                      };
+                    }
+
+                    const widget = new nutrientRuntime.Annotations.WidgetAnnotation(widgetConfig);
 
                     // Create form field based on type
                     let formField;
@@ -1623,11 +1724,7 @@ function FieldPlacementContent({
                       formField = new nutrientRuntime.FormFields.TextFormField({
                         annotationIds: new nutrientRuntime.Immutable.List([widget.id]),
                         name: fieldName,
-                        defaultValue: new Date().toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        }),
+                        defaultValue: '',
                       });
                     }
 
@@ -1753,14 +1850,40 @@ function FieldPlacementContent({
 
                         console.log('[Mobile Debug] Creating PDF-space field with rect:', pdfRect);
 
-                        // Create widget annotation directly in PDF space
-                        const widget = new mobileRuntime.Annotations.WidgetAnnotation({
+                        // Create widget annotation with customData for recipient info
+                        // For date fields, add border and date formatting actions
+                        const widgetConfig: any = {
                           boundingBox: pdfRect,
                           formFieldName: fieldName,
                           id: mobileRuntime.generateInstantId(),
                           pageIndex,
                           name: fieldName,
-                        });
+                          customData: {
+                            recipientId: currentRecipient?.id || currentRecipient?.participantId || '',
+                            recipientName: currentRecipient?.name || 'Unknown',
+                            recipientEmail: currentRecipient?.email || '',
+                            recipientColor: currentRecipient?.color || '#4A90E2',
+                            type: customEvent.detail.fieldType,
+                            // Also add Nutrient-style naming for compatibility
+                            signerID: currentRecipient?.id || currentRecipient?.participantId || '',
+                            signerName: currentRecipient?.name || 'Unknown',
+                            signerEmail: currentRecipient?.email || '',
+                            signerColor: currentRecipient?.color || '#4A90E2',
+                          },
+                        };
+
+                        // Add border and date formatting for date fields
+                        if (customEvent.detail.fieldType === 'date' && mobileRuntime.Color && mobileRuntime.Actions?.JavaScriptAction) {
+                          widgetConfig.borderColor = mobileRuntime.Color.fromHex(currentRecipient?.color || '#4A90E2');
+                          widgetConfig.borderWidth = 2;
+                          widgetConfig.additionalActions = {
+                            onFormat: new mobileRuntime.Actions.JavaScriptAction({
+                              script: 'AFDate_FormatEx("mm/dd/yyyy")',
+                            }),
+                          };
+                        }
+
+                        const widget = new mobileRuntime.Annotations.WidgetAnnotation(widgetConfig);
 
                         // Create the form field based on type
                         let formField;
@@ -1783,11 +1906,7 @@ function FieldPlacementContent({
                           formField = new mobileRuntime.FormFields.TextFormField({
                             annotationIds: new mobileRuntime.Immutable.List([widget.id]),
                             name: fieldName,
-                            defaultValue: new Date().toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            }),
+                            defaultValue: '',
                           });
                         }
 
@@ -1893,12 +2012,13 @@ function FieldPlacementContent({
 
             // Set up additional event listeners once the viewer is loaded
             // Add event listener for annotation deletion to update field counts
-            instance.addEventListener('annotations.delete', (event: any) => {
-              const deletedAnnotations = event.annotations || [];
+            instance.addEventListener('annotations.delete', (deletedAnnotations: any) => {
+              // deletedAnnotations is an Immutable.List
+              const annotationsArray = deletedAnnotations.toArray ? deletedAnnotations.toArray() : [deletedAnnotations];
 
-              console.log('Annotation deletion detected:', deletedAnnotations);
+              console.log('Annotation deletion detected:', annotationsArray);
 
-              deletedAnnotations.forEach((annotation: any) => {
+              annotationsArray.forEach((annotation: any) => {
                 // Check if this is one of our field annotations
                 const fieldName = annotation.name;
                 if (!fieldName) return;
@@ -2072,7 +2192,6 @@ function FieldPlacementContent({
   };
 
   return (
-    <ViewerContext.Provider value={viewerInstanceRef}>
       <div className="space-y-6">
         <div>
           <div className="flex items-center justify-between">
@@ -2377,6 +2496,5 @@ function FieldPlacementContent({
           </div>
         )}
       </div>
-    </ViewerContext.Provider>
   );
 }

@@ -17,6 +17,8 @@ export interface ReactDatePickerProps {
   className?: string;
   disabled?: boolean;
   placeholder?: string;
+  minDate?: Date;
+  maxDate?: Date;
 }
 
 export function ReactDatePickerCustom({
@@ -26,6 +28,8 @@ export function ReactDatePickerCustom({
   className,
   disabled = false,
   placeholder = 'Pick a date',
+  minDate,
+  maxDate,
 }: ReactDatePickerProps) {
   // Custom header for the calendar
   const CustomHeader = ({
@@ -79,6 +83,8 @@ export function ReactDatePickerCustom({
             selected={date}
             onChange={(date) => setDate(date || undefined)}
             inline
+            minDate={minDate}
+            maxDate={maxDate}
             renderCustomHeader={CustomHeader}
             calendarClassName="bg-background border-none shadow-none"
             dayClassName={(_date) =>

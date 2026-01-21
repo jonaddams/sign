@@ -47,13 +47,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get recipient user information
-    const recipientUser = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, signatureRequest.participant.userId),
-    });
+    const recipientUserResults = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, signatureRequest.participant.userId))
+      .limit(1);
 
-    if (!recipientUser) {
+    if (recipientUserResults.length === 0) {
       return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
     }
+
+    const recipientUser = recipientUserResults[0];
 
     // Get document annotations (field placements)
     const annotations = await db
@@ -100,6 +104,8 @@ export async function POST(request: NextRequest) {
       },
       annotations: annotations.length > 0 ? annotations[0].annotationData : { fields: [] },
       participants: allParticipants.map((p) => ({
+        id: p.participant.id,
+        participantId: p.participant.id,
         name: p.user.name || p.user.email,
         email: p.user.email,
         role: p.participant.accessLevel,

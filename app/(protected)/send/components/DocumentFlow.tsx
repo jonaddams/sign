@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { DocumentFlowProvider, useDocumentFlow } from '../context/DocumentFlowContext';
+import { useViewerInstance } from '../context/ViewerInstanceContext';
 import NavigationControls from './NavigationControls';
 import StepIndicator from './StepIndicator';
 
@@ -18,6 +19,7 @@ export default function DocumentFlow({ children }: { children: (state: any) => R
 // Separate component to use the context inside the provider
 function DocumentFlowContent({ children }: { children: (state: any) => React.ReactNode }) {
   const { state, dispatch } = useDocumentFlow();
+  const { viewerInstanceRef } = useViewerInstance();
   const [isSubmitting, _setIsSubmitting] = useState(false);
 
   // Function to check if we can proceed to the next step
@@ -181,19 +183,41 @@ function DocumentFlowContent({ children }: { children: (state: any) => React.Rea
     }
 
     try {
+      // Get viewer instance from context
+      const viewerInstance = viewerInstanceRef.current;
+
+      if (!viewerInstance) {
+        console.error('Viewer instance not available');
+        toast({
+          title: 'Error',
+          description: 'Viewer not ready. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Export InstantJSON from viewer
+      console.log('=== EXPORTING INSTANT JSON ===');
+      const instantJSON = await viewerInstance.exportInstantJSON();
+
+      console.log('Document ID:', state.document.id);
+      console.log('Annotations count:', instantJSON?.annotations?.length || 0);
+      console.log('Form fields count:', instantJSON?.formFields?.length || 0);
+      console.log('============================');
+
       const response = await fetch(`/api/documents/${state.document.id}/fields`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          annotationData: {
-            fields: state.fields,
-          },
+          annotationData: instantJSON,
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to save field annotations');
       }
+
+      console.log('InstantJSON saved successfully');
     } catch (error) {
       console.error('Error saving field annotations:', error);
       toast({

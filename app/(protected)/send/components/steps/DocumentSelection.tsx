@@ -343,6 +343,7 @@ export default function DocumentSelection() {
                       date={state.document.expiresAt}
                       setDate={handleExpirationDateChange}
                       placeholder="Set document expiration date"
+                      minDate={new Date()}
                     />
                     <div className="text-xs text-muted-foreground flex items-center items-start items-start">
                       <Clock className="h-3 w-3 mr-1 sm:mt-1" />
@@ -496,6 +497,7 @@ export default function DocumentSelection() {
                             date={state.document.expiresAt}
                             setDate={handleExpirationDateChange}
                             placeholder="Set document expiration date"
+                            minDate={new Date()}
                           />
                           <div className="text-sm text-muted-foreground flex items-center items-start">
                             <Clock className="h-3 w-3 mr-2 mt-1" />

@@ -42,8 +42,8 @@ export default function TopNav() {
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const paths = pathname.split('/').filter(Boolean);
 
-    // Always start with Sign as the root
-    const breadcrumbs: BreadcrumbItem[] = [{ label: 'Sign', href: '/dashboard' }];
+    // Always start with Home as the root
+    const breadcrumbs: BreadcrumbItem[] = [{ label: 'Home', href: '/' }];
 
     // Add current page
     if (paths.length > 0) {

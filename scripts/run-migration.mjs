@@ -1,45 +1,41 @@
+#!/usr/bin/env node
+import { readFileSync } from 'fs';
 import postgres from 'postgres';
-import fs from 'fs';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
+// Load environment variables
+config({ path: '.env.local' });
 
-const sql = postgres(process.env.DATABASE_URL);
+const DATABASE_URL = process.env.DATABASE_URL;
 
-async function runMigration() {
-  console.log('Running database migration...\n');
-
-  const migrationSQL = fs.readFileSync('database/drizzle/migrations/0000_nebulous_snowbird.sql', 'utf8');
-
-  // Split by statement-breakpoint and execute each statement
-  const statements = migrationSQL.split('--> statement-breakpoint').filter(s => s.trim());
-
-  let count = 0;
-  for (const statement of statements) {
-    const trimmed = statement.trim();
-    if (trimmed) {
-      try {
-        await sql.unsafe(trimmed);
-        count++;
-        console.log(`✓ Executed statement ${count}`);
-      } catch (err) {
-        // Ignore "already exists" errors
-        if (err.code === '42P07' || err.code === '42710') {
-          console.log(`⊘ Skipped statement ${count} (already exists)`);
-        } else {
-          console.error(`✗ Error in statement ${count}:`, err.message);
-          throw err;
-        }
-      }
-    }
-  }
-
-  console.log(`\n✓ Migration complete! Executed ${count} statements.\n`);
-
-  await sql.end();
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL not found in .env.local');
+  process.exit(1);
 }
 
-runMigration().catch(err => {
-  console.error('Migration failed:', err);
-  process.exit(1);
-});
+const sql = postgres(DATABASE_URL);
+
+async function runMigration() {
+  try {
+    console.log('Running migration...');
+
+    const migrationSQL = readFileSync('database/drizzle/migrations/0001_special_inhumans.sql', 'utf8');
+
+    // Split by statement breakpoint
+    const statements = migrationSQL.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean);
+
+    for (const statement of statements) {
+      console.log('Executing:', statement.substring(0, 100) + '...');
+      await sql.unsafe(statement);
+    }
+
+    console.log('✓ Migration completed successfully');
+  } catch (error) {
+    console.error('Migration failed:', error);
+    process.exit(1);
+  } finally {
+    await sql.end();
+  }
+}
+
+runMigration();

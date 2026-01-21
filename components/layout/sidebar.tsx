@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, Files, FileText, Home, Inbox, Menu, SendHorizontal, Trash2 } from 'lucide-react';
+import { Files, FileText, Home, Inbox, Menu, SendHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type React from 'react';
@@ -19,12 +19,12 @@ export default function Sidebar() {
     href,
     icon: Icon,
     children,
-    highlight = false,
+    badge,
   }: {
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     children: React.ReactNode;
-    highlight?: boolean;
+    badge?: number;
   }) {
     const isActive = pathname === href;
 
@@ -40,9 +40,9 @@ export default function Sidebar() {
       >
         <Icon className={`mr-3 h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
         {children}
-        {highlight && !isActive && (
+        {badge !== undefined && badge > 0 && !isActive && (
           <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-            3
+            {badge > 99 ? '99+' : badge}
           </span>
         )}
       </Link>
@@ -80,20 +80,20 @@ export default function Sidebar() {
                   <NavItem href="/dashboard" icon={Home}>
                     Dashboard
                   </NavItem>
-                  <NavItem href="/inbox" icon={Inbox} highlight={true}>
+                  <NavItem href="/inbox" icon={Inbox}>
                     Inbox
                   </NavItem>
                   <NavItem href="/send" icon={SendHorizontal}>
                     Send
                   </NavItem>
-                  <NavItem href="/documents" icon={FileText}>
-                    Documents
+                  <NavItem href="/documents" icon={SendHorizontal}>
+                    Sent
+                  </NavItem>
+                  <NavItem href="/archive" icon={FileText}>
+                    Signed
                   </NavItem>
                   <NavItem href="/templates" icon={Files}>
                     Templates
-                  </NavItem>
-                  <NavItem href="/archive" icon={Archive}>
-                    Archive
                   </NavItem>
                   <NavItem href="/trash" icon={Trash2}>
                     Trash

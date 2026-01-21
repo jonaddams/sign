@@ -109,11 +109,26 @@ export function safeLoadViewer(options: {
     return Promise.reject(new Error('Nutrient Viewer not available'));
   }
 
+  const container = options.container;
+
+  // First, try to unload any existing instance on this container
+  try {
+    if (typeof window.NutrientViewer.unload === 'function') {
+      window.NutrientViewer.unload(container);
+    }
+  } catch (error) {
+    // Ignore unload errors - might not have been loaded
+    console.log('Unload before load (expected if no previous instance):', error);
+  }
+
   // Ensure container is completely empty before loading
   // This prevents "container is not empty" errors
-  const container = options.container;
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
+  try {
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+  } catch (error) {
+    console.warn('Container cleanup warning:', error);
   }
 
   if (typeof window.NutrientViewer.load === 'function') {
