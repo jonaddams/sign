@@ -11,6 +11,7 @@ import { eq, and, desc, isNull, sql } from 'drizzle-orm';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { FileText } from 'lucide-react';
+import { CancelButton } from './components/CancelButton';
 import { DeleteButton } from './components/DeleteButton';
 
 export default async function SentDocumentsPage() {
@@ -63,17 +64,21 @@ export default async function SentDocumentsPage() {
   };
 
   // Get status display info
-  const getStatusInfo = (totalParticipants: number, signedCount: number) => {
+  const getStatusInfo = (totalParticipants: number, signedCount: number, documentStatus: string | null) => {
+    // Check for cancelled status first
+    if (documentStatus === 'CANCELLED') {
+      return { label: 'Cancelled', variant: 'destructive' as const, canCancel: false };
+    }
     if (totalParticipants === 0) {
-      return { label: 'Draft', variant: 'outline' as const };
+      return { label: 'Draft', variant: 'outline' as const, canCancel: false };
     }
     if (signedCount === totalParticipants) {
-      return { label: 'Completed', variant: 'default' as const };
+      return { label: 'Completed', variant: 'default' as const, canCancel: false };
     }
     if (signedCount > 0) {
-      return { label: `${signedCount}/${totalParticipants} Signed`, variant: 'outline' as const };
+      return { label: `${signedCount}/${totalParticipants} Signed`, variant: 'outline' as const, canCancel: true };
     }
-    return { label: 'Pending', variant: 'outline' as const };
+    return { label: 'Pending', variant: 'outline' as const, canCancel: true };
   };
 
   return (
@@ -101,7 +106,7 @@ export default async function SentDocumentsPage() {
                 </TableHeader>
                 <TableBody>
                   {sentDocuments.map((doc) => {
-                    const statusInfo = getStatusInfo(doc.totalParticipants, doc.signedCount);
+                    const statusInfo = getStatusInfo(doc.totalParticipants, doc.signedCount, doc.documentStatus);
                     return (
                       <TableRow
                         key={doc.documentId}
@@ -130,6 +135,9 @@ export default async function SentDocumentsPage() {
                                 View
                               </Button>
                             </Link>
+                            {statusInfo.canCancel && (
+                              <CancelButton documentId={doc.documentId} documentName={doc.documentName} />
+                            )}
                             <DeleteButton documentId={doc.documentId} documentName={doc.documentName} />
                           </div>
                         </TableCell>

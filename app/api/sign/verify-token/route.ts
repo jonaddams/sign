@@ -46,6 +46,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This document has expired' }, { status: 410 });
     }
 
+    // Check if signature request has been cancelled
+    if (signatureRequest.signatureRequest.status === 'CANCELLED') {
+      return NextResponse.json({ error: 'This document has been cancelled by the sender' }, { status: 410 });
+    }
+
+    // Check if document has been cancelled
+    if (signatureRequest.document.status === 'CANCELLED') {
+      return NextResponse.json({ error: 'This document has been cancelled by the sender' }, { status: 410 });
+    }
+
     // Get recipient user information
     const recipientUserResults = await db
       .select()

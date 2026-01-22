@@ -215,6 +215,11 @@ export default function SignDocumentPage() {
           setIsSigned(true);
           setError('This document has already been signed.');
         }
+
+        // Check if cancelled
+        if (data.signatureRequest.status === 'CANCELLED') {
+          setError('This document has been cancelled by the sender.');
+        }
       } catch (err) {
         console.error('Error verifying token:', err);
         setError(err instanceof Error ? err.message : 'Failed to load document');

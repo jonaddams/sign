@@ -15,6 +15,13 @@
       "when": 1769023740060,
       "tag": "0001_special_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769167200000,
+      "tag": "0002_add_cancelled_status",
+      "breakpoints": true
     }
   ]
 }
