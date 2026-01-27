@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: 'Invalid file type. Only PDF, Word, Excel, PowerPoint, and image files are allowed.' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
       return NextResponse.json(
         { error: 'Invalid file extension. Only PDF, Word, Excel, PowerPoint, and image files are allowed.' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 

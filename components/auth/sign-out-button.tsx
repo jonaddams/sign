@@ -6,6 +6,7 @@ const SignOutButton: React.FC = () => {
   const { setSession } = useSession();
   return (
     <button
+      type="button"
       className="w-full text-left hover:underline"
       onClick={async () => {
         handleSignOut();

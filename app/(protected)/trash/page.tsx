@@ -1,13 +1,13 @@
+import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { Trash2 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import PageContent from '@/components/layout/page-content';
 import PageLayout from '@/components/layout/page-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
 import { documents } from '@/database/drizzle/document-signing-schema';
-import { eq, and, desc, isNotNull } from 'drizzle-orm';
-import { redirect } from 'next/navigation';
-import { Trash2 } from 'lucide-react';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 import { TrashActions } from './components/TrashActions';
 
 export default async function TrashPage() {
@@ -26,12 +26,7 @@ export default async function TrashPage() {
       deletedAt: documents.deletedAt,
     })
     .from(documents)
-    .where(
-      and(
-        eq(documents.ownerId, session.user.id),
-        isNotNull(documents.deletedAt)
-      )
-    )
+    .where(and(eq(documents.ownerId, session.user.id), isNotNull(documents.deletedAt)))
     .orderBy(desc(documents.deletedAt));
 
   // Format relative time
@@ -75,10 +70,7 @@ export default async function TrashPage() {
                 </TableHeader>
                 <TableBody>
                   {deletedDocuments.map((doc) => (
-                    <TableRow
-                      key={doc.documentId}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    >
+                    <TableRow key={doc.documentId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                       <TableCell>
                         <span className="font-medium text-muted-foreground">{doc.documentName}</span>
                       </TableCell>

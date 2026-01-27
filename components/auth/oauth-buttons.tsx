@@ -9,7 +9,7 @@ interface OAuthButtonsProps {
   callbackUrl?: string;
 }
 
-export function OAuthButtons({ callbackUrl }: OAuthButtonsProps) {
+export function OAuthButtons({ callbackUrl: _callbackUrl }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {

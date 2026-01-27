@@ -523,7 +523,7 @@ export default function DocumentSelection() {
                         {!isMobile
                           ? pageNumbers.map((page, index) =>
                               page === 'ellipsis' ? (
-                                <PaginationItem key={`ellipsis-${index}`}>
+                                <PaginationItem key={`ellipsis-${index}-${pageNumbers[index - 1]}`}>
                                   <PaginationEllipsis />
                                 </PaginationItem>
                               ) : (
@@ -540,7 +540,9 @@ export default function DocumentSelection() {
                             )
                           : // Simplified pagination for mobile
                             pageNumbers.map((page, index) => (
-                              <PaginationItem key={`page-${index}`}>
+                              <PaginationItem
+                                key={page === 'ellipsis' ? `ellipsis-${index}-${pageNumbers[index - 1]}` : page}
+                              >
                                 {page === 'ellipsis' ? (
                                   <PaginationEllipsis />
                                 ) : (

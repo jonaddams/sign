@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       where: (documentTemplates, { and, eq, like }) =>
         and(
           eq(documentTemplates.creatorId, session.user.id as string),
-          like(documentTemplates.templateFilePath, `%${key}`)
+          like(documentTemplates.templateFilePath, `%${key}`),
         ),
     });
 

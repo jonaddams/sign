@@ -35,10 +35,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 /**
  * Send email via Resend API
  */
-async function sendEmailViaResend(
-  options: EmailOptions & { from: string },
-  apiKey: string,
-): Promise<boolean> {
+async function sendEmailViaResend(options: EmailOptions & { from: string }, apiKey: string): Promise<boolean> {
   const { to, subject, html, from } = options;
 
   try {
@@ -74,10 +71,7 @@ async function sendEmailViaResend(
 /**
  * Send email via SendGrid API
  */
-async function sendEmailViaSendGrid(
-  options: EmailOptions & { from: string },
-  apiKey: string,
-): Promise<boolean> {
+async function sendEmailViaSendGrid(options: EmailOptions & { from: string }, apiKey: string): Promise<boolean> {
   const { to, subject, html, from } = options;
 
   try {

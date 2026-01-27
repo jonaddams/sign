@@ -49,7 +49,9 @@ export function createSignatureFieldRenderer(options: RendererOptions) {
     // Determine if this field belongs to the current recipient
     // Use field name matching (more reliable than signerId which may be empty/wrong)
     // Find current recipient from participants to get their email
-    const currentParticipant = options.participants.find(p => p.id === options.currentRecipientId || p.participantId === options.currentRecipientId);
+    const currentParticipant = options.participants.find(
+      (p) => p.id === options.currentRecipientId || p.participantId === options.currentRecipientId,
+    );
     let isCurrentRecipient = false;
 
     if (currentParticipant?.email) {
@@ -67,7 +69,7 @@ export function createSignatureFieldRenderer(options: RendererOptions) {
     let displayColor = signerColor;
     if (!annotation.customData?.signerColor) {
       const participantIndex = options.participants.findIndex(
-        (p) => p.id === signerId || p.participantId === signerId || p.email === signerEmail
+        (p) => p.id === signerId || p.participantId === signerId || p.email === signerEmail,
       );
       displayColor = participantIndex >= 0 ? SIGNER_COLORS[participantIndex % SIGNER_COLORS.length] : SIGNER_COLORS[0];
     }

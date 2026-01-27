@@ -1,6 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
-import { users } from '@/database/drizzle/auth-schema';
 import {
   documentAuditLog,
   documentNotifications,
@@ -51,9 +50,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return new NextResponse(JSON.stringify({ error: 'No recipients found for this document' }), { status: 400 });
     }
 
-    // Create signature requests for each signer
+    // Create signature requests for each signer - batch insert for performance
     const signatureRequestIds: string[] = [];
     const accessTokens: Record<string, string> = {};
+    const signatureRequestValues: Array<{
+      id: string;
+      documentId: string;
+      participantId: string;
+      status: 'PENDING';
+      signatureType: 'ELECTRONIC';
+      accessToken: string;
+      requestedAt: Date;
+    }> = [];
 
     for (const participant of participants) {
       if (participant.accessLevel === 'SIGNER') {
@@ -61,19 +69,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const accessToken = crypto.randomUUID();
         accessTokens[participant.id] = accessToken;
 
-        // Create signature request with access token
-        await db.insert(signatureRequests).values({
+        signatureRequestValues.push({
           id: crypto.randomUUID(),
           documentId,
           participantId: participant.id,
           status: 'PENDING',
           signatureType: 'ELECTRONIC',
-          accessToken, // Store the token for verification
+          accessToken,
           requestedAt: new Date(),
         });
 
         signatureRequestIds.push(participant.id);
       }
+    }
+
+    // Batch insert all signature requests at once
+    if (signatureRequestValues.length > 0) {
+      await db.insert(signatureRequests).values(signatureRequestValues);
     }
 
     // Update document status to PENDING
@@ -103,28 +115,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Send emails to recipients based on signing order
     // For sequential signing, only send to signingOrder 0
     // For parallel signing, send to all
-    const recipientsToNotify = participants.filter((p) => p.signingOrder === 0);
+    const recipientsToNotify = participants.filter((p) => p.signingOrder === 0 && p.accessLevel === 'SIGNER');
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    let emailsSent = 0;
 
-    for (const participant of recipientsToNotify) {
-      if (participant.accessLevel === 'SIGNER') {
-        // Fetch user information for this participant
-        const recipientUser = await db.query.users.findFirst({
+    // Fetch all recipient users in parallel
+    const recipientUserPromises = recipientsToNotify.map((participant) =>
+      db.query.users
+        .findFirst({
           where: (users, { eq }) => eq(users.id, participant.userId),
-        });
+        })
+        .then((user) => ({ participant, user })),
+    );
 
-        if (!recipientUser || !recipientUser.email) {
-          logger.warn('Participant user not found or has no email', { participantId: participant.id });
-          continue;
-        }
+    const recipientResults = await Promise.all(recipientUserPromises);
 
+    // Send emails in parallel for better performance
+    const emailPromises = recipientResults
+      .filter(({ user }) => user?.email)
+      .map(async ({ participant, user }) => {
         const accessToken = accessTokens[participant.id];
         const signingUrl = `${appUrl}/sign/${accessToken}`;
 
         const emailHtml = generateSigningEmail({
-          recipientName: recipientUser.name || recipientUser.email,
+          recipientName: user!.name || user!.email!,
           senderName: session.user.name || 'A user',
           documentName: document.name,
           signingUrl,
@@ -133,38 +147,41 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         });
 
         const emailSent = await sendEmail({
-          to: recipientUser.email,
+          to: user!.email!,
           subject: emailSubject || 'Please sign this document',
           html: emailHtml,
         });
 
-        if (emailSent) {
-          emailsSent++;
+        return {
+          participantId: participant.id,
+          email: user!.email!,
+          success: emailSent,
+        };
+      });
 
-          // Track notification
-          await db.insert(documentNotifications).values({
-            id: crypto.randomUUID(),
-            documentId,
-            recipientEmail: recipientUser.email,
-            notificationType: 'SIGNATURE_REQUEST',
-            sentAt: new Date(),
-            isDelivered: true,
-            deliveredAt: new Date(),
-          });
-        } else {
-          logger.warn('Failed to send email to participant', { participantId: participant.id });
+    const emailResults = await Promise.all(emailPromises);
+    const emailsSent = emailResults.filter((r) => r.success).length;
 
-          // Track failed notification
-          await db.insert(documentNotifications).values({
-            id: crypto.randomUUID(),
-            documentId,
-            recipientEmail: recipientUser.email,
-            notificationType: 'SIGNATURE_REQUEST',
-            sentAt: new Date(),
-            isDelivered: false,
-          });
-        }
-      }
+    // Log warnings for failed emails
+    emailResults
+      .filter((r) => !r.success)
+      .forEach((r) => {
+        logger.warn('Failed to send email to participant', { participantId: r.participantId });
+      });
+
+    // Batch insert all notifications at once
+    const notificationValues = emailResults.map((result) => ({
+      id: crypto.randomUUID(),
+      documentId,
+      recipientEmail: result.email,
+      notificationType: 'SIGNATURE_REQUEST' as const,
+      sentAt: new Date(),
+      isDelivered: result.success,
+      deliveredAt: result.success ? new Date() : null,
+    }));
+
+    if (notificationValues.length > 0) {
+      await db.insert(documentNotifications).values(notificationValues);
     }
 
     return NextResponse.json({

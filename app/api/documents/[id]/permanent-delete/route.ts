@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
+import { and, eq } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
 import { documents } from '@/database/drizzle/document-signing-schema';
-import { eq, and } from 'drizzle-orm';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -19,19 +16,11 @@ export async function DELETE(
     // Permanent delete: Remove from database
     const result = await db
       .delete(documents)
-      .where(
-        and(
-          eq(documents.id, id),
-          eq(documents.ownerId, session.user.id)
-        )
-      )
+      .where(and(eq(documents.id, id), eq(documents.ownerId, session.user.id)))
       .returning();
 
     if (result.length === 0) {
-      return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, message: 'Document permanently deleted' });

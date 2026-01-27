@@ -1,9 +1,9 @@
-import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
-import { eq } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
-import { documentParticipants } from '../database/drizzle/document-signing-schema.js';
+import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/neon-http';
 import { users } from '../database/drizzle/auth-schema.js';
+import { documentParticipants } from '../database/drizzle/document-signing-schema.js';
 
 dotenv.config({ path: '.env.local' });
 
@@ -17,7 +17,7 @@ async function checkParticipants() {
   const currentRecipient = await db
     .select({
       participant: documentParticipants,
-      user: users
+      user: users,
     })
     .from(documentParticipants)
     .innerJoin(users, eq(documentParticipants.userId, users.id))
@@ -29,7 +29,7 @@ async function checkParticipants() {
   const fieldOwner = await db
     .select({
       participant: documentParticipants,
-      user: users
+      user: users,
     })
     .from(documentParticipants)
     .innerJoin(users, eq(documentParticipants.userId, users.id))

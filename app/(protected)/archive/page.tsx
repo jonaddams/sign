@@ -1,17 +1,17 @@
+import { and, desc, eq, isNull } from 'drizzle-orm';
+import { CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import PageContent from '@/components/layout/page-content';
 import PageLayout from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants, signatureRequests } from '@/database/drizzle/document-signing-schema';
 import { users } from '@/database/drizzle/auth-schema';
-import { eq, and, desc, isNull } from 'drizzle-orm';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { CheckCircle } from 'lucide-react';
+import { documentParticipants, documents, signatureRequests } from '@/database/drizzle/document-signing-schema';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 import { DeleteButton } from '../documents/components/DeleteButton';
 
 export default async function SignedDocumentsPage() {
@@ -41,8 +41,8 @@ export default async function SignedDocumentsPage() {
       and(
         eq(documentParticipants.userId, session.user.id),
         eq(signatureRequests.status, 'SIGNED'),
-        isNull(documents.deletedAt) // Not deleted
-      )
+        isNull(documents.deletedAt), // Not deleted
+      ),
     )
     .orderBy(desc(signatureRequests.signedAt));
 
@@ -89,10 +89,7 @@ export default async function SignedDocumentsPage() {
                 </TableHeader>
                 <TableBody>
                   {signedDocuments.map((doc) => (
-                    <TableRow
-                      key={doc.signatureRequestId}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    >
+                    <TableRow key={doc.signatureRequestId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                       <TableCell>
                         <span className="font-medium">{doc.documentName}</span>
                       </TableCell>

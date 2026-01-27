@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync } from 'fs';
-import postgres from 'postgres';
+import { readFileSync } from 'node:fs';
 import { config } from 'dotenv';
+import postgres from 'postgres';
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -22,10 +22,13 @@ async function runMigration() {
     const migrationSQL = readFileSync('database/drizzle/migrations/0001_special_inhumans.sql', 'utf8');
 
     // Split by statement breakpoint
-    const statements = migrationSQL.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean);
+    const statements = migrationSQL
+      .split('--> statement-breakpoint')
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     for (const statement of statements) {
-      console.log('Executing:', statement.substring(0, 100) + '...');
+      console.log('Executing:', `${statement.substring(0, 100)}...`);
       await sql.unsafe(statement);
     }
 

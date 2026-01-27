@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import postgres from 'postgres';
 import { config } from 'dotenv';
+import postgres from 'postgres';
 
 // Load environment variables
 config({ path: '.env.local' });

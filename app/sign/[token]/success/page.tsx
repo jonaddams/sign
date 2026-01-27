@@ -2,10 +2,10 @@
 
 import { CheckCircle, Download, Home } from 'lucide-react';
 import Link from 'next/link';
+import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import PageLayout from '@/components/layout/page-layout';
-import PageContent from '@/components/layout/page-content';
 
 export default function SignSuccessPage() {
   return (

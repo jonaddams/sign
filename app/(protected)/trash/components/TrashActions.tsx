@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, RotateCcw } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -47,11 +47,7 @@ export function TrashActions({ documentId, documentName }: TrashActionsProps) {
   };
 
   const handlePermanentDelete = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to PERMANENTLY delete "${documentName}"? This action cannot be undone.`
-      )
-    ) {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete "${documentName}"? This action cannot be undone.`)) {
       return;
     }
 

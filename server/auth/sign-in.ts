@@ -5,8 +5,8 @@ export const handleSignin = async ({ provider }: { provider: string }) => {
   try {
     await signIn(provider, { redirectTo: '/dashboard' });
   } catch (error) {
-    throw error;
     console.error(error);
+    throw error;
   }
 };
 

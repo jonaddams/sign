@@ -1,5 +1,5 @@
-import postgres from 'postgres';
 import dotenv from 'dotenv';
+import postgres from 'postgres';
 
 dotenv.config({ path: '.env.local' });
 
@@ -37,7 +37,6 @@ try {
   console.log('All document data has been removed.');
   console.log('User accounts have been preserved.\n');
   console.log('You can now start testing with a clean slate.\n');
-
 } catch (error) {
   console.error('\n❌ Error resetting database:', error);
   process.exit(1);

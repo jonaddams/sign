@@ -15,6 +15,7 @@ export function ImageIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
       fill="currentColor"
       {...props}
     >
+      <title>Image</title>
       <g>
         <path
           fillRule="evenodd"

@@ -1,10 +1,10 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { and, eq, like } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
+import { documentParticipants, documents } from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants } from '@/database/drizzle/document-signing-schema';
 import { auth } from '@/lib/auth/auth-js';
 import { s3Client } from '@/lib/s3';
-import { eq, and, like } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,12 +47,7 @@ export async function GET(request: NextRequest) {
       const participantResults = await db
         .select()
         .from(documentParticipants)
-        .where(
-          and(
-            eq(documentParticipants.documentId, document.id),
-            eq(documentParticipants.userId, session.user.id)
-          )
-        )
+        .where(and(eq(documentParticipants.documentId, document.id), eq(documentParticipants.userId, session.user.id)))
         .limit(1);
 
       if (participantResults.length === 0) {

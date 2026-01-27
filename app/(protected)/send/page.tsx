@@ -20,25 +20,25 @@ export default function SendPage() {
       >
         <ViewerInstanceProvider>
           <DocumentFlow>
-          {/* The Step content will be rendered by DocumentFlow based on the current step */}
-          {(state) => {
-            // Render the appropriate component based on the current step
-            switch (state.currentStep) {
-              case 1:
-                return <DocumentSelection />;
-              case 2:
-                return <RecipientConfig />;
-              case 3:
-                return <FieldPlacement />;
-              case 4:
-                return <EmailCustomization />;
-              case 5:
-                return <ReviewAndSend />;
-              default:
-                return <DocumentSelection />;
-            }
-          }}
-        </DocumentFlow>
+            {/* The Step content will be rendered by DocumentFlow based on the current step */}
+            {(state) => {
+              // Render the appropriate component based on the current step
+              switch (state.currentStep) {
+                case 1:
+                  return <DocumentSelection />;
+                case 2:
+                  return <RecipientConfig />;
+                case 3:
+                  return <FieldPlacement />;
+                case 4:
+                  return <EmailCustomization />;
+                case 5:
+                  return <ReviewAndSend />;
+                default:
+                  return <DocumentSelection />;
+              }
+            }}
+          </DocumentFlow>
         </ViewerInstanceProvider>
       </PageContent>
     </PageLayout>

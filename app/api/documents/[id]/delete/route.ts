@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
+import { and, eq, isNull } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
 import { documents } from '@/database/drizzle/document-signing-schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -24,16 +21,13 @@ export async function POST(
         and(
           eq(documents.id, id),
           eq(documents.ownerId, session.user.id),
-          isNull(documents.deletedAt) // Only delete if not already deleted
-        )
+          isNull(documents.deletedAt), // Only delete if not already deleted
+        ),
       )
       .returning();
 
     if (result.length === 0) {
-      return NextResponse.json(
-        { error: 'Document not found or already deleted' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Document not found or already deleted' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, message: 'Document moved to trash' });

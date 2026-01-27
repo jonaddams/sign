@@ -17,7 +17,11 @@ export function CancelButton({ documentId, documentName, disabled }: CancelButto
   const [isCancelling, setIsCancelling] = useState(false);
 
   const handleCancel = async () => {
-    if (!confirm(`Are you sure you want to cancel "${documentName}"?\n\nThis will:\n- Cancel all pending signature requests\n- Notify recipients that the document was cancelled\n\nThis action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to cancel "${documentName}"?\n\nThis will:\n- Cancel all pending signature requests\n- Notify recipients that the document was cancelled\n\nThis action cannot be undone.`,
+      )
+    ) {
       return;
     }
 

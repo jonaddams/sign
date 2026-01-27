@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
-import { users } from '@/database/drizzle/auth-schema';
 import {
   documentAuditLog,
   documentNotifications,
@@ -52,10 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Check if document is completed (all signatures done)
     if (document.status === 'COMPLETED') {
-      return NextResponse.json(
-        { error: 'Cannot cancel a completed document' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Cannot cancel a completed document' }, { status: 400 });
     }
 
     // Get all pending signature requests for this document
@@ -66,23 +62,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
       .from(signatureRequests)
       .innerJoin(documentParticipants, eq(signatureRequests.participantId, documentParticipants.id))
-      .where(
-        and(
-          eq(signatureRequests.documentId, documentId),
-          eq(signatureRequests.status, 'PENDING')
-        )
-      );
+      .where(and(eq(signatureRequests.documentId, documentId), eq(signatureRequests.status, 'PENDING')));
 
     // Update all PENDING signature requests to CANCELLED
     const cancelledCount = await db
       .update(signatureRequests)
       .set({ status: 'CANCELLED' })
-      .where(
-        and(
-          eq(signatureRequests.documentId, documentId),
-          eq(signatureRequests.status, 'PENDING')
-        )
-      )
+      .where(and(eq(signatureRequests.documentId, documentId), eq(signatureRequests.status, 'PENDING')))
       .returning();
 
     // Update document status to CANCELLED

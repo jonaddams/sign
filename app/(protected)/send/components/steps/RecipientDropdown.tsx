@@ -110,9 +110,13 @@ const RecipientDropdown = () => {
   return (
     <div className="relative">
       {/* Dropdown trigger - styled like FieldOption */}
-      <div
-        className={`flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 ${isSingleSigner ? '' : 'cursor-pointer'}`}
+      <button
+        type="button"
+        disabled={isSingleSigner}
+        className={`w-full flex items-center justify-between p-3 mb-3 rounded-md border border-gray-200 dark:border-zinc-700 ${isSingleSigner ? '' : 'cursor-pointer'}`}
         onClick={() => !isSingleSigner && setIsDropdownOpen(!isDropdownOpen)}
+        aria-label={isSingleSigner ? 'Only signer' : 'Select recipient'}
+        aria-expanded={isSingleSigner ? undefined : isDropdownOpen}
       >
         <div className="flex items-center flex-1">
           <div
@@ -133,7 +137,7 @@ const RecipientDropdown = () => {
             <ChevronDown className="h-3 w-3 text-gray-700 dark:text-gray-300" />
           </div>
         )}
-      </div>
+      </button>
 
       {/* Dropdown content - only show if multiple signers */}
       {!isSingleSigner && isDropdownOpen && (
@@ -148,9 +152,10 @@ const RecipientDropdown = () => {
             const isSelected = index === currentRecipientIndex;
 
             return (
-              <div
+              <button
                 key={recipient.email}
-                className={`flex items-center justify-between p-3 cursor-pointer
+                type="button"
+                className={`w-full flex items-center justify-between p-3 cursor-pointer text-left
                   ${isSelected ? 'border-l-4 bg-gray-50 dark:bg-zinc-700' : 'border-l-4 border-l-transparent hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
                 style={{
                   borderLeftColor: isSelected ? recipientColors[recipient.email] : 'transparent',
@@ -159,6 +164,8 @@ const RecipientDropdown = () => {
                   setIsDropdownOpen(false);
                   setCurrentRecipientIndex(index);
                 }}
+                aria-label={`Select ${recipient.name}`}
+                aria-current={isSelected}
               >
                 <div className="flex items-center">
                   <div
@@ -181,7 +188,7 @@ const RecipientDropdown = () => {
                     <Check className="h-3 w-3 text-gray-950" />
                   </div>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

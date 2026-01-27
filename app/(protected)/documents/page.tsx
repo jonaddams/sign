@@ -1,16 +1,16 @@
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { FileText } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import PageContent from '@/components/layout/page-content';
 import PageLayout from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { auth } from '@/lib/auth/auth-js';
+import { documentParticipants, documents, signatureRequests } from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants, signatureRequests } from '@/database/drizzle/document-signing-schema';
-import { eq, and, desc, isNull, sql } from 'drizzle-orm';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { auth } from '@/lib/auth/auth-js';
 import { CancelButton } from './components/CancelButton';
 import { DeleteButton } from './components/DeleteButton';
 
@@ -40,8 +40,8 @@ export default async function SentDocumentsPage() {
     .where(
       and(
         eq(documents.ownerId, session.user.id),
-        isNull(documents.deletedAt) // Not deleted
-      )
+        isNull(documents.deletedAt), // Not deleted
+      ),
     )
     .groupBy(documents.id, documents.name, documents.createdAt, documents.expiresAt, documents.status)
     .orderBy(desc(documents.createdAt));
@@ -108,10 +108,7 @@ export default async function SentDocumentsPage() {
                   {sentDocuments.map((doc) => {
                     const statusInfo = getStatusInfo(doc.totalParticipants, doc.signedCount, doc.documentStatus);
                     return (
-                      <TableRow
-                        key={doc.documentId}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                      >
+                      <TableRow key={doc.documentId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{doc.documentName}</span>

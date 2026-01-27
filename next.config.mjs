@@ -14,6 +14,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    // Optimize package imports to avoid barrel file imports (200-800ms savings)
+    optimizePackageImports: ['lucide-react'],
   },
   // Set output for Docker/containerized deployments if needed
   // output: 'standalone',

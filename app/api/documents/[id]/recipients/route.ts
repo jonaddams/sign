@@ -33,9 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // First, delete existing participants to allow re-configuration
-    await db
-      .delete(documentParticipants)
-      .where(eq(documentParticipants.documentId, documentId));
+    await db.delete(documentParticipants).where(eq(documentParticipants.documentId, documentId));
 
     // Create participant records for each recipient
     const createdParticipants = [];
@@ -45,11 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // If no userId provided, try to find or create a user by email
       if (!recipientUserId && recipient.email) {
         // Try to find existing user by email
-        const existingUsers = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, recipient.email))
-          .limit(1);
+        const existingUsers = await db.select().from(users).where(eq(users.email, recipient.email)).limit(1);
 
         if (existingUsers.length > 0) {
           recipientUserId = existingUsers[0].id;
@@ -80,7 +74,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           id: crypto.randomUUID(),
           documentId,
           userId: recipientUserId,
-          accessLevel: recipient.accessLevel || (recipient.role === 'viewer' ? 'VIEWER' : recipient.role === 'editor' ? 'EDITOR' : 'SIGNER'),
+          accessLevel:
+            recipient.accessLevel ||
+            (recipient.role === 'viewer' ? 'VIEWER' : recipient.role === 'editor' ? 'EDITOR' : 'SIGNER'),
           signingOrder: recipient.signingOrder || 0,
           isRequired: recipient.isRequired !== false,
         })
@@ -98,7 +94,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {

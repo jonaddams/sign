@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/database/drizzle/drizzle';
+import { and, eq } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
 import { signatureRequests } from '@/database/drizzle/document-signing-schema';
-import { eq, and } from 'drizzle-orm';
+import { db } from '@/database/drizzle/drizzle';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -17,12 +17,7 @@ export async function POST(request: NextRequest) {
     const signatureRequest = await db
       .select()
       .from(signatureRequests)
-      .where(
-        and(
-          eq(signatureRequests.id, signatureRequestId),
-          eq(signatureRequests.accessToken, token)
-        )
-      )
+      .where(and(eq(signatureRequests.id, signatureRequestId), eq(signatureRequests.accessToken, token)))
       .limit(1);
 
     if (signatureRequest.length === 0) {

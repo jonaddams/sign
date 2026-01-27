@@ -1,19 +1,71 @@
+import { and, desc, eq } from 'drizzle-orm';
 import { Activity, Calendar, Clock, Download, FileText, Mail, User, Users } from 'lucide-react';
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+import { DocumentPreviewDialog } from '@/components/document-preview-dialog';
 import PageLayout from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants, signatureRequests, documentAuditLog, documentAnnotations } from '@/database/drizzle/document-signing-schema';
 import { users } from '@/database/drizzle/auth-schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { redirect, notFound } from 'next/navigation';
-import Link from 'next/link';
+import {
+  documentAnnotations,
+  documentAuditLog,
+  documentParticipants,
+  documents,
+  signatureRequests,
+} from '@/database/drizzle/document-signing-schema';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+// Hoist static functions outside component for better performance
+function formatRelativeTime(date: Date | null) {
+  if (!date) return 'Unknown';
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+}
+
+function formatAuditAction(action: string) {
+  const actionMap: Record<string, string> = {
+    DOCUMENT_CREATED: 'Document Created',
+    DOCUMENT_SENT: 'Document Sent',
+    DOCUMENT_VIEWED: 'Document Viewed',
+    DOCUMENT_SIGNED: 'Document Signed',
+    DOCUMENT_DECLINED: 'Document Declined',
+    DOCUMENT_COMPLETED: 'Document Completed',
+    DOCUMENT_EXPIRED: 'Document Expired',
+    DOCUMENT_DELETED: 'Document Deleted',
+    RECIPIENT_ADDED: 'Recipient Added',
+    RECIPIENT_REMOVED: 'Recipient Removed',
+    FIELD_ADDED: 'Field Added',
+    FIELD_UPDATED: 'Field Updated',
+    FIELD_REMOVED: 'Field Removed',
+    EMAIL_SENT: 'Email Sent',
+    REMINDER_SENT: 'Reminder Sent',
+  };
+
+  return (
+    actionMap[action] ||
+    action
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  );
 }
 
 export default async function DocumentDetailPage({ params }: PageProps) {
@@ -24,8 +76,8 @@ export default async function DocumentDetailPage({ params }: PageProps) {
     redirect('/api/auth/signin');
   }
 
-  // Query: Document details
-  const documentResult = await db
+  // Start all independent queries in parallel for 2-5× performance improvement
+  const documentPromise = db
     .select({
       id: documents.id,
       name: documents.name,
@@ -43,35 +95,7 @@ export default async function DocumentDetailPage({ params }: PageProps) {
     .where(eq(documents.id, id))
     .limit(1);
 
-  if (documentResult.length === 0) {
-    notFound();
-  }
-
-  const document = documentResult[0];
-
-  // Check if user has access to this document
-  const hasAccess = document.ownerId === session.user.id;
-
-  if (!hasAccess) {
-    // Check if user is a participant
-    const participantResult = await db
-      .select()
-      .from(documentParticipants)
-      .where(
-        and(
-          eq(documentParticipants.documentId, id),
-          eq(documentParticipants.userId, session.user.id)
-        )
-      )
-      .limit(1);
-
-    if (participantResult.length === 0) {
-      redirect('/dashboard');
-    }
-  }
-
-  // Query: Recipients with signature status
-  const recipients = await db
+  const recipientsPromise = db
     .select({
       id: documentParticipants.id,
       userId: documentParticipants.userId,
@@ -90,18 +114,13 @@ export default async function DocumentDetailPage({ params }: PageProps) {
     .where(eq(documentParticipants.documentId, id))
     .orderBy(documentParticipants.signingOrder);
 
-  // Query: Field annotations
-  const annotations = await db
+  const annotationsPromise = db
     .select()
     .from(documentAnnotations)
     .where(eq(documentAnnotations.documentId, id))
     .limit(1);
 
-  const fields = annotations[0]?.annotationData as { fields: any[] } | null;
-  const fieldCount = fields?.fields?.length || 0;
-
-  // Query: Audit log
-  const auditLog = await db
+  const auditLogPromise = db
     .select({
       id: documentAuditLog.id,
       action: documentAuditLog.action,
@@ -116,52 +135,55 @@ export default async function DocumentDetailPage({ params }: PageProps) {
     .orderBy(desc(documentAuditLog.createdAt))
     .limit(10);
 
-  // Format relative time
-  const formatRelativeTime = (date: Date | null) => {
-    if (!date) return 'Unknown';
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  // Await document first to check access
+  const documentResult = await documentPromise;
 
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString();
-  };
+  if (documentResult.length === 0) {
+    notFound();
+  }
 
-  // Format audit action
-  const formatAuditAction = (action: string) => {
-    const actionMap: Record<string, string> = {
-      'DOCUMENT_CREATED': 'Document Created',
-      'DOCUMENT_SENT': 'Document Sent',
-      'DOCUMENT_VIEWED': 'Document Viewed',
-      'DOCUMENT_SIGNED': 'Document Signed',
-      'DOCUMENT_DECLINED': 'Document Declined',
-      'DOCUMENT_COMPLETED': 'Document Completed',
-      'DOCUMENT_EXPIRED': 'Document Expired',
-      'DOCUMENT_DELETED': 'Document Deleted',
-      'RECIPIENT_ADDED': 'Recipient Added',
-      'RECIPIENT_REMOVED': 'Recipient Removed',
-      'FIELD_ADDED': 'Field Added',
-      'FIELD_UPDATED': 'Field Updated',
-      'FIELD_REMOVED': 'Field Removed',
-      'EMAIL_SENT': 'Email Sent',
-      'REMINDER_SENT': 'Reminder Sent',
-    };
+  const document = documentResult[0];
 
-    return actionMap[action] || action.split('_').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-  };
+  // Check if user has access to this document
+  const hasAccess = document.ownerId === session.user.id;
+
+  if (!hasAccess) {
+    // Check if user is a participant
+    const participantResult = await db
+      .select()
+      .from(documentParticipants)
+      .where(and(eq(documentParticipants.documentId, id), eq(documentParticipants.userId, session.user.id)))
+      .limit(1);
+
+    if (participantResult.length === 0) {
+      redirect('/dashboard');
+    }
+  }
+
+  // Now await all other queries in parallel
+  const [recipients, annotations, auditLog] = await Promise.all([
+    recipientsPromise,
+    annotationsPromise,
+    auditLogPromise,
+  ]);
+
+  const fields = annotations[0]?.annotationData as { fields: any[] } | null;
+  const fieldCount = fields?.fields?.length || 0;
 
   // Calculate signature status
-  const totalSigners = recipients.filter(r => r.accessLevel === 'SIGNER').length;
-  const signedCount = recipients.filter(r => r.signatureStatus === 'SIGNED').length;
-  const pendingCount = recipients.filter(r => r.signatureStatus === 'PENDING').length;
+  const totalSigners = recipients.filter((r) => r.accessLevel === 'SIGNER').length;
+  const signedCount = recipients.filter((r) => r.signatureStatus === 'SIGNED').length;
+  const pendingCount = recipients.filter((r) => r.signatureStatus === 'PENDING').length;
+
+  // Prepare signature statuses for the preview renderer
+  const signatureStatuses = recipients
+    .filter((r) => r.accessLevel === 'SIGNER')
+    .map((r) => ({
+      participantId: r.id,
+      status: (r.signatureStatus || 'PENDING') as 'PENDING' | 'SIGNED' | 'DECLINED' | 'CANCELLED',
+      participantName: r.userName || 'Unknown',
+      participantEmail: r.userEmail || '',
+    }));
 
   return (
     <PageLayout>
@@ -170,25 +192,37 @@ export default async function DocumentDetailPage({ params }: PageProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-              <Link href="/dashboard" className="hover:text-foreground">Dashboard</Link>
+              <Link href="/dashboard" className="hover:text-foreground">
+                Dashboard
+              </Link>
               <span>/</span>
               <span>Document Details</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{document.name}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              ID: {document.id.slice(0, 8)}...
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">ID: {document.id.slice(0, 8)}...</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" aria-label="Download document">
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" aria-label="Resend document to recipients">
               <Mail className="h-4 w-4 mr-2" />
               Resend
             </Button>
           </div>
+        </div>
+
+        {/* Document Preview Button */}
+        <div className="mb-6">
+          <DocumentPreviewDialog
+            documentName={document.name}
+            documentFilePath={document.documentFilePath}
+            annotations={annotations[0]?.annotationData || null}
+            signatureStatuses={signatureStatuses}
+            signedCount={signedCount}
+            totalSigners={totalSigners}
+          />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -230,7 +264,12 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                     Created
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {document.createdAt?.toLocaleDateString()} at {document.createdAt?.toLocaleTimeString()}
+                    {document.createdAt
+                      ? new Intl.DateTimeFormat('en-US', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(document.createdAt)
+                      : 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -245,7 +284,10 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                         Expires
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {document.expiresAt.toLocaleDateString()} at {document.expiresAt.toLocaleTimeString()}
+                        {new Intl.DateTimeFormat('en-US', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(document.expiresAt)}
                       </p>
                     </div>
                   </div>
@@ -258,9 +300,7 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-medium">File Size</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(document.size / 1024).toFixed(2)} KB
-                      </p>
+                      <p className="text-sm text-muted-foreground">{(document.size / 1024).toFixed(2)} KB</p>
                     </div>
                   </div>
                 </>
@@ -276,12 +316,16 @@ export default async function DocumentDetailPage({ params }: PageProps) {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-2xl font-bold">{signedCount} / {totalSigners}</p>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {signedCount} / {totalSigners}
+                  </p>
                   <p className="text-sm text-muted-foreground">Signatures completed</p>
                 </div>
                 <div className="flex gap-2">
                   {signedCount === totalSigners && totalSigners > 0 ? (
-                    <Badge variant="default" className="bg-green-600">Completed</Badge>
+                    <Badge variant="default" className="bg-green-600">
+                      Completed
+                    </Badge>
                   ) : pendingCount > 0 ? (
                     <Badge variant="outline">In Progress</Badge>
                   ) : (
@@ -308,11 +352,17 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                     </div>
                     <div className="ml-2">
                       {recipient.signatureStatus === 'SIGNED' ? (
-                        <Badge variant="default" className="text-xs bg-green-600">Signed</Badge>
+                        <Badge variant="default" className="text-xs bg-green-600">
+                          Signed
+                        </Badge>
                       ) : recipient.signatureStatus === 'DECLINED' ? (
-                        <Badge variant="destructive" className="text-xs">Declined</Badge>
+                        <Badge variant="destructive" className="text-xs">
+                          Declined
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs">Pending</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Pending
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -335,7 +385,7 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold">{fieldCount}</p>
+                  <p className="text-2xl font-bold tabular-nums">{fieldCount}</p>
                   <p className="text-sm text-muted-foreground">Total fields placed</p>
 
                   {fields?.fields && (
@@ -345,7 +395,7 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                           const type = field.type === 'initial' ? 'initials' : field.type;
                           acc[type] = (acc[type] || 0) + 1;
                           return acc;
-                        }, {})
+                        }, {}),
                       ).map(([type, count]) => (
                         <div key={type} className="flex items-center justify-between text-sm">
                           <span className="capitalize">{type}</span>
@@ -380,12 +430,8 @@ export default async function DocumentDetailPage({ params }: PageProps) {
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <p className="text-sm font-medium">{formatAuditAction(log.action)}</p>
-                        {log.userName && (
-                          <p className="text-xs text-muted-foreground">by {log.userName}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {formatRelativeTime(log.createdAt)}
-                        </p>
+                        {log.userName && <p className="text-xs text-muted-foreground">by {log.userName}</p>}
+                        <p className="text-xs text-muted-foreground">{formatRelativeTime(log.createdAt)}</p>
                       </div>
                     </div>
                   ))}

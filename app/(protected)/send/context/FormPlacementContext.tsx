@@ -77,22 +77,28 @@ export const FormPlacementProvider: React.FC<{
 
   // Create a placeholder email if needed (for "I am the only signer" scenarios without session)
   // This ensures the signer list is populated even when session isn't available
-  const effectiveEmail = currentUserEmail ||
+  const effectiveEmail =
+    currentUserEmail ||
     (userWillSign && currentUserName
       ? `${currentUserName.toLowerCase().replace(/\s+/g, '.')}@placeholder.local`
       : undefined);
 
   // Filter signer recipients and add current user if they will sign
-  const signerRecipients = [
-    ...(userWillSign && (effectiveEmail || currentUserName)
-      ? [{
-          email: effectiveEmail || 'current.user@placeholder.local',
-          name: currentUserName,
-          role: 'signer'
-        } as Recipient]
-      : []),
-    ...recipients.filter((r) => r.role === 'signer'),
-  ];
+  const signerRecipients = useMemo(
+    () => [
+      ...(userWillSign && (effectiveEmail || currentUserName)
+        ? [
+            {
+              email: effectiveEmail || 'current.user@placeholder.local',
+              name: currentUserName,
+              role: 'signer',
+            } as Recipient,
+          ]
+        : []),
+      ...recipients.filter((r) => r.role === 'signer'),
+    ],
+    [userWillSign, effectiveEmail, currentUserName, recipients],
+  );
 
   console.log('[FormPlacementContext] Computed signers:', {
     userWillSign,
@@ -100,7 +106,7 @@ export const FormPlacementProvider: React.FC<{
     sessionUser: session?.user,
     recipientsCount: recipients.length,
     signerRecipientsCount: signerRecipients.length,
-    signerRecipients
+    signerRecipients,
   });
 
   // Get current recipient

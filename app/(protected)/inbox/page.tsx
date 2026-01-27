@@ -1,17 +1,17 @@
+import { and, desc, eq } from 'drizzle-orm';
+import { FileText } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import PageContent from '@/components/layout/page-content';
 import PageLayout from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { auth } from '@/lib/auth/auth-js';
-import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants, signatureRequests } from '@/database/drizzle/document-signing-schema';
 import { users } from '@/database/drizzle/auth-schema';
-import { eq, and, desc } from 'drizzle-orm';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { documentParticipants, documents, signatureRequests } from '@/database/drizzle/document-signing-schema';
+import { db } from '@/database/drizzle/drizzle';
+import { auth } from '@/lib/auth/auth-js';
 
 export default async function InboxPage() {
   const session = await auth();
@@ -41,12 +41,7 @@ export default async function InboxPage() {
     .innerJoin(documents, eq(documentParticipants.documentId, documents.id))
     .leftJoin(users, eq(documents.ownerId, users.id))
     .innerJoin(signatureRequests, eq(signatureRequests.participantId, documentParticipants.id))
-    .where(
-      and(
-        eq(documentParticipants.userId, session.user.id),
-        eq(signatureRequests.status, 'PENDING')
-      )
-    )
+    .where(and(eq(documentParticipants.userId, session.user.id), eq(signatureRequests.status, 'PENDING')))
     .orderBy(desc(signatureRequests.requestedAt));
 
   // Format relative time
@@ -107,17 +102,12 @@ export default async function InboxPage() {
                 </TableHeader>
                 <TableBody>
                   {documentsToSign.map((item) => (
-                    <TableRow
-                      key={item.signatureRequestId}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    >
+                    <TableRow key={item.signatureRequestId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">{item.documentName}</span>
                           {item.signingOrder !== null && item.signingOrder > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              Signing order: {item.signingOrder}
-                            </span>
+                            <span className="text-xs text-muted-foreground">Signing order: {item.signingOrder}</span>
                           )}
                         </div>
                       </TableCell>
@@ -136,7 +126,10 @@ export default async function InboxPage() {
                             Expired
                           </Badge>
                         ) : isExpiringSoon(item.documentExpiresAt) ? (
-                          <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700 dark:text-yellow-400">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-yellow-500 text-yellow-700 dark:text-yellow-400"
+                          >
                             Urgent
                           </Badge>
                         ) : (

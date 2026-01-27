@@ -1,13 +1,13 @@
 'use client';
 
-import { CheckCircle, FileText, Loader2, ShieldAlert } from 'lucide-react';
+import { CheckCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import PageContent from '@/components/layout/page-content';
+import PageLayout from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import PageLayout from '@/components/layout/page-layout';
-import PageContent from '@/components/layout/page-content';
 import { getNutrientViewerRuntime, safeLoadViewer, safeUnloadViewer } from '@/lib/nutrient-viewer';
 import { createSignatureFieldRenderer } from '@/lib/signature-field-renderer';
 
@@ -63,9 +63,7 @@ const setupSignatureStorage = async (instance: any, PSPDFKit: any) => {
     const signaturesString = localStorage.getItem(STORAGE_KEY);
     if (signaturesString) {
       const storedSignatures = JSON.parse(signaturesString);
-      const list = PSPDFKit.Immutable.List(
-        storedSignatures.map(PSPDFKit.Annotations.fromSerializableObject),
-      );
+      const list = PSPDFKit.Immutable.List(storedSignatures.map(PSPDFKit.Annotations.fromSerializableObject));
       instance.setStoredSignatures(list);
       console.log(`Loaded ${storedSignatures.length} stored signatures`);
     }
@@ -123,9 +121,7 @@ const setupSignatureStorage = async (instance: any, PSPDFKit: any) => {
       const signaturesString = localStorage.getItem(STORAGE_KEY);
       const storedSignatures = signaturesString ? JSON.parse(signaturesString) : [];
       const annotations = storedSignatures.map(PSPDFKit.Annotations.fromSerializableObject);
-      const updatedAnnotations = annotations.filter(
-        (currentAnnotation: any) => !currentAnnotation.equals(annotation),
-      );
+      const updatedAnnotations = annotations.filter((currentAnnotation: any) => !currentAnnotation.equals(annotation));
 
       localStorage.setItem(
         STORAGE_KEY,
@@ -170,7 +166,7 @@ export default function SignDocumentPage() {
   const [isDeclined, setIsDeclined] = useState(false);
   const [allFieldsFilled, setAllFieldsFilled] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const viewerInstanceRef = useRef<any>(null);
   const isLoadingRef = useRef(false);
 
@@ -234,10 +230,9 @@ export default function SignDocumentPage() {
   }, [token]);
 
   // Load document in Nutrient Viewer
-  // Note: isViewerLoaded is intentionally NOT in the dependency array to prevent re-render loop.
-  // The early return check ensures we only load once even without the dependency.
+  // Uses containerEl state (set via callback ref) to ensure DOM is ready
   useEffect(() => {
-    if (!signingData || !containerRef.current || isViewerLoaded || isSigned || isLoadingRef.current) {
+    if (!signingData || !containerEl || isViewerLoaded || isSigned || isLoadingRef.current) {
       return;
     }
 
@@ -262,7 +257,7 @@ export default function SignDocumentPage() {
         }
 
         // Only load if component is still mounted
-        if (!isMounted || !containerRef.current) {
+        if (!isMounted || !containerEl) {
           console.log('Component unmounted or container lost, aborting load');
           return;
         }
@@ -281,7 +276,7 @@ export default function SignDocumentPage() {
 
         // Load viewer with signing tools enabled and custom field renderer
         const instance = await safeLoadViewer({
-          container: containerRef.current,
+          container: containerEl,
           document: proxyUrl,
           licenseKey: process.env.NEXT_PUBLIC_NUTRIENT_VIEWER_LICENSE_KEY,
           useCDN: true,
@@ -337,12 +332,13 @@ export default function SignDocumentPage() {
       isMounted = false;
       isLoadingRef.current = false;
       // Always try to unload viewer on cleanup
-      if (containerRef.current) {
-        safeUnloadViewer(containerRef.current);
+      if (containerEl) {
+        safeUnloadViewer(containerEl);
         viewerInstanceRef.current = null;
       }
     };
-  }, [signingData, isSigned]); // Removed isViewerLoaded from dependencies to prevent re-render loop
+    // biome-ignore lint/correctness/useExhaustiveDependencies: isViewerLoaded intentionally excluded to prevent cleanup loop that unloads viewer
+  }, [signingData, isSigned, containerEl]);
 
   // Update form field permissions based on current recipient
   // This runs after fields are created to set proper readOnly status
@@ -383,16 +379,17 @@ export default function SignDocumentPage() {
             // Extract email slug from field name for exact matching
             const parts = field.name.split('_');
             const fieldEmailSlug = parts.length >= 2 ? parts[1].toLowerCase() : '';
-            const currentRecipientEmailSlug = signingData.recipient.email.split('@')[0].toLowerCase().replace(/\./g, '');
+            const currentRecipientEmailSlug = signingData.recipient.email
+              .split('@')[0]
+              .toLowerCase()
+              .replace(/\./g, '');
             const fieldBelongsToCurrentRecipient = fieldEmailSlug === currentRecipientEmailSlug;
 
             const isUserField =
-              fieldBelongsToCurrentRecipient ||
-              (signerID && signerID !== '' && signerID === signingData.recipient.id);
+              fieldBelongsToCurrentRecipient || (signerID && signerID !== '' && signerID === signingData.recipient.id);
 
             const currentReadOnly = field.readOnly || false;
             const newReadOnly = !isUserField;
-
 
             // Only update if the value needs to change
             if (currentReadOnly !== newReadOnly) {
@@ -474,7 +471,9 @@ export default function SignDocumentPage() {
           const isSignatureField = field instanceof PSPDFKit.FormFields.SignatureFormField;
           const isTextField = field instanceof PSPDFKit.FormFields.TextFormField;
 
-          console.log(`Checking field: ${field.name}, type: ${fieldType}, isSignature: ${isSignatureField}, isText: ${isTextField}`);
+          console.log(
+            `Checking field: ${field.name}, type: ${fieldType}, isSignature: ${isSignatureField}, isText: ${isTextField}`,
+          );
 
           if (isSignatureField) {
             // Check if signature field has overlapping annotations (is signed)
@@ -716,8 +715,8 @@ export default function SignDocumentPage() {
               onClick={handleDecline}
               disabled={isSigning}
               size="lg"
-              variant="outline"
-              className="cursor-pointer text-red-600 hover:text-red-700"
+              variant="destructive"
+              className="cursor-pointer"
             >
               Decline to Sign
             </Button>
@@ -748,7 +747,7 @@ export default function SignDocumentPage() {
         <div className="h-[calc(100vh-280px)]">
           <Card className="h-full">
             <CardContent className="h-full p-0">
-              <div ref={containerRef} className="h-full w-full" id="nutrient-signing-container" />
+              <div ref={setContainerEl} className="h-full w-full" id="nutrient-signing-container" />
             </CardContent>
           </Card>
         </div>

@@ -1,6 +1,5 @@
-import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
-import { documentAnnotations, documents } from '@/database/drizzle/document-signing-schema';
+import { documentAnnotations } from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
 import { auth } from '@/lib/auth/auth-js';
 import { logger } from '@/lib/logger';
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {

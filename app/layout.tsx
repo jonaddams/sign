@@ -23,11 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={caveat.variable}>
       <head>
-        <Script
-          id="nutrient-viewer-sdk"
-          src={nutrientSdkUrl}
-          strategy="beforeInteractive"
-        />
+        <script crossOrigin="anonymous" src="//unpkg.com/react-scan/dist/auto.global.js" />
+        <Script id="nutrient-viewer-sdk" src={nutrientSdkUrl} strategy="beforeInteractive" />
       </head>
       <body className={inter.className}>
         <ThemeProvider>

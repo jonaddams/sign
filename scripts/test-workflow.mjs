@@ -1,5 +1,5 @@
-import postgres from 'postgres';
 import dotenv from 'dotenv';
+import postgres from 'postgres';
 
 dotenv.config({ path: '.env.local' });
 

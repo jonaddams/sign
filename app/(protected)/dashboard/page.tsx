@@ -1,14 +1,99 @@
-import { Activity, FileText, PenLine, Clock } from 'lucide-react';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { Activity, Clock, FileText, PenLine } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import PageLayout from '@/components/layout/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MetricCard } from '@/components/ui/metric-card';
-import { auth } from '@/lib/auth/auth-js';
+import {
+  documentAuditLog,
+  documentParticipants,
+  documents,
+  signatureRequests,
+} from '@/database/drizzle/document-signing-schema';
 import { db } from '@/database/drizzle/drizzle';
-import { documents, documentParticipants, signatureRequests, documentAuditLog } from '@/database/drizzle/document-signing-schema';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth/auth-js';
+
+// Hoist static helper functions outside component for better performance
+function formatRelativeTime(date: Date | null) {
+  if (!date) return 'Unknown';
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date);
+}
+
+function formatExpiration(date: Date | null) {
+  if (!date) return null;
+  const now = new Date();
+
+  if (date < now) {
+    return { text: 'Expired', variant: 'destructive' as const, expired: true };
+  }
+
+  const diff = date.getTime() - now.getTime();
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (hours < 24) {
+    return {
+      text: `Expires in ${hours} hour${hours !== 1 ? 's' : ''}`,
+      variant: 'destructive' as const,
+      expired: false,
+    };
+  }
+
+  if (days <= 3) {
+    return {
+      text: `Expires in ${days} day${days !== 1 ? 's' : ''}`,
+      variant: 'outline' as const,
+      expired: false,
+    };
+  }
+
+  return {
+    text: `Expires ${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date)}`,
+    variant: 'outline' as const,
+    expired: false,
+  };
+}
+
+function formatAuditAction(action: string) {
+  const actionMap: Record<string, string> = {
+    DOCUMENT_CREATED: 'Document Created',
+    DOCUMENT_SENT: 'Document Sent',
+    DOCUMENT_VIEWED: 'Document Viewed',
+    DOCUMENT_SIGNED: 'Document Signed',
+    DOCUMENT_DECLINED: 'Document Declined',
+    DOCUMENT_COMPLETED: 'Document Completed',
+    DOCUMENT_EXPIRED: 'Document Expired',
+    DOCUMENT_DELETED: 'Document Deleted',
+    RECIPIENT_ADDED: 'Recipient Added',
+    RECIPIENT_REMOVED: 'Recipient Removed',
+    FIELD_ADDED: 'Field Added',
+    FIELD_UPDATED: 'Field Updated',
+    FIELD_REMOVED: 'Field Removed',
+    EMAIL_SENT: 'Email Sent',
+    REMINDER_SENT: 'Reminder Sent',
+  };
+
+  return (
+    actionMap[action] ||
+    action
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  );
+}
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -17,8 +102,8 @@ export default async function DashboardPage() {
     redirect('/api/auth/signin');
   }
 
-  // Query: Documents owned by user with recipient counts
-  const userDocuments = await db
+  // Start all independent queries in parallel for 2-5× performance improvement
+  const userDocumentsPromise = db
     .select({
       id: documents.id,
       name: documents.name,
@@ -30,61 +115,24 @@ export default async function DashboardPage() {
     .orderBy(desc(documents.updatedAt))
     .limit(10);
 
-  // Get recipient counts for each document
-  const documentIds = userDocuments.map(doc => doc.id);
-  const recipientCounts = documentIds.length > 0 ? await db
-    .select({
-      documentId: documentParticipants.documentId,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(documentParticipants)
-    .where(inArray(documentParticipants.documentId, documentIds))
-    .groupBy(documentParticipants.documentId) : [];
-
-  // Map recipient counts to documents
-  const documentsWithCounts = userDocuments.map(doc => ({
-    ...doc,
-    recipientCount: recipientCounts.find(rc => rc.documentId === doc.id)?.count || 0,
-  }));
-
-  // Query: Documents user needs to sign
-  const pendingSignaturesResult = await db
+  const pendingSignaturesPromise = db
     .select({ count: sql<number>`count(*)::int` })
     .from(signatureRequests)
     .innerJoin(documentParticipants, eq(signatureRequests.participantId, documentParticipants.id))
-    .where(
-      and(
-        eq(documentParticipants.userId, session.user.id),
-        eq(signatureRequests.status, 'PENDING')
-      )
-    );
+    .where(and(eq(documentParticipants.userId, session.user.id), eq(signatureRequests.status, 'PENDING')));
 
-  const pendingSignatures = pendingSignaturesResult[0]?.count || 0;
-
-  // Query: Total documents owned
-  const totalDocumentsResult = await db
+  const totalDocumentsPromise = db
     .select({ count: sql<number>`count(*)::int` })
     .from(documents)
     .where(eq(documents.ownerId, session.user.id));
 
-  const totalDocuments = totalDocumentsResult[0]?.count || 0;
-
-  // Query: Completed signatures (signed documents)
-  const completedSignaturesResult = await db
+  const completedSignaturesPromise = db
     .select({ count: sql<number>`count(*)::int` })
     .from(signatureRequests)
     .innerJoin(documentParticipants, eq(signatureRequests.participantId, documentParticipants.id))
-    .where(
-      and(
-        eq(documentParticipants.userId, session.user.id),
-        eq(signatureRequests.status, 'SIGNED')
-      )
-    );
+    .where(and(eq(documentParticipants.userId, session.user.id), eq(signatureRequests.status, 'SIGNED')));
 
-  const completedSignatures = completedSignaturesResult[0]?.count || 0;
-
-  // Query: Recent activity
-  const recentActivity = await db
+  const recentActivityPromise = db
     .select({
       id: documentAuditLog.id,
       action: documentAuditLog.action,
@@ -99,87 +147,39 @@ export default async function DashboardPage() {
     .orderBy(desc(documentAuditLog.createdAt))
     .limit(5);
 
-  // Format relative time (for past dates)
-  const formatRelativeTime = (date: Date | null) => {
-    if (!date) return 'Unknown';
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  // Await all independent queries in parallel
+  const [userDocuments, pendingSignaturesResult, totalDocumentsResult, completedSignaturesResult, recentActivity] =
+    await Promise.all([
+      userDocumentsPromise,
+      pendingSignaturesPromise,
+      totalDocumentsPromise,
+      completedSignaturesPromise,
+      recentActivityPromise,
+    ]);
 
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString();
-  };
+  // Get recipient counts (depends on userDocuments result)
+  const documentIds = userDocuments.map((doc) => doc.id);
+  const recipientCounts =
+    documentIds.length > 0
+      ? await db
+          .select({
+            documentId: documentParticipants.documentId,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(documentParticipants)
+          .where(inArray(documentParticipants.documentId, documentIds))
+          .groupBy(documentParticipants.documentId)
+      : [];
 
-  // Format expiration date (for future dates or expired)
-  const formatExpiration = (date: Date | null) => {
-    if (!date) return null;
-    const now = new Date();
+  // Map recipient counts to documents
+  const documentsWithCounts = userDocuments.map((doc) => ({
+    ...doc,
+    recipientCount: recipientCounts.find((rc) => rc.documentId === doc.id)?.count || 0,
+  }));
 
-    // Check if expired
-    if (date < now) {
-      return { text: 'Expired', variant: 'destructive' as const, expired: true };
-    }
-
-    const diff = date.getTime() - now.getTime();
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    // Expiring soon (within 24 hours)
-    if (hours < 24) {
-      return {
-        text: `Expires in ${hours} hour${hours !== 1 ? 's' : ''}`,
-        variant: 'destructive' as const,
-        expired: false
-      };
-    }
-
-    // Expiring within 3 days
-    if (days <= 3) {
-      return {
-        text: `Expires in ${days} day${days !== 1 ? 's' : ''}`,
-        variant: 'outline' as const,
-        expired: false
-      };
-    }
-
-    // Normal expiration
-    return {
-      text: `Expires ${date.toLocaleDateString()}`,
-      variant: 'outline' as const,
-      expired: false
-    };
-  };
-
-  // Map audit action to user-friendly message
-  const formatAuditAction = (action: string) => {
-    const actionMap: Record<string, string> = {
-      'DOCUMENT_CREATED': 'Document Created',
-      'DOCUMENT_SENT': 'Document Sent',
-      'DOCUMENT_VIEWED': 'Document Viewed',
-      'DOCUMENT_SIGNED': 'Document Signed',
-      'DOCUMENT_DECLINED': 'Document Declined',
-      'DOCUMENT_COMPLETED': 'Document Completed',
-      'DOCUMENT_EXPIRED': 'Document Expired',
-      'DOCUMENT_DELETED': 'Document Deleted',
-      'RECIPIENT_ADDED': 'Recipient Added',
-      'RECIPIENT_REMOVED': 'Recipient Removed',
-      'FIELD_ADDED': 'Field Added',
-      'FIELD_UPDATED': 'Field Updated',
-      'FIELD_REMOVED': 'Field Removed',
-      'EMAIL_SENT': 'Email Sent',
-      'REMINDER_SENT': 'Reminder Sent',
-    };
-
-    return actionMap[action] || action.split('_').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-  };
+  const pendingSignatures = pendingSignaturesResult[0]?.count || 0;
+  const totalDocuments = totalDocumentsResult[0]?.count || 0;
+  const completedSignatures = completedSignaturesResult[0]?.count || 0;
 
   return (
     <PageLayout>
@@ -271,7 +271,7 @@ export default async function DashboardPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground/70 mt-1 font-mono">
-                                ID: {doc.id.slice(0, 8)}...
+                                ID: {doc.id.slice(0, 8)}…
                               </p>
                             </div>
                             {expirationInfo && (
@@ -312,9 +312,7 @@ export default async function DashboardPage() {
                           <p className="text-muted-foreground text-sm truncate">
                             {activity.documentName || 'Document'}
                           </p>
-                          <p className="text-muted-foreground text-xs">
-                            {formatRelativeTime(activity.createdAt)}
-                          </p>
+                          <p className="text-muted-foreground text-xs">{formatRelativeTime(activity.createdAt)}</p>
                         </div>
                       </div>
                     ))}

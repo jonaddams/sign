@@ -65,7 +65,7 @@
 
 /* Center text in date form fields */
 input[type="text"].PSPDFKit-Form-Input {
-  text-align: center !important;
+  text-align: center;
 }
 
 /* Style date field inputs specifically */
@@ -73,4 +73,19 @@ input[type="text"].PSPDFKit-Form-Input {
   text-align: center;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Hide custom field overlay when form field is focused */
+.PSPDFKit-Annotation-Widget:focus-within .custom-signature-field {
+  display: none !important;
+}
+
+/* Hide custom field overlay when the input has a value (non-empty) */
+.PSPDFKit-Annotation-Widget:has(input:not(:placeholder-shown)) .custom-signature-field {
+  display: none !important;
+}
+
+/* Also hide when input has any value via the valid pseudo-class */
+.PSPDFKit-Annotation-Widget:has(input[value]:not([value=""])) .custom-signature-field {
+  display: none !important;
 }

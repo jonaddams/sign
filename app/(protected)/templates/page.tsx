@@ -2,7 +2,7 @@
 
 import { Download, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import PageContent from '@/components/layout/page-content';
 import PageLayout from '@/components/layout/page-layout';
@@ -64,7 +64,7 @@ export default function TemplatesPage() {
   const [previewDoc, setPreviewDoc] = useState<{ url: string; id: string; isOpen: boolean } | null>(null);
   const isMobile = useIsMobile();
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/templates');
@@ -117,12 +117,12 @@ export default function TemplatesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch templates on page load
   useEffect(() => {
     fetchTemplates();
-  }, []);
+  }, [fetchTemplates]);
 
   // Handle template upload
   const handleUploadComplete = async (fileData: FileData) => {

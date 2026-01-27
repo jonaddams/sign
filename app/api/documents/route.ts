@@ -16,10 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !documentFilePath) {
-      return NextResponse.json(
-        { error: 'Document name and file path are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Document name and file path are required' }, { status: 400 });
     }
 
     // Create document record
@@ -45,14 +42,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ document: document[0] });
   } catch (error) {
     logger.error('Error creating document', error);
-    return NextResponse.json(
-      { error: 'Failed to create document' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create document' }, { status: 500 });
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -68,9 +62,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ documents: userDocuments });
   } catch (error) {
     logger.error('Error fetching documents', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch documents' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
   }
 }

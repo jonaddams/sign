@@ -2,7 +2,14 @@ import { boolean, inet, integer, jsonb, pgEnum, pgTable, text, timestamp, unique
 import { users } from './auth-schema'; // Assuming the previous auth schema is in this file
 
 // Enum definitions
-export const documentStatus = pgEnum('document_status', ['DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'DECLINED', 'CANCELLED']);
+export const documentStatus = pgEnum('document_status', [
+  'DRAFT',
+  'PENDING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'DECLINED',
+  'CANCELLED',
+]);
 
 export const signatureStatus = pgEnum('signature_status', ['PENDING', 'SIGNED', 'DECLINED', 'CANCELLED']);
 

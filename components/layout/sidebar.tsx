@@ -106,9 +106,11 @@ export default function Sidebar() {
       </nav>
 
       {isMobileMenuOpen && (
-        <div
+        <button
+          type="button"
           className="fixed inset-0 z-[65] bg-black bg-opacity-50 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Close menu"
         />
       )}
     </>

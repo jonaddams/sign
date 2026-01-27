@@ -105,9 +105,9 @@ const LandingPage = () => {
                 title: 'Mobile Signing',
                 description: 'Sign documents on the go from any device with our responsive mobile experience.',
               },
-            ].map((feature, index) => (
+            ].map((feature) => (
               <div
-                key={index}
+                key={feature.title}
                 className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-gray-100 dark:bg-zinc-700">

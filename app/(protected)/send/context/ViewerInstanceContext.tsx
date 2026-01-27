@@ -11,11 +11,7 @@ const ViewerInstanceContext = createContext<ViewerInstanceContextType | null>(nu
 export function ViewerInstanceProvider({ children }: { children: React.ReactNode }) {
   const viewerInstanceRef = useRef<any>(null);
 
-  return (
-    <ViewerInstanceContext.Provider value={{ viewerInstanceRef }}>
-      {children}
-    </ViewerInstanceContext.Provider>
-  );
+  return <ViewerInstanceContext.Provider value={{ viewerInstanceRef }}>{children}</ViewerInstanceContext.Provider>;
 }
 
 export function useViewerInstance() {
